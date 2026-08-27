@@ -267,12 +267,16 @@ async function main() {
       create: { name: makeName, slug: slugify(makeName) },
     });
     for (const m of models) {
-      const model = await prisma.vehicleModel.create({
-        data: { makeId: make.id, name: m.model, yearFrom: m.years[0], yearTo: m.years[1] },
+      const model = await prisma.vehicleModel.upsert({
+        where: { makeId_name: { makeId: make.id, name: m.model } },
+        update: { yearFrom: m.years[0], yearTo: m.years[1] },
+        create: { makeId: make.id, name: m.model, yearFrom: m.years[0], yearTo: m.years[1] },
       });
       for (const e of m.engines) {
-        const engine = await prisma.vehicleEngine.create({
-          data: { modelId: model.id, name: e.name, fuel: e.fuel, powerHp: e.hp },
+        const engine = await prisma.vehicleEngine.upsert({
+          where: { modelId_name: { modelId: model.id, name: e.name } },
+          update: { fuel: e.fuel, powerHp: e.hp },
+          create: { modelId: model.id, name: e.name, fuel: e.fuel, powerHp: e.hp },
         });
         engineByKey.set(`${makeName}|${m.model}|${e.name}`, engine.id);
       }

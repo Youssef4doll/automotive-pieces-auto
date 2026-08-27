@@ -91,7 +91,7 @@ export default function ProductActions({
         <button
           disabled={outOfStock}
           onClick={handleAdd}
-          className="flex-1 h-12 rounded-lg bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-bold text-sm sm:text-base"
+          className="flex-1 h-12 rounded-lg bg-gold-500 hover:bg-gold-400 disabled:bg-gray-300 text-navy-950 font-display font-bold uppercase tracking-wide text-sm sm:text-base"
         >
           {added ? (
             "✓ Ajouté"
@@ -103,11 +103,19 @@ export default function ProductActions({
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-600">
-        <span>💳 {t("trust.cod")}</span>
-        <span>🔄 {t("trust.exchange")}</span>
-        <span>🛡 {t("trust.warranty")}</span>
-        <span>↩ {t("trust.returns")}</span>
+      <div className="flex flex-wrap gap-2">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+          {t("trust.cod")}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-gold-500/10 text-navy-900 border border-gold-500/40">
+          {t("trust.exchange")}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-gray-100 text-navy-900 border border-gray-200">
+          {t("trust.warranty")}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-gray-100 text-navy-900 border border-gray-200">
+          {t("trust.returns")}
+        </span>
       </div>
 
       {pickerOpen && <VehiclePicker onClose={() => setPickerOpen(false)} />}

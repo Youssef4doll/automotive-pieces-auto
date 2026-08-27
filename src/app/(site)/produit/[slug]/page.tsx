@@ -35,6 +35,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       ? Math.round((1 - product.priceSell / product.compareAtPrice) * 100)
       : null;
 
+  // `specs` is a free-form JSON bag; `packContents` is a structured field used
+  // only by PackCard to render bundle line items, not a human-readable spec —
+  // exclude it here so we don't print raw JSON into the specs grid.
+  const specEntries = Object.entries((product.specs as Record<string, unknown>) ?? {}).filter(
+    ([key]) => key !== "packContents"
+  );
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -126,51 +133,68 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8 mt-10">
+      <div className="flex flex-col gap-8 mt-10 max-w-3xl">
         <section>
-          <h2 className="font-bold text-navy-950 mb-2">Description</h2>
+          <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-2">Description</h2>
           <p className="text-sm text-gray-700 leading-relaxed">{product.description}</p>
-
-          {product.oemRefs.length > 0 && (
-            <>
-              <h2 className="font-bold text-navy-950 mt-6 mb-2">Références OEM</h2>
-              <p className="text-sm text-gray-700">{product.oemRefs.join(", ")}</p>
-            </>
-          )}
         </section>
 
-        <section>
-          <h2 className="font-bold text-navy-950 mb-2">Compatibilité véhicules</h2>
-          {product.fitments.length === 0 ? (
-            <p className="text-sm text-gray-500">Compatibilité universelle / non spécifiée — contactez-nous pour vérifier.</p>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-                  <tr>
-                    <th className="text-start px-3 py-2">Marque</th>
-                    <th className="text-start px-3 py-2">Modèle</th>
-                    <th className="text-start px-3 py-2">Motorisation</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {product.fitments.map((f, i) => (
-                    <tr key={f.id} className={i % 2 ? "bg-white" : "bg-gray-50/50"}>
-                      <td className="px-3 py-2">{f.engine.model.make.name}</td>
-                      <td className="px-3 py-2">{f.engine.model.name}</td>
-                      <td className="px-3 py-2">{f.engine.name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {specEntries.length > 0 && (
+          <section>
+            <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Caractéristiques</h2>
+            <div className="grid sm:grid-cols-2 gap-2.5">
+              {specEntries.map(([key, value]) => (
+                <div
+                  key={key}
+                  className="flex justify-between gap-3 text-sm bg-gray-50 rounded-lg px-3.5 py-2.5 border border-gray-100"
+                >
+                  <span className="text-gray-500">{key}</span>
+                  <span className="font-semibold text-navy-950">{String(value)}</span>
+                </div>
+              ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
+
+        {product.oemRefs.length > 0 && (
+          <section>
+            <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-2">Références OEM</h2>
+            <p className="text-sm font-mono text-gray-700">{product.oemRefs.join(" · ")}</p>
+          </section>
+        )}
       </div>
+
+      <section className="mt-8">
+        <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Compatibilité véhicules</h2>
+        {product.fitments.length === 0 ? (
+          <p className="text-sm text-gray-500">Compatibilité universelle / non spécifiée — contactez-nous pour vérifier.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <table className="w-full text-sm">
+              <thead className="bg-navy-950 text-white/70">
+                <tr>
+                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Marque</th>
+                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Modèle</th>
+                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Motorisation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {product.fitments.map((f, i) => (
+                  <tr key={f.id} className={i % 2 ? "bg-white" : "bg-gray-50/60"}>
+                    <td className="px-4 py-2.5 font-semibold text-navy-900">{f.engine.model.make.name}</td>
+                    <td className="px-4 py-2.5">{f.engine.model.name}</td>
+                    <td className="px-4 py-2.5 text-gray-600">{f.engine.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       {product.reviews.length > 0 && (
         <section className="mt-10">
-          <h2 className="font-bold text-navy-950 mb-3">Avis clients</h2>
+          <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Avis clients</h2>
           <div className="grid sm:grid-cols-3 gap-4">
             {product.reviews.map((r) => (
               <div key={r.id} className="p-4 rounded-xl border border-gray-200 bg-white">
@@ -185,7 +209,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       {related.length > 0 && (
         <section className="mt-10">
-          <h2 className="font-bold text-navy-950 mb-3">Produits similaires</h2>
+          <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Produits similaires</h2>
           <ProductGrid products={related} />
         </section>
       )}

@@ -102,6 +102,7 @@ model VehicleModel {
   yearTo    Int?
   engines   VehicleEngine[]
 
+  @@unique([makeId, name])
   @@index([makeId])
 }
 
@@ -114,6 +115,7 @@ model VehicleEngine {
   powerHp   Int?
   fitments  ProductFitment[]
 
+  @@unique([modelId, name])
   @@index([modelId])
 }
 
