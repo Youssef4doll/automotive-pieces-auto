@@ -59,9 +59,9 @@ export default function HeaderClient({
         onMouseLeave={() => setMenuOpen(false)}
       >
         <div className="mx-auto max-w-7xl px-3 sm:px-4">
-          <div className="flex items-center gap-3 py-3">
+          <div className="flex items-center flex-wrap gap-[10px] lg:gap-[clamp(10px,1.2vw,18px)] py-2.5">
             <button
-              className="lg:hidden p-2 -ms-2 rounded hover:bg-white/10"
+              className="lg:hidden p-2 -ms-2 rounded hover:bg-white/10 shrink-0"
               aria-label="Menu"
               onClick={() => setMobileOpen(true)}
             >
@@ -81,7 +81,7 @@ export default function HeaderClient({
               />
             </Link>
 
-            <nav className="hidden lg:flex items-center gap-1 ms-2 font-display font-semibold uppercase text-sm tracking-wide">
+            <nav className="hidden lg:flex items-center gap-1 shrink-0 font-display font-semibold uppercase text-sm tracking-wide whitespace-nowrap">
               <Link href="/" className="px-3 py-2 rounded-md hover:bg-white/10 border-b-2 border-gold-500">
                 {t("nav.home")}
               </Link>
@@ -105,9 +105,12 @@ export default function HeaderClient({
               </a>
             </nav>
 
+            {/* This spacer and the search form below share the row's leftover
+                width equally (both flex-1) — same ratio as the reference
+                design — rather than all of it collapsing into one gap. */}
             <div className="hidden lg:block flex-1" />
 
-            <form onSubmit={submitSearch} className="hidden md:flex flex-1 lg:flex-initial lg:w-[220px] xl:w-[280px] mx-2">
+            <form onSubmit={submitSearch} className="hidden md:flex flex-[1_1_150px] min-w-[130px]">
               <div className="flex w-full rounded-md overflow-hidden bg-white">
                 <input
                   value={q}
@@ -122,7 +125,7 @@ export default function HeaderClient({
               </div>
             </form>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <a
                 href={`https://wa.me/${whatsapp}`}
                 target="_blank"
