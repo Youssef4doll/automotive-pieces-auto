@@ -21,9 +21,12 @@ export default function SettingsForm({ settings }: { settings: SettingsMap }) {
         <Field label="Délai régions" name="delivery_regions" defaultValue={settings.delivery_regions} />
       </div>
 
-      {state?.ok && <p className="text-sm text-green-600 font-medium">Paramètres enregistrés ✓</p>}
+      {state?.ok && <p className="text-sm text-green-700 font-medium">Paramètres enregistrés ✓</p>}
 
-      <button disabled={pending} className="self-start px-5 py-3 rounded-lg bg-navy-900 text-white font-semibold disabled:opacity-60">
+      <button
+        disabled={pending}
+        className="self-start px-5 py-3 rounded-lg bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase tracking-wide disabled:opacity-60"
+      >
         {pending ? "Enregistrement…" : "Enregistrer"}
       </button>
     </form>
@@ -45,13 +48,13 @@ function Field({
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold text-gray-500">{label}</span>
+      <span className="text-xs font-display font-bold uppercase tracking-wide text-navy-900/45">{label}</span>
       <input
         name={name}
         type={type}
         defaultValue={defaultValue}
         dir={dir}
-        className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm"
+        className="px-3 py-2.5 border border-navy-900/15 rounded-lg text-sm outline-none focus:border-gold-500"
       />
     </label>
   );

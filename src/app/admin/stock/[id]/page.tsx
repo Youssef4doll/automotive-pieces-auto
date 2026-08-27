@@ -14,7 +14,9 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-extrabold">Modifier — {product.name}</h1>
+      <h1 className="text-2xl font-heading font-extrabold uppercase tracking-tight text-navy-950">
+        Modifier — {product.name}
+      </h1>
       <ProductForm
         product={{
           id: product.id,

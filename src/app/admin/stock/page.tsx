@@ -21,31 +21,41 @@ export default async function AdminStockPage({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-extrabold">Stock</h1>
-        <Link href="/admin/stock/nouveau" className="px-4 py-2.5 rounded-lg bg-navy-900 text-white text-sm font-semibold">
+        <h1 className="text-2xl font-heading font-extrabold uppercase tracking-tight text-navy-950">Stock</h1>
+        <Link
+          href="/admin/stock/nouveau"
+          className="px-4 py-2.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-navy-950 text-sm font-display font-bold uppercase tracking-wide"
+        >
           + Nouveau produit
         </Link>
       </div>
 
       <form className="flex gap-2">
-        <input name="q" defaultValue={q} placeholder="Nom ou référence…" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-        <button className="px-4 py-2 bg-navy-900 text-white rounded-lg text-sm font-semibold">Rechercher</button>
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Nom ou référence…"
+          className="px-3 py-2 border border-navy-900/15 rounded-lg text-sm outline-none focus:border-gold-500"
+        />
+        <button className="px-4 py-2 bg-navy-900 hover:bg-navy-800 text-white rounded-lg text-sm font-display font-bold uppercase tracking-wide">
+          Rechercher
+        </button>
       </form>
 
-      <div className="rounded-xl border border-gray-200 bg-white overflow-x-auto">
+      <div className="rounded-xl border border-navy-900/10 bg-white shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+          <thead className="bg-navy-950 text-white/70">
             <tr>
-              <th className="text-start px-4 py-3">Produit</th>
-              <th className="text-start px-4 py-3">Catégorie</th>
-              <th className="text-end px-4 py-3">Achat</th>
-              <th className="text-end px-4 py-3">Vente</th>
-              <th className="text-end px-4 py-3">Marge</th>
-              <th className="text-end px-4 py-3">Stock</th>
-              <th className="text-end px-4 py-3">Actions</th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Produit</th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Catégorie</th>
+              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Achat</th>
+              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Vente</th>
+              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Marge</th>
+              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Stock</th>
+              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-navy-900/8">
             {products.map((p) => {
               const buy = toNumber(p.priceBuy);
               const sell = toNumber(p.priceSell);
@@ -55,9 +65,9 @@ export default async function AdminStockPage({
                 <tr key={p.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <p className="font-medium">{p.name}</p>
-                    <p className="text-xs text-gray-400">{p.sku} {p.brand ? `· ${p.brand.name}` : ""}</p>
+                    <p className="text-xs text-navy-900/40">{p.sku} {p.brand ? `· ${p.brand.name}` : ""}</p>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{p.category.name}</td>
+                  <td className="px-4 py-3 text-navy-900/50">{p.category.name}</td>
                   <td className="px-4 py-3 text-end">{formatTND(buy)}</td>
                   <td className="px-4 py-3 text-end font-semibold">{formatTND(sell)}</td>
                   <td className="px-4 py-3 text-end text-green-700">{marginPct}%</td>
@@ -65,7 +75,7 @@ export default async function AdminStockPage({
                     <span className={`font-bold ${low ? "text-red-600" : ""}`}>{p.stockQty}</span>
                   </td>
                   <td className="px-4 py-3 text-end whitespace-nowrap">
-                    <Link href={`/admin/stock/${p.id}`} className="text-xs font-semibold text-navy-700 hover:underline me-3">
+                    <Link href={`/admin/stock/${p.id}`} className="text-xs font-display font-bold uppercase tracking-wide text-red-500 hover:underline me-3">
                       Modifier
                     </Link>
                     <DeleteProductButton productId={p.id} />
@@ -75,7 +85,7 @@ export default async function AdminStockPage({
             })}
             {products.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">Aucun produit</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-navy-900/40">Aucun produit</td>
               </tr>
             )}
           </tbody>

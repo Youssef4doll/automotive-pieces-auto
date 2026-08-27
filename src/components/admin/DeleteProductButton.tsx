@@ -17,7 +17,11 @@ export default function DeleteProductButton({ productId }: { productId: string }
   }
 
   return (
-    <button onClick={onDelete} disabled={pending} className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50">
+    <button
+      onClick={onDelete}
+      disabled={pending}
+      className="text-xs font-display font-bold uppercase tracking-wide text-red-500 hover:underline disabled:opacity-50"
+    >
       Supprimer
     </button>
   );

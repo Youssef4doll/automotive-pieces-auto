@@ -13,7 +13,7 @@ export default async function NewProductPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-extrabold">Nouveau produit</h1>
+      <h1 className="text-2xl font-heading font-extrabold uppercase tracking-tight text-navy-950">Nouveau produit</h1>
       <ProductForm categories={categories} brands={brands} />
     </div>
   );

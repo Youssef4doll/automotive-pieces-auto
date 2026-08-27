@@ -66,7 +66,7 @@ async function main() {
 
   await adminPage.click('button:has-text("Confirmée")');
   await adminPage.waitForTimeout(800);
-  const statusBadge = await adminPage.locator("span.bg-gray-100").first().textContent();
+  const statusBadge = await adminPage.locator("span.rounded-full").first().textContent();
   console.log("✓ Admin set status, badge now reads:", statusBadge?.trim());
 
   // 5. Back on the customer side: verify the tracking page reflects the new status.

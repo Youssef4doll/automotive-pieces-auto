@@ -24,8 +24,10 @@ export default function OrderStatusButtons({ orderId, status }: { orderId: strin
           key={s}
           disabled={pending}
           onClick={() => setStatus(s)}
-          className={`px-3 py-2 rounded-lg text-xs font-semibold border disabled:opacity-50 ${
-            status === s ? "bg-navy-900 text-white border-navy-900" : "border-gray-300 text-gray-600 hover:border-navy-500"
+          className={`px-3 py-2 rounded-lg text-xs font-display font-bold uppercase tracking-wide border disabled:opacity-50 ${
+            status === s
+              ? "bg-gold-500 text-navy-950 border-gold-500"
+              : "border-navy-900/15 text-navy-900/60 hover:border-navy-900/40"
           }`}
         >
           {ORDER_STATUS_LABEL[s]}
@@ -34,8 +36,8 @@ export default function OrderStatusButtons({ orderId, status }: { orderId: strin
       <button
         disabled={pending}
         onClick={() => setStatus("CANCELLED")}
-        className={`px-3 py-2 rounded-lg text-xs font-semibold border disabled:opacity-50 ${
-          status === "CANCELLED" ? "bg-red-600 text-white border-red-600" : "border-red-200 text-red-600 hover:border-red-500"
+        className={`px-3 py-2 rounded-lg text-xs font-display font-bold uppercase tracking-wide border disabled:opacity-50 ${
+          status === "CANCELLED" ? "bg-red-500 text-white border-red-500" : "border-red-200 text-red-600 hover:border-red-500"
         }`}
       >
         Annuler

@@ -98,9 +98,12 @@ export default function ProductForm({
       </div>
 
       {state?.error && <p className="text-sm text-red-600 font-medium">{state.error}</p>}
-      {state?.ok && <p className="text-sm text-green-600 font-medium">Enregistré ✓</p>}
+      {state?.ok && <p className="text-sm text-green-700 font-medium">Enregistré ✓</p>}
 
-      <button disabled={pending} className="self-start px-5 py-3 rounded-lg bg-navy-900 text-white font-semibold disabled:opacity-60">
+      <button
+        disabled={pending}
+        className="self-start px-5 py-3 rounded-lg bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase tracking-wide disabled:opacity-60"
+      >
         {pending ? "Enregistrement…" : "Enregistrer"}
       </button>
 
@@ -108,9 +111,13 @@ export default function ProductForm({
         .input {
           width: 100%;
           padding: 0.6rem 0.75rem;
-          border: 1px solid #d1d5db;
+          border: 1px solid rgba(15, 35, 82, 0.15);
           border-radius: 0.5rem;
           font-size: 0.875rem;
+          outline: none;
+        }
+        .input:focus {
+          border-color: #fbc000;
         }
       `}</style>
     </form>
@@ -120,7 +127,7 @@ export default function ProductForm({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold text-gray-500">{label}</span>
+      <span className="text-xs font-display font-bold uppercase tracking-wide text-navy-900/45">{label}</span>
       {children}
     </label>
   );
