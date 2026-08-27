@@ -529,7 +529,7 @@ async function main() {
   if (existingReviews === 0) {
     await prisma.review.createMany({
       data: [
-        { productId: brakePad, authorName: "Amira T. — Sfax", rating: 5, comment: "Commandé un kit de freinage le matin, livré en 48h à Sfax. Les références correspondaient exactement.", verified: true },
+        { productId: brakePad, authorName: "Mehdi B. — Sfax", rating: 5, comment: "Commandé un kit de freinage le matin, livré en 48h à Sfax. Les références correspondaient exactement.", verified: true },
         { productId: airFilter, authorName: "Salma T. — Tunis", rating: 5, comment: "J'ai envoyé ma carte grise sur WhatsApp, ils m'ont trouvé la pièce en 10 minutes. Service impeccable.", verified: true },
         { productId: oil, authorName: "Garage Ennasr — Ariana", rating: 5, comment: "Nous équipons notre garage chez eux depuis deux ans. Prix corrects et disponibilité réelle.", verified: true },
       ],

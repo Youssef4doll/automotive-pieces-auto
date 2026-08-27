@@ -9,7 +9,7 @@ export default async function PacksSection() {
   if (packs.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-10">
+    <section id="packs" className="mx-auto max-w-7xl px-4 py-10">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-6">
         <div>
           <Eyebrow k="packs.eyebrow" />

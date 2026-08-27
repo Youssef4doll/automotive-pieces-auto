@@ -11,6 +11,8 @@ import NotFoundBand from "@/components/NotFoundBand";
 import B2BBand from "@/components/B2BBand";
 import SectionHeading from "@/components/SectionHeading";
 import Eyebrow from "@/components/Eyebrow";
+import TrustBadges from "@/components/TrustBadges";
+import T from "@/components/T";
 import { getTopSellers } from "@/lib/data/catalog";
 import { getSettings } from "@/lib/settings";
 
@@ -24,13 +26,32 @@ export default async function HomePage() {
       <FinderGrid whatsapp={settings.shop_whatsapp} />
       <CategoryGrid />
       <PacksSection />
+      <TrustBadges />
       {topSellers.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-10">
-          <Eyebrow k="home.bestsellersEyebrow" />
-          <SectionHeading
-            k="home.bestsellers"
-            className="text-2xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight mb-6"
-          />
+        <section id="produits" className="mx-auto max-w-7xl px-4 py-10">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
+            <div>
+              <Eyebrow k="home.bestsellersEyebrow" />
+              <SectionHeading
+                k="home.bestsellers"
+                className="text-2xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight"
+              />
+            </div>
+            <div className="flex gap-2">
+              <span className="text-sm font-semibold px-3.5 py-2 rounded-full bg-navy-900 text-white">
+                <T k="product.chipAll" />
+              </span>
+              <span className="text-sm font-semibold px-3.5 py-2 rounded-full bg-white border border-navy-900/15 text-navy-900/80">
+                <T k="product.chipBrake" />
+              </span>
+              <span className="text-sm font-semibold px-3.5 py-2 rounded-full bg-white border border-navy-900/15 text-navy-900/80">
+                <T k="product.chipFilter" />
+              </span>
+              <span className="text-sm font-semibold px-3.5 py-2 rounded-full bg-white border border-navy-900/15 text-navy-900/80">
+                <T k="product.chipOil" />
+              </span>
+            </div>
+          </div>
           <ProductGrid products={topSellers} />
         </section>
       )}
