@@ -1,0 +1,241 @@
+// Automotive Pieces Auto — database schema
+// One database drives both the public storefront and the admin CRM,
+// so anything an admin changes (stock, price, order status, settings)
+// is reflected immediately on the storefront.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum DeliveryMethod {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  COD
+  CARD
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum CustomerSegment {
+  NEW
+  REGULAR
+  VIP
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role      @default(CUSTOMER)
+  segment      CustomerSegment @default(NEW)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  orders       Order[]
+  reviews      Review[]
+
+  @@index([role])
+}
+
+model Brand {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  logoUrl   String?
+  isPartsBrand Boolean @default(true) // parts brand (Kamoka, Bosch..) vs vehicle make brand
+  products  Product[]
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  name         String
+  slug         String     @unique
+  order        Int        @default(0)
+  parentId     String?
+  parent       Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children     Category[] @relation("CategoryTree")
+  products     Product[]
+}
+
+model VehicleMake {
+  id      String         @id @default(cuid())
+  name    String         @unique
+  slug    String         @unique
+  logoUrl String?
+  models  VehicleModel[]
+}
+
+model VehicleModel {
+  id        String         @id @default(cuid())
+  makeId    String
+  make      VehicleMake    @relation(fields: [makeId], references: [id], onDelete: Cascade)
+  name      String
+  yearFrom  Int?
+  yearTo    Int?
+  engines   VehicleEngine[]
+
+  @@index([makeId])
+}
+
+model VehicleEngine {
+  id        String        @id @default(cuid())
+  modelId   String
+  model     VehicleModel  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  name      String        // e.g. "1.5 dCi"
+  fuel      String?       // essence / diesel
+  powerHp   Int?
+  fitments  ProductFitment[]
+
+  @@index([modelId])
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  sku           String   @unique // reference stamped on the part
+  name          String
+  slug          String   @unique
+  brandId       String?
+  brand         Brand?   @relation(fields: [brandId], references: [id])
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id])
+  description   String   @default("")
+  imageUrl      String   @default("/images/parts-lineup.png")
+  oemRefs       String[] @default([])
+  specs         Json     @default("{}")
+  priceBuy      Decimal  @default(0) @db.Decimal(10, 2)  // prix d'achat
+  priceSell     Decimal  @db.Decimal(10, 2)               // prix de vente
+  compareAtPrice Decimal? @db.Decimal(10, 2)              // struck-through reference price
+  currency      String   @default("TND")
+  stockQty      Int      @default(0)
+  lowStockThreshold Int  @default(5)
+  isTopSeller   Boolean  @default(false)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  fitments      ProductFitment[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+  stockMoves    StockMovement[]
+
+  @@index([categoryId])
+  @@index([brandId])
+}
+
+model ProductFitment {
+  id        String        @id @default(cuid())
+  productId String
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  engineId  String
+  engine    VehicleEngine @relation(fields: [engineId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, engineId])
+  @@index([engineId])
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  change    Int      // positive = restock, negative = sold/adjusted
+  reason    String   // "order", "restock", "adjustment"
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+model Order {
+  id             String         @id @default(cuid())
+  ref            String         @unique // e.g. CMD-1042
+  userId         String?
+  user           User?          @relation(fields: [userId], references: [id])
+  customerName   String
+  phone          String
+  email          String?
+  governorate    String
+  address        String?
+  deliveryMethod DeliveryMethod @default(DELIVERY)
+  paymentMethod  PaymentMethod  @default(COD)
+  status         OrderStatus    @default(PENDING)
+  subtotal       Decimal        @db.Decimal(10, 2)
+  shippingFee    Decimal        @db.Decimal(10, 2) @default(0)
+  total          Decimal        @db.Decimal(10, 2)
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  items          OrderItem[]
+  history        OrderStatusEvent[]
+
+  @@index([status])
+  @@index([userId])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+  name      String   // snapshot
+  sku       String   // snapshot
+  imageUrl  String   @default("/images/parts-lineup.png")
+  unitPrice Decimal  @db.Decimal(10, 2)
+  qty       Int
+  lineTotal Decimal  @db.Decimal(10, 2)
+
+  @@index([orderId])
+}
+
+model OrderStatusEvent {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  authorName  String
+  rating      Int
+  comment     String
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([productId])
+}
+
+model Setting {
+  key   String @id
+  value String
+}

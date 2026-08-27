@@ -1,0 +1,179 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useLocale } from "@/i18n/LocaleProvider";
+import { useVehicle } from "@/lib/vehicle-store";
+
+type Engine = { id: string; name: string; fuel: string | null; powerHp: number | null };
+type Model = { id: string; name: string; yearFrom: number | null; yearTo: number | null; engines: Engine[] };
+type Make = { id: string; name: string; slug: string; models: Model[] };
+
+export default function VehiclePicker({
+  onClose,
+  initialMakeSlug,
+}: {
+  onClose: () => void;
+  initialMakeSlug?: string;
+}) {
+  const { t } = useLocale();
+  const setVehicle = useVehicle((s) => s.set);
+  const [makes, setMakes] = useState<Make[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState<"make" | "model" | "engine">("make");
+  const [make, setMake] = useState<Make | null>(null);
+  const [model, setModel] = useState<Model | null>(null);
+  const [filter, setFilter] = useState("");
+
+  useEffect(() => {
+    fetch("/api/vehicles")
+      .then((r) => r.json())
+      .then((data: Make[]) => {
+        setMakes(data);
+        if (initialMakeSlug) {
+          const preset = data.find((m) => m.slug === initialMakeSlug);
+          if (preset) {
+            setMake(preset);
+            setStep("model");
+          }
+        }
+      })
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filteredMakes = makes.filter((m) => m.name.toLowerCase().includes(filter.toLowerCase()));
+  const filteredModels = make?.models.filter((m) => m.name.toLowerCase().includes(filter.toLowerCase())) ?? [];
+
+  function pickEngine(engine: Engine) {
+    if (!make || !model) return;
+    setVehicle({
+      makeId: make.id,
+      makeName: make.name,
+      modelId: model.id,
+      modelName: model.name,
+      engineId: engine.id,
+      engineName: engine.name,
+    });
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-2 text-sm">
+            <button
+              className={step === "make" ? "font-bold text-navy-900" : "text-gray-400"}
+              onClick={() => {
+                setStep("make");
+                setFilter("");
+              }}
+            >
+              {t("vehicle.make")}
+            </button>
+            {make && (
+              <>
+                <span className="text-gray-300">›</span>
+                <button
+                  className={step === "model" ? "font-bold text-navy-900" : "text-gray-400"}
+                  onClick={() => {
+                    setStep("model");
+                    setFilter("");
+                  }}
+                >
+                  {make.name}
+                </button>
+              </>
+            )}
+            {model && (
+              <>
+                <span className="text-gray-300">›</span>
+                <span className="font-bold text-navy-900">{model.name}</span>
+              </>
+            )}
+          </div>
+          <button onClick={onClose} className="p-1 text-gray-500" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+
+        {step !== "engine" && (
+          <div className="p-3 border-b">
+            <input
+              autoFocus
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Rechercher…"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-navy-700"
+            />
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto p-2">
+          {loading && <p className="text-center text-gray-400 py-8 text-sm">Chargement…</p>}
+
+          {!loading && step === "make" && (
+            <ul className="grid grid-cols-2 gap-2 p-1">
+              {filteredMakes.map((m) => (
+                <li key={m.id}>
+                  <button
+                    onClick={() => {
+                      setMake(m);
+                      setStep("model");
+                      setFilter("");
+                    }}
+                    className="w-full text-start px-3 py-3 rounded-lg border border-gray-200 hover:border-navy-700 hover:bg-navy-50 text-sm font-medium"
+                  >
+                    {m.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {!loading && step === "model" && make && (
+            <ul className="flex flex-col gap-2 p-1">
+              {filteredModels.map((m) => (
+                <li key={m.id}>
+                  <button
+                    onClick={() => {
+                      setModel(m);
+                      setStep("engine");
+                    }}
+                    className="w-full text-start px-3 py-3 rounded-lg border border-gray-200 hover:border-navy-700 flex items-center justify-between text-sm"
+                  >
+                    <span className="font-medium">{m.name}</span>
+                    <span className="text-xs text-gray-400">
+                      {m.yearFrom}–{m.yearTo}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {!loading && step === "engine" && model && (
+            <ul className="flex flex-col gap-2 p-1">
+              {model.engines.map((e) => (
+                <li key={e.id}>
+                  <button
+                    onClick={() => pickEngine(e)}
+                    className="w-full text-start px-3 py-3 rounded-lg border border-gray-200 hover:border-navy-700 flex items-center justify-between text-sm"
+                  >
+                    <span className="font-medium">{e.name}</span>
+                    <span className="text-xs text-gray-400">
+                      {e.fuel} {e.powerHp ? `· ${e.powerHp}ch` : ""}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
