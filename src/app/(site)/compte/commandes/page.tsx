@@ -26,7 +26,7 @@ export default async function OrdersTrackingPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl font-extrabold text-navy-950">Mes commandes</h1>
+        <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 tracking-tight">Mes commandes</h1>
         <Link href="/compte" className="text-sm text-navy-900 underline">← Mon compte</Link>
       </div>
 

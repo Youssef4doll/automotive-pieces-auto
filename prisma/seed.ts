@@ -380,7 +380,20 @@ async function main() {
     { sku: "OIL-17001", name: "Huile moteur CASTROL EDGE 5W30 (5L)", brand: "Castrol", category: "Lubrifiant>Huile moteur", priceBuy: 68, priceSell: 94.00, stockQty: 45, description: "Huile moteur synthèse 5W30, bidon 5 litres, toutes motorisations essence/diesel récentes", isTopSeller: true },
     { sku: "OIL-17002", name: "Huile moteur CASTROL MAGNATEC 10W40 (4L)", brand: "Castrol", category: "Lubrifiant>Huile moteur", priceBuy: 48, priceSell: 69.00, stockQty: 38, description: "Huile moteur semi-synthèse 10W40, bidon 4 litres" },
     { sku: "OIL-17003", name: "Antigel CASTROL -37°C (5L)", brand: "Castrol", category: "Lubrifiant>Antigel", priceBuy: 22, priceSell: 34.00, stockQty: 30, description: "Liquide de refroidissement prêt à l'emploi, protection -37°C" },
+
+    // ---- Packs entretien — real bundle SKUs, priced honestly as sum − 15% ----
+    { sku: "PACK-REVISION-15K", name: "Pack Révision 15 000 km", brand: "Automotive", category: "Lubrifiant>Huile moteur", priceBuy: 90, priceSell: 118.00, compareAt: 138.60, stockQty: 20, description: "Vidange complète : huile moteur 5W-30 (5L), filtre à huile et filtre à air.", engineFitCount: 0 },
+    { sku: "PACK-FREINAGE-AV-AR", name: "Pack Freinage avant + arrière", brand: "Automotive", category: "Freinage>Kit de plaquettes de frein", priceBuy: 165, priceSell: 221.00, compareAt: 260.00, stockQty: 12, description: "Plaquettes avant et arrière, plus disque de frein avant : de quoi refaire les quatre roues.", engineFitCount: 0 },
+    { sku: "PACK-HIVER", name: "Pack Prêt pour l'hiver", brand: "Automotive", category: "Carosserie>Balai d'essuie-glace", priceBuy: 65, priceSell: 83.00, compareAt: 98.00, stockQty: 20, description: "Balais d'essuie-glace, antigel -37°C et thermostat d'eau.", engineFitCount: 0 },
   ];
+
+  // Component breakdown shown in the pack's "Dans le pack" list — pulled from
+  // the real, currently seeded products above, not a separate invented list.
+  const PACK_CONTENTS: Record<string, string[]> = {
+    "PACK-REVISION-15K": ["OC-90-KM", "F217001", "OIL-17001"],
+    "PACK-FREINAGE-AV-AR": ["BR-4820", "BR-4822", "DS-1001"],
+    "PACK-HIVER": ["WB-13001", "OIL-17003", "TH-14002"],
+  };
 
   const productIdBySku = new Map<string, string>();
   for (const p of products) {
@@ -404,6 +417,7 @@ async function main() {
         lowStockThreshold: 5,
         isTopSeller: !!p.isTopSeller,
         oemRefs: p.oemRefs ?? [],
+        specs: p.sku in PACK_CONTENTS ? { packContents: PACK_CONTENTS[p.sku] } : undefined,
       },
     });
     productIdBySku.set(p.sku, created.id);
@@ -515,9 +529,9 @@ async function main() {
   if (existingReviews === 0) {
     await prisma.review.createMany({
       data: [
-        { productId: brakePad, authorName: "Amira T.", rating: 5, comment: "Livré en 24h à Tunis, pièce parfaitement compatible avec ma Clio IV.", verified: true },
-        { productId: airFilter, authorName: "Mohamed G.", rating: 5, comment: "Prix correct et référence vérifiée avant envoi, aucune mauvaise surprise.", verified: true },
-        { productId: oil, authorName: "Sonia F.", rating: 4, comment: "Bon rapport qualité prix, je recommande le paiement à la livraison.", verified: true },
+        { productId: brakePad, authorName: "Amira T. — Sfax", rating: 5, comment: "Commandé un kit de freinage le matin, livré en 48h à Sfax. Les références correspondaient exactement.", verified: true },
+        { productId: airFilter, authorName: "Salma T. — Tunis", rating: 5, comment: "J'ai envoyé ma carte grise sur WhatsApp, ils m'ont trouvé la pièce en 10 minutes. Service impeccable.", verified: true },
+        { productId: oil, authorName: "Garage Ennasr — Ariana", rating: 5, comment: "Nous équipons notre garage chez eux depuis deux ans. Prix corrects et disponibilité réelle.", verified: true },
       ],
     });
   }

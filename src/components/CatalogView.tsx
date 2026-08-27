@@ -42,7 +42,7 @@ export default function CatalogView({
         )}
       </nav>
 
-      <h1 className="text-xl sm:text-2xl font-extrabold text-navy-950 mb-1">{title}</h1>
+      <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mb-1 tracking-tight">{title}</h1>
       <p className="text-sm text-gray-500 mb-5">
         {products.length} référence{products.length > 1 ? "s" : ""} · 24h Grand Tunis, 48–72h régions
       </p>

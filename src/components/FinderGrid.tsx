@@ -12,6 +12,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [presetMake, setPresetMake] = useState<string | undefined>(undefined);
 
+  const [modelQuery, setModelQuery] = useState("");
   const [vin, setVin] = useState("");
   const [vinMsg, setVinMsg] = useState<string | null>(null);
 
@@ -23,6 +24,11 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
   function openPicker(makeSlug?: string) {
     setPresetMake(makeSlug);
     setPickerOpen(true);
+  }
+
+  function submitModel(e: React.FormEvent) {
+    e.preventDefault();
+    openPicker();
   }
 
   function submitVin(e: React.FormEvent) {
@@ -54,91 +60,127 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-10">
-      <h2 className="text-xl sm:text-2xl font-extrabold text-navy-950 mb-5">{t("finder.title")}</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <button
-          onClick={() => openPicker()}
-          className="text-start p-4 rounded-xl border-2 border-gray-200 hover:border-navy-700 bg-white flex flex-col gap-2"
-        >
-          <span className="text-2xl">🚗</span>
-          <span className="font-bold text-navy-900 text-sm">{t("finder.byModel")}</span>
-          <span className="text-xs text-gray-500">{t("finder.byModelDesc")}</span>
-        </button>
+      <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-8">
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-6">
+          <h2 className="font-heading font-extrabold uppercase text-xl sm:text-2xl text-navy-950 tracking-tight">
+            {t("finder.title")}
+          </h2>
+          <p className="text-sm text-gray-500">{t("finder.subtitle")}</p>
+        </div>
 
-        <div className="p-4 rounded-xl border-2 border-gray-200 bg-white flex flex-col gap-2">
-          <span className="text-2xl">📇</span>
-          <span className="font-bold text-navy-900 text-sm">{t("finder.byPlate")}</span>
-          <span className="text-xs text-gray-500">{t("finder.byPlateDesc")}</span>
-          {plateSent ? (
-            <span className="text-xs font-semibold text-green-700 mt-1">{t("finder.plateReceived")}</span>
-          ) : (
-            <label className="mt-1 text-xs font-semibold text-navy-900 bg-gold-500 hover:bg-gold-400 rounded-lg px-3 py-2 text-center cursor-pointer min-h-11 flex items-center justify-center">
-              {t("finder.uploadPhoto")}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Par modèle */}
+          <div className="flex flex-col gap-2.5">
+            <FinderTitle k="finder.byModel" />
+            <p className="text-xs text-gray-500 min-h-8">{t("finder.byModelDesc")}</p>
+            <form onSubmit={submitModel}>
               <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={() => setPlateSent(true)}
+                value={modelQuery}
+                onChange={(e) => setModelQuery(e.target.value)}
+                placeholder={t("finder.byModelPlaceholder")}
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-navy-700"
               />
-            </label>
-          )}
-        </div>
-
-        <div className="p-4 rounded-xl border-2 border-gray-200 bg-white flex flex-col gap-2">
-          <span className="text-2xl">🔢</span>
-          <span className="font-bold text-navy-900 text-sm">{t("finder.byVin")}</span>
-          <span className="text-xs text-gray-500">{t("finder.byVinDesc")}</span>
-          <form onSubmit={submitVin} className="mt-1 flex flex-col gap-1.5">
-            <input
-              dir="ltr"
-              value={vin}
-              onChange={(e) => setVin(e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, "").slice(0, 17))}
-              placeholder="VF15R..."
-              className={`px-2.5 py-2 text-sm border rounded-lg outline-none font-mono tracking-wider ${
-                vin.length === 17 ? "border-green-500" : vin.length > 0 ? "border-amber-400" : "border-gray-300"
-              }`}
-            />
-            <div className="flex items-center justify-between text-[10px] text-gray-400">
-              <span>{vin.length}/17</span>
-              <button type="submit" className="text-navy-900 font-bold underline">
-                {t("hero.searchCta")}
-              </button>
-            </div>
-            {vinMsg && <p className="text-[11px] text-amber-600">{vinMsg}</p>}
-          </form>
-        </div>
-
-        <div className="p-4 rounded-xl border-2 border-gray-200 bg-white flex flex-col gap-2">
-          <span className="text-2xl">🔎</span>
-          <span className="font-bold text-navy-900 text-sm">{t("finder.byRef")}</span>
-          <span className="text-xs text-gray-500">{t("finder.byRefDesc")}</span>
-          <form onSubmit={submitRef} className="mt-1 flex gap-1.5">
-            <input
-              dir="ltr"
-              value={ref}
-              onChange={(e) => setRef(e.target.value)}
-              placeholder="FL-0810…"
-              className="flex-1 min-w-0 px-2.5 py-2 text-sm border border-gray-300 rounded-lg outline-none"
-            />
-            <button type="submit" className="px-2.5 rounded-lg bg-navy-900 text-white text-xs font-bold shrink-0">
-              →
+            </form>
+            <button
+              onClick={() => openPicker()}
+              className="mt-auto w-full py-2.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-xs tracking-wide flex items-center justify-center gap-2"
+            >
+              {t("finder.browse")}
             </button>
-          </form>
-          {refMsg && (
+          </div>
+
+          {/* Par carte grise */}
+          <div className="flex flex-col gap-2.5">
+            <FinderTitle k="finder.byPlate" />
+            <p className="text-xs text-gray-500 min-h-8">{t("finder.byPlateDesc")}</p>
+            <div className="flex-1" />
+            {plateSent ? (
+              <span className="text-xs font-semibold text-green-700 py-2.5">{t("finder.plateReceived")}</span>
+            ) : (
+              <label className="w-full py-2.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-xs tracking-wide text-center cursor-pointer flex items-center justify-center gap-2">
+                {t("finder.uploadPhoto")}
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={() => setPlateSent(true)} />
+              </label>
+            )}
             <a
-              href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Référence: ${ref}`)}`}
+              href={`https://wa.me/${whatsapp}`}
               target="_blank"
               rel="noreferrer"
-              className="text-[11px] text-green-700 font-semibold underline"
+              className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-display font-bold uppercase text-xs tracking-wide text-center flex items-center justify-center gap-2"
             >
-              {refMsg}
+              WhatsApp
             </a>
-          )}
+          </div>
+
+          {/* Par VIN */}
+          <div className="flex flex-col gap-2.5">
+            <FinderTitle k="finder.byVin" />
+            <p className="text-xs text-gray-500 min-h-8">{t("finder.byVinDesc")}</p>
+            <form onSubmit={submitVin} className="flex flex-col gap-2.5 flex-1">
+              <div>
+                <input
+                  dir="ltr"
+                  value={vin}
+                  onChange={(e) => setVin(e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, "").slice(0, 17))}
+                  placeholder="VF1BR1V0H12345678"
+                  className={`w-full px-3 py-2.5 text-sm border rounded-lg outline-none font-mono tracking-wider ${
+                    vin.length === 17 ? "border-green-500" : vin.length > 0 ? "border-amber-400" : "border-gray-300"
+                  }`}
+                />
+                <div className="flex items-center justify-between text-[10px] text-gray-400 mt-1">
+                  <span>{vin.length}/17</span>
+                </div>
+                {vinMsg && <p className="text-[11px] text-amber-600 mt-1">{vinMsg}</p>}
+              </div>
+              <button
+                type="submit"
+                disabled={vin.length !== 17}
+                className="mt-auto w-full py-2.5 rounded-lg bg-gray-200 enabled:bg-navy-900 disabled:text-gray-400 enabled:text-white enabled:hover:bg-navy-800 font-display font-bold uppercase text-xs tracking-wide"
+              >
+                {t("finder.identify")}
+              </button>
+            </form>
+          </div>
+
+          {/* Par référence */}
+          <div className="flex flex-col gap-2.5">
+            <FinderTitle k="finder.byRef" />
+            <p className="text-xs text-gray-500 min-h-8">{t("finder.byRefDesc")}</p>
+            <form onSubmit={submitRef} className="flex flex-col gap-2.5 flex-1">
+              <input
+                dir="ltr"
+                value={ref}
+                onChange={(e) => setRef(e.target.value)}
+                placeholder="EX. FL-0810"
+                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-navy-700"
+              />
+              {refMsg && (
+                <a
+                  href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Référence: ${ref}`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] text-green-700 font-semibold underline"
+                >
+                  {refMsg}
+                </a>
+              )}
+              <button
+                type="submit"
+                className="mt-auto w-full py-2.5 rounded-lg bg-gray-200 hover:bg-navy-900 hover:text-white text-gray-600 font-display font-bold uppercase text-xs tracking-wide transition"
+              >
+                {t("finder.search")}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
 
       {pickerOpen && <VehiclePicker onClose={() => setPickerOpen(false)} initialMakeSlug={presetMake} />}
     </section>
   );
+}
+
+function FinderTitle({ k }: { k: "finder.byModel" | "finder.byPlate" | "finder.byVin" | "finder.byRef" }) {
+  const { t } = useLocale();
+  return <h3 className="font-display font-bold uppercase text-red-500 text-sm tracking-wide">{t(k)}</h3>;
 }

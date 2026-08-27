@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useLocale } from "@/i18n/LocaleProvider";
-import MyVehicleChip from "./MyVehicleChip";
 
 const POPULAR = [
   { label: "Plaquettes de frein", href: "/catalogue/freinage/freinage-kit-de-plaquettes-de-frein" },
+  { label: "Huile 5W-30", href: "/catalogue/lubrifiant/lubrifiant-huile-moteur" },
   { label: "Filtre à air", href: "/catalogue/filtres/filtres-filtre-a-air" },
-  { label: "Amortisseurs", href: "/catalogue/suspension/suspension-amortisseur" },
-  { label: "Huile moteur", href: "/catalogue/lubrifiant/lubrifiant-huile-moteur" },
 ];
 
 export default function Hero() {
@@ -24,38 +23,52 @@ export default function Hero() {
   }
 
   return (
-    <section className="bg-navy-900 text-white">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:py-14 flex flex-col items-center text-center gap-5">
-        <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight max-w-3xl">{t("hero.title")}</h1>
-        <p className="text-white/70 text-sm sm:text-base max-w-xl">{t("hero.subtitle")}</p>
+    <section className="bg-navy-900 text-white overflow-hidden">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:py-16 grid lg:grid-cols-2 gap-10 items-center">
+        <div className="text-center lg:text-start">
+          <h1 className="font-display font-bold uppercase text-4xl sm:text-6xl leading-[0.95] tracking-tight">
+            <span className="block text-white">{t("hero.titleLine1")}</span>
+            <span className="block text-gold-500">{t("hero.titleLine2")}</span>
+          </h1>
+          <div className="mt-4 w-24 h-1.5 bg-red-500 rounded-full mx-auto lg:mx-0" />
+          <p className="mt-5 text-white/70 text-base sm:text-lg">{t("hero.subtitle")}</p>
 
-        <form onSubmit={submit} className="w-full max-w-2xl flex rounded-xl overflow-hidden shadow-lg mt-2">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            type="search"
-            placeholder={t("hero.searchPlaceholder")}
-            className="flex-1 min-w-0 px-4 py-3.5 sm:py-4 text-navy-950 outline-none text-sm sm:text-base"
-          />
-          <button type="submit" className="px-5 sm:px-8 bg-gold-500 hover:bg-gold-400 text-navy-950 font-bold text-sm sm:text-base">
-            {t("hero.searchCta")}
-          </button>
-        </form>
+          <form onSubmit={submit} className="mt-6 flex rounded-lg overflow-hidden shadow-lg bg-white">
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              type="search"
+              placeholder={t("hero.searchPlaceholder")}
+              className="flex-1 min-w-0 px-4 py-3.5 sm:py-4 bg-white text-navy-950 outline-none text-sm sm:text-base"
+            />
+            <button type="submit" className="px-5 sm:px-8 bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-sm sm:text-base tracking-wide">
+              {t("hero.searchCta")}
+            </button>
+          </form>
 
-        <div className="flex flex-wrap gap-2 justify-center">
-          {POPULAR.map((p) => (
-            <a
-              key={p.href}
-              href={p.href}
-              className="px-3 py-2 min-h-10 flex items-center rounded-full border border-white/25 text-xs sm:text-sm text-white/80 hover:bg-white/10"
-            >
-              {p.label}
-            </a>
-          ))}
+          <div className="mt-4 flex flex-wrap gap-2 justify-center lg:justify-start">
+            <span className="text-xs text-white/50 self-center me-1">{t("hero.popular")}</span>
+            {POPULAR.map((p) => (
+              <a
+                key={p.href}
+                href={p.href}
+                className="px-3 py-1.5 min-h-9 flex items-center rounded-full border border-white/25 text-xs sm:text-sm text-white/85 hover:bg-white/10"
+              >
+                {p.label}
+              </a>
+            ))}
+          </div>
         </div>
 
-        <div className="mt-2">
-          <MyVehicleChip />
+        <div className="relative h-56 sm:h-72 lg:h-96">
+          <Image
+            src="/images/parts-lineup.png"
+            alt="Pièces automobiles Automotive"
+            fill
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-contain"
+            priority
+          />
         </div>
       </div>
     </section>

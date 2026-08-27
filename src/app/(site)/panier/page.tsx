@@ -27,7 +27,7 @@ export default function CartPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-xl sm:text-2xl font-extrabold text-navy-950 mb-6">{t("cart.title")}</h1>
+      <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mb-6 tracking-tight">{t("cart.title")}</h1>
       <div className="flex flex-col gap-3 mb-6">
         {items.map((item) => (
           <div key={item.productId} className="flex gap-4 p-4 rounded-xl border border-gray-200 bg-white">

@@ -91,7 +91,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {product.brand && (
             <span className="text-xs font-bold text-gray-400 uppercase">{product.brand.name}</span>
           )}
-          <h1 className="text-xl sm:text-2xl font-extrabold text-navy-950 mt-1 mb-2">{product.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mt-1 mb-2 tracking-tight">{product.name}</h1>
           <p className="text-xs text-gray-400 mb-3">Réf. {product.sku}</p>
 
           <div className="flex items-baseline gap-3 mb-3">

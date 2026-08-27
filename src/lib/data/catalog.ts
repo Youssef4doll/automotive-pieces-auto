@@ -144,6 +144,31 @@ export async function findProductByReference(query: string) {
   return product;
 }
 
+export async function getPacks() {
+  const packs = await prisma.product.findMany({
+    where: { sku: { startsWith: "PACK-" }, active: true },
+    orderBy: { priceSell: "asc" },
+  });
+
+  const allContentSkus = packs.flatMap((p) => {
+    const specs = p.specs as { packContents?: string[] } | null;
+    return specs?.packContents ?? [];
+  });
+  const components = allContentSkus.length
+    ? await prisma.product.findMany({ where: { sku: { in: allContentSkus } } })
+    : [];
+  const componentBySku = new Map(components.map((c) => [c.sku, c]));
+
+  return packs.map((p) => {
+    const specs = p.specs as { packContents?: string[] } | null;
+    const contents = (specs?.packContents ?? [])
+      .map((sku) => componentBySku.get(sku))
+      .filter((c): c is (typeof components)[number] => !!c)
+      .map((c) => ({ name: c.name, price: toNumber(c.priceSell) }));
+    return { ...serializeProduct(p), contents };
+  });
+}
+
 export async function getRecentReviews(take = 6) {
   return prisma.review.findMany({
     orderBy: { createdAt: "desc" },

@@ -12,7 +12,7 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
   return (
     <div className="mx-auto max-w-xl px-4 py-16 text-center">
       <div className="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-3xl mx-auto mb-5">✓</div>
-      <h1 className="text-2xl font-extrabold text-navy-950 mb-2">Commande confirmée !</h1>
+      <h1 className="text-2xl font-heading font-extrabold uppercase text-navy-950 mb-2 tracking-tight">Commande confirmée !</h1>
       <p className="text-gray-600 mb-1">Merci pour votre confiance. Nous préparons votre commande.</p>
       <p className="text-sm text-gray-400 mb-6">
         Numéro de commande : <span className="font-mono font-bold text-navy-900" dir="ltr">{order.ref}</span>

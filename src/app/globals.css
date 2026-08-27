@@ -1,21 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f6f8;
-  --foreground: #10203f;
+  --background: #f4f5f7;
+  --foreground: #0f2352;
 
-  --color-navy-950: #08122a;
-  --color-navy-900: #0d1c3d;
-  --color-navy-800: #142a56;
-  --color-navy-700: #1c3670;
-  --color-navy-600: #274686;
+  /* Exact brand tokens lifted from the Claude Design reference export. */
+  --color-navy-950: #081633;
+  --color-navy-900: #0f2352;
+  --color-navy-800: #16305f;
+  --color-navy-700: #1c3a70;
+  --color-navy-600: #274a87;
 
-  --color-gold-600: #d99a00;
-  --color-gold-500: #f5b400;
-  --color-gold-400: #ffc933;
+  --color-gold-600: #e0ac00;
+  --color-gold-500: #fbc000;
+  --color-gold-400: #ffd23d;
 
-  --color-red-600: #d81f2c;
-  --color-red-500: #e93341;
+  --color-red-600: #c50e26;
+  --color-red-500: #e1112c;
 }
 
 @theme inline {
@@ -31,7 +32,9 @@
   --color-gold-400: var(--color-gold-400);
   --color-red-600: var(--color-red-600);
   --color-red-500: var(--color-red-500);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-barlow);
+  --font-display: var(--font-barlow-condensed);
+  --font-heading: var(--font-archivo);
 }
 
 html {
@@ -41,6 +44,23 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-barlow), system-ui, sans-serif;
+}
+
+/* Arabic has no glyphs in Barlow/Barlow-Semi-Condensed/Archivo — swap the
+   whole family stack (body copy and headings alike) to Cairo under RTL. */
+[dir="rtl"] body,
+[dir="rtl"] .font-display,
+[dir="rtl"] .font-heading {
+  font-family: var(--font-cairo), system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-barlow-condensed), var(--font-barlow), sans-serif;
+}
+
+.font-heading {
+  font-family: var(--font-archivo), var(--font-barlow), sans-serif;
 }
 
 [dir="rtl"] .rtl-flip {
