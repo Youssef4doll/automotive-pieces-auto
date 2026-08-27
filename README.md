@@ -59,25 +59,34 @@ npm run db:seed               # taxonomy, brands, vehicles, ~50 products, demo o
 npm run dev
 ```
 
-### Database: Neon Postgres
+### Database: Supabase Postgres
 
-This project targets [Neon](https://neon.tech) (serverless Postgres) in production, and the schema uses Prisma's
+This project targets [Supabase](https://supabase.com) Postgres in production, and the schema uses Prisma's
 `directUrl` split — see `prisma/schema.prisma`:
 
-- **`DATABASE_URL`** — the **pooled** connection string (hostname has a `-pooler` suffix). Used for all normal app
-  queries; required on serverless runtimes like Vercel, which open many short-lived connections that would
-  otherwise exhaust Postgres's connection limit.
-- **`DATABASE_URL_UNPOOLED`** — the **direct** connection string (no `-pooler`). Used only for
-  `prisma migrate` — PgBouncer's transaction-pooling mode (what the pooled URL routes through) doesn't support
-  the session-level features migrations need.
+- **`DATABASE_URL`** — the **Transaction pooler** connection string (port `6543`, host
+  `aws-0-<region>.pooler.supabase.com`). Used for all normal app queries; required on serverless runtimes like
+  Vercel, which open many short-lived connections that would otherwise exhaust Postgres's connection limit.
+  Must include `?pgbouncer=true` at the end — this tells Prisma to skip prepared statements, which PgBouncer's
+  transaction-pooling mode doesn't support.
+- **`DATABASE_URL_UNPOOLED`** — the **direct** connection string (port `5432`). Used only for `prisma migrate`,
+  which needs session-level features the pooled connection doesn't support.
 
-Get both from the Neon console (Project → Connection Details — it shows a pooled and a direct string) and set
-them in `.env` locally and in your deploy platform's environment variables (e.g. Vercel → Project → Settings →
-Environment Variables). Any other Postgres works too — just set `DATABASE_URL` to it and either omit
-`DATABASE_URL_UNPOOLED` or point it at the same value.
+Get both from the Supabase dashboard → **Project Settings → Database → Connection string** (it has tabs for
+"Transaction pooler" and "Direct connection" — copy each into the matching env var). Set them in `.env` locally
+and in your deploy platform's environment variables (e.g. Vercel → Project → Settings → Environment Variables).
 
-Running `npm run db:seed` or `prisma migrate` against a fresh Neon database works from any machine with normal
-network access; it does not need the Neon CLI or MCP server installed, just the connection string in `.env`.
+One gotcha: Supabase's **direct** connection (`db.<project-ref>.supabase.co:5432`) requires IPv6. If migrations
+fail to connect from a machine/network that's IPv4-only, use the **Session pooler** string instead for
+`DATABASE_URL_UNPOOLED` (same `pooler.supabase.com` host as the transaction pooler, but port `5432`) — it
+supports the session-level features migrations need and works over IPv4.
+
+Any other standard Postgres works too (Neon, RDS, your own server, etc.) — just set `DATABASE_URL` to it and
+either omit `DATABASE_URL_UNPOOLED` or point it at the same value; the pooled/direct split above is specifically
+how to wire up Supabase.
+
+Running `npm run db:seed` or `prisma migrate` against a fresh Supabase database works from any machine with
+normal network access — no Supabase CLI required, just the connection strings in `.env`.
 
 ### Demo accounts (from the seed)
 
