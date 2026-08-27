@@ -442,10 +442,16 @@ async function main() {
   // guessed contact details. See src/lib/settings.ts DEFAULT_SETTINGS.
 
   console.log("Seeding admin + demo customer…");
+  // update: {} here would mean re-running the seed against a database that
+  // already has these rows (e.g. a stale demo account, or a password hash
+  // from a previous version of this script) leaves the password exactly as
+  // it was — so the "Admin login: .../admin1234" line below would print a
+  // credential that isn't actually true. Reset the hash (and the other
+  // fields) on every run so the printed credentials are always correct.
   const adminPasswordHash = await bcrypt.hash("admin1234", 10);
   const admin = await prisma.user.upsert({
     where: { email: "admin@automotive-pieces-auto.tn" },
-    update: {},
+    update: { passwordHash: adminPasswordHash, name: "Admin", role: "ADMIN" },
     create: {
       email: "admin@automotive-pieces-auto.tn",
       passwordHash: adminPasswordHash,
@@ -457,7 +463,13 @@ async function main() {
   const customerPasswordHash = await bcrypt.hash("client1234", 10);
   const customer = await prisma.user.upsert({
     where: { email: "karim.bensalah@example.com" },
-    update: {},
+    update: {
+      passwordHash: customerPasswordHash,
+      name: "Karim Ben Salah",
+      phone: "+216 20 111 222",
+      role: "CUSTOMER",
+      segment: "REGULAR",
+    },
     create: {
       email: "karim.bensalah@example.com",
       passwordHash: customerPasswordHash,
