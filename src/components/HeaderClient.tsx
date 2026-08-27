@@ -32,6 +32,7 @@ export default function HeaderClient({
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [vehicleOpen, setVehicleOpen] = useState(false);
+  const [expandedFamily, setExpandedFamily] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
   function submitSearch(e: React.FormEvent) {
@@ -53,7 +54,10 @@ export default function HeaderClient({
         </div>
       </div>
 
-      <header className="sticky top-0 z-40 bg-navy-900 text-white shadow-md">
+      <header
+        className="relative sticky top-0 z-40 bg-navy-900 text-white shadow-md"
+        onMouseLeave={() => setMenuOpen(false)}
+      >
         <div className="mx-auto max-w-7xl px-3 sm:px-4">
           <div className="flex items-center gap-3 py-3">
             <button
@@ -81,19 +85,15 @@ export default function HeaderClient({
               <Link href="/" className="px-3 py-2 rounded-md hover:bg-white/10 border-b-2 border-gold-500">
                 {t("nav.home")}
               </Link>
-              <div
-                className="relative"
+              <button
+                className="px-3 py-2 rounded-md hover:bg-white/10 flex items-center gap-1"
                 onMouseEnter={() => setMenuOpen(true)}
-                onMouseLeave={() => setMenuOpen(false)}
               >
-                <button className="px-3 py-2 rounded-md hover:bg-white/10 flex items-center gap-1">
-                  {t("nav.products")}
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-                {menuOpen && <MegaMenu families={menu} onNavigate={() => setMenuOpen(false)} />}
-              </div>
+                {t("nav.products")}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
               <Link href="/#marques" className="px-3 py-2 rounded-md hover:bg-white/10">
                 {t("nav.brands")}
               </Link>
@@ -105,7 +105,9 @@ export default function HeaderClient({
               </a>
             </nav>
 
-            <form onSubmit={submitSearch} className="hidden md:flex flex-1 max-w-md mx-2">
+            <div className="hidden lg:block flex-1" />
+
+            <form onSubmit={submitSearch} className="hidden md:flex flex-1 lg:flex-initial lg:w-[220px] xl:w-[280px] mx-2">
               <div className="flex w-full rounded-md overflow-hidden bg-white">
                 <input
                   value={q}
@@ -120,7 +122,7 @@ export default function HeaderClient({
               </div>
             </form>
 
-            <div className="flex items-center gap-2 ms-auto">
+            <div className="flex items-center gap-2">
               <a
                 href={`https://wa.me/${whatsapp}`}
                 target="_blank"
@@ -187,6 +189,8 @@ export default function HeaderClient({
             </div>
           </form>
         </div>
+
+        {menuOpen && <MegaMenu families={menu} onNavigate={() => setMenuOpen(false)} />}
       </header>
 
       {mobileOpen && (
@@ -227,17 +231,43 @@ export default function HeaderClient({
               </Link>
               <div className="h-px bg-gray-200 my-2" />
               <p className="px-3 text-xs font-semibold text-gray-400 normal-case">{t("nav.products")}</p>
-              {menu.map((family) => (
-                <Link
-                  key={family.id}
-                  href={`/catalogue/${family.slug}`}
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center justify-between px-3 py-3 rounded-lg hover:bg-gray-100 text-sm font-bold text-navy-900"
-                >
-                  {family.name}
-                  <span className="text-gray-400 normal-case">›</span>
-                </Link>
-              ))}
+              {menu.map((family) => {
+                const expanded = expandedFamily === family.id;
+                return (
+                  <div key={family.id} className={expanded ? "bg-gray-50 rounded-lg" : ""}>
+                    <button
+                      onClick={() => setExpandedFamily(expanded ? null : family.id)}
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-3 rounded-lg text-sm font-bold text-navy-900 border-s-[3px] ${
+                        expanded ? "border-gold-500" : "border-transparent hover:bg-gray-100"
+                      }`}
+                    >
+                      {family.name}
+                      <span
+                        className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] transition-transform ${
+                          expanded ? "bg-red-50 text-red-600 rotate-180" : "bg-gray-100 text-red-500"
+                        }`}
+                      >
+                        ▼
+                      </span>
+                    </button>
+                    {expanded && (
+                      <div className="flex flex-col">
+                        {family.children.map((sub) => (
+                          <Link
+                            key={sub.id}
+                            href={`/catalogue/${family.slug}/${sub.slug}`}
+                            onClick={() => setMobileOpen(false)}
+                            className="flex items-center gap-2 ps-8 pe-3 py-2.5 text-sm font-medium normal-case text-navy-900/80 border-t border-gray-100"
+                          >
+                            <span className="text-gold-500">•</span>
+                            {sub.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               <div className="h-px bg-gray-200 my-2" />
               <div className="px-3 py-2 normal-case">
                 <LanguageSwitcher />
