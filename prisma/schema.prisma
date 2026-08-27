@@ -8,8 +8,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection (PgBouncer, "-pooler" host) for normal app traffic —
+  // required on serverless/edge runtimes like Vercel, which open many
+  // short-lived connections.
+  url       = env("DATABASE_URL")
+  // Direct/unpooled connection for schema migrations (prisma migrate),
+  // which need session-level Postgres features PgBouncer's transaction
+  // pooling mode doesn't support.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum Role {

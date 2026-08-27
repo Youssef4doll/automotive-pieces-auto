@@ -52,19 +52,32 @@ Per the agreed scope for this pass:
 ## Getting started
 
 ```bash
-cp .env.example .env          # then edit DATABASE_URL / SESSION_SECRET
+cp .env.example .env          # then fill in DATABASE_URL / DATABASE_URL_UNPOOLED / SESSION_SECRET
 npm install
-npx prisma migrate dev        # creates the schema
+npx prisma migrate deploy     # applies the schema (uses DATABASE_URL_UNPOOLED)
 npm run db:seed               # taxonomy, brands, vehicles, ~50 products, demo orders/reviews
 npm run dev
 ```
 
-Requires a running PostgreSQL instance matching `DATABASE_URL` in `.env`. Locally that's typically:
+### Database: Neon Postgres
 
-```bash
-sudo service postgresql start
-sudo -u postgres psql -c "CREATE DATABASE automotive_pieces_auto;"
-```
+This project targets [Neon](https://neon.tech) (serverless Postgres) in production, and the schema uses Prisma's
+`directUrl` split — see `prisma/schema.prisma`:
+
+- **`DATABASE_URL`** — the **pooled** connection string (hostname has a `-pooler` suffix). Used for all normal app
+  queries; required on serverless runtimes like Vercel, which open many short-lived connections that would
+  otherwise exhaust Postgres's connection limit.
+- **`DATABASE_URL_UNPOOLED`** — the **direct** connection string (no `-pooler`). Used only for
+  `prisma migrate` — PgBouncer's transaction-pooling mode (what the pooled URL routes through) doesn't support
+  the session-level features migrations need.
+
+Get both from the Neon console (Project → Connection Details — it shows a pooled and a direct string) and set
+them in `.env` locally and in your deploy platform's environment variables (e.g. Vercel → Project → Settings →
+Environment Variables). Any other Postgres works too — just set `DATABASE_URL` to it and either omit
+`DATABASE_URL_UNPOOLED` or point it at the same value.
+
+Running `npm run db:seed` or `prisma migrate` against a fresh Neon database works from any machine with normal
+network access; it does not need the Neon CLI or MCP server installed, just the connection string in `.env`.
 
 ### Demo accounts (from the seed)
 
