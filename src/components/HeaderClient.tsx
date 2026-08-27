@@ -44,154 +44,160 @@ export default function HeaderClient({
 
   return (
     <>
-      <div className="bg-red-500 text-white text-[11px] sm:text-xs">
-        <div className="mx-auto max-w-7xl px-3 sm:px-4 py-2 flex items-center justify-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar font-medium">
+      <div className="bg-red-500 text-white text-[clamp(11px,3vw,13px)] leading-[1.35] font-semibold">
+        <div className="px-[14px] py-2 flex items-center justify-center flex-wrap gap-x-[clamp(10px,3vw,34px)] gap-y-1.5 overflow-x-auto no-scrollbar tracking-[.02em]">
           <span className="whitespace-nowrap">{t("top.delivery")}</span>
-          <span className="hidden sm:inline opacity-60">•</span>
+          <span className="hidden sm:inline opacity-55">•</span>
           <span className="hidden sm:inline whitespace-nowrap">{t("top.cod")}</span>
-          <span className="hidden md:inline opacity-60">•</span>
+          <span className="hidden md:inline opacity-55">•</span>
           <span className="hidden md:inline whitespace-nowrap">{t("top.returns")}</span>
         </div>
       </div>
 
       <header
-        className="relative sticky top-0 z-40 bg-navy-900 text-white shadow-md"
+        className="relative sticky top-0 z-40 bg-navy-900 text-white shadow-md px-[clamp(12px,3.5vw,28px)]"
         onMouseLeave={() => setMenuOpen(false)}
       >
-        <div className="mx-auto max-w-7xl px-3 sm:px-4">
-          <div className="flex items-center flex-wrap gap-[10px] lg:gap-[clamp(10px,1.2vw,18px)] py-2.5">
+        <div className="flex items-center flex-wrap gap-x-[clamp(10px,2vw,18px)] gap-y-2 py-2.5">
+          <button
+            className="lg:hidden p-2 -ms-2 rounded hover:bg-white/10 shrink-0"
+            aria-label="Menu"
+            onClick={() => setMobileOpen(true)}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          <Link href="/" className="shrink-0 flex items-center">
+            <Image
+              src="/images/logo-white.png"
+              alt="Automotive Pièces Auto"
+              width={160}
+              height={53}
+              className="h-[clamp(34px,9vw,48px)] w-auto"
+              priority
+            />
+          </Link>
+
+          <nav className="hidden lg:flex items-center gap-[18px] shrink-0 text-[12.5px] font-semibold uppercase tracking-[.04em] whitespace-nowrap">
+            <Link href="/" className="text-white pb-[3px] border-b-2 border-gold-500">
+              {t("nav.home")}
+            </Link>
             <button
-              className="lg:hidden p-2 -ms-2 rounded hover:bg-white/10 shrink-0"
-              aria-label="Menu"
-              onClick={() => setMobileOpen(true)}
+              className="text-white flex items-center gap-1.5 hover:text-gold-500"
+              onMouseEnter={() => setMenuOpen(true)}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 6h16M4 12h16M4 18h16" />
+              {t("nav.products")}
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M6 9l6 6 6-6" />
               </svg>
             </button>
-
-            <Link href="/" className="shrink-0 flex items-center">
-              <Image
-                src="/images/logo-white.png"
-                alt="Automotive Pièces Auto"
-                width={160}
-                height={53}
-                className="h-8 sm:h-9 w-auto"
-                priority
-              />
+            <Link href="/#marques" className="text-white hover:text-gold-500">
+              {t("nav.brands")}
             </Link>
+            <Link href="/#magasin" className="text-white hover:text-gold-500">
+              {t("nav.about")}
+            </Link>
+            <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className="text-white hover:text-gold-500">
+              {t("nav.contact")}
+            </a>
+          </nav>
 
-            <nav className="hidden lg:flex items-center gap-1 shrink-0 font-display font-semibold uppercase text-sm tracking-wide whitespace-nowrap">
-              <Link href="/" className="px-3 py-2 rounded-md hover:bg-white/10 border-b-2 border-gold-500">
-                {t("nav.home")}
-              </Link>
-              <button
-                className="px-3 py-2 rounded-md hover:bg-white/10 flex items-center gap-1"
-                onMouseEnter={() => setMenuOpen(true)}
-              >
-                {t("nav.products")}
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
-              <Link href="/#marques" className="px-3 py-2 rounded-md hover:bg-white/10">
-                {t("nav.brands")}
-              </Link>
-              <Link href="/#magasin" className="px-3 py-2 rounded-md hover:bg-white/10">
-                {t("nav.about")}
-              </Link>
-              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-md hover:bg-white/10">
-                {t("nav.contact")}
-              </a>
-            </nav>
+          {/* This spacer and the search form below share the row's leftover
+              width equally (both flex-1) — same ratio as the reference
+              design — rather than all of it collapsing into one gap. */}
+          <div className="hidden lg:block flex-1" />
 
-            {/* This spacer and the search form below share the row's leftover
-                width equally (both flex-1) — same ratio as the reference
-                design — rather than all of it collapsing into one gap. */}
-            <div className="hidden lg:block flex-1" />
-
-            <form onSubmit={submitSearch} className="hidden md:flex flex-[1_1_150px] min-w-[130px]">
-              <div className="flex w-full rounded-md overflow-hidden bg-white">
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  type="search"
-                  placeholder={t("nav.search")}
-                  className="flex-1 px-3 py-2 text-sm text-navy-900 outline-none min-w-0"
-                />
-                <button type="submit" className="px-4 bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold text-sm uppercase tracking-wide">
-                  {t("hero.searchOk")}
-                </button>
-              </div>
-            </form>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <a
-                href={`https://wa.me/${whatsapp}`}
-                target="_blank"
-                rel="noreferrer"
-                className="hidden xl:flex flex-col items-end leading-tight px-2"
-              >
-                <span className="text-[10px] uppercase text-white/60 tracking-wide">{t("nav.callToOrder")}</span>
-                <span dir="ltr" className="text-sm font-bold text-white">{phone}</span>
-              </a>
-              <Link
-                href="/compte"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-md border border-white/25 hover:bg-white/10 text-xs font-display font-bold uppercase tracking-wide"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" />
-                </svg>
-                <span className="max-w-20 truncate">{userName ?? t("nav.account")}</span>
-              </Link>
-              <Link
-                href="/compte"
-                className="sm:hidden flex items-center justify-center w-10 h-10 rounded-md hover:bg-white/10"
-                aria-label={t("nav.account")}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" />
-                </svg>
-              </Link>
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="hidden sm:inline-flex text-[11px] px-2 py-1 rounded bg-gold-500 text-navy-950 font-bold uppercase"
-                >
-                  {t("nav.admin")}
-                </Link>
-              )}
-              <button
-                onClick={openCart}
-                className="relative flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-md bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-xs sm:text-sm tracking-wide"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                  <circle cx="9" cy="21" r="1" />
-                  <circle cx="20" cy="21" r="1" />
-                  <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
-                </svg>
-                <span>{t("nav.cart")} ({count})</span>
-              </button>
-            </div>
-          </div>
-
-          <form onSubmit={submitSearch} className="md:hidden pb-3">
-            <div className="flex w-full rounded-md overflow-hidden bg-white">
+          <form onSubmit={submitSearch} className="hidden md:flex flex-[1_1_150px] min-w-[130px]">
+            <div className="flex w-full items-center gap-2.5 rounded-md bg-white/10 border border-white/18 px-3 py-2.5">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbc000" strokeWidth="2.4" className="shrink-0">
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <path d="M15.5 15.5 21 21" />
+              </svg>
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 type="search"
                 placeholder={t("nav.search")}
-                className="flex-1 px-3 py-2.5 text-sm text-navy-900 outline-none min-w-0"
+                className="flex-1 min-w-0 bg-transparent text-[13.5px] text-white placeholder-white/50 outline-none"
               />
-              <button type="submit" className="px-4 bg-gold-500 text-navy-950 font-display font-bold text-sm uppercase">
+              <button type="submit" className="shrink-0 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500 whitespace-nowrap">
                 {t("hero.searchOk")}
               </button>
             </div>
           </form>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <a
+              href={`https://wa.me/${whatsapp}`}
+              target="_blank"
+              rel="noreferrer"
+              className="hidden xl:flex flex-col gap-px items-end leading-tight"
+            >
+              <span className="text-[10.5px] uppercase text-white/60 tracking-[.1em]">{t("nav.callToOrder")}</span>
+              <span dir="ltr" className="font-heading text-base font-bold tracking-[.01em] text-white">{phone}</span>
+            </a>
+            <Link
+              href="/compte"
+              className="hidden sm:flex items-center gap-1.5 min-h-11 px-3 rounded-md border border-white/22 hover:border-gold-500 hover:text-gold-500 text-xs font-bold uppercase tracking-[.04em]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" />
+              </svg>
+              <span className="max-w-20 truncate">{userName ?? t("nav.account")}</span>
+            </Link>
+            <Link
+              href="/compte"
+              className="sm:hidden flex items-center justify-center w-10 h-10 rounded-md hover:bg-white/10"
+              aria-label={t("nav.account")}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" />
+              </svg>
+            </Link>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="hidden sm:inline-flex text-[11px] px-2 py-1 rounded bg-gold-500 text-navy-950 font-bold uppercase"
+              >
+                {t("nav.admin")}
+              </Link>
+            )}
+            <button
+              onClick={openCart}
+              className="relative flex items-center gap-2 min-h-11 px-3.5 rounded-md bg-gold-500 hover:bg-gold-400 text-navy-950 font-bold uppercase text-[12.5px] tracking-[.04em]"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0f2352" strokeWidth="2.2">
+                <path d="M3 4h3l2.5 11h9L20 7H7" />
+                <circle cx="9.5" cy="19" r="1.6" />
+                <circle cx="17.5" cy="19" r="1.6" />
+              </svg>
+              <span className="whitespace-nowrap">{t("nav.cart")} ({count})</span>
+            </button>
+          </div>
         </div>
+
+        <form onSubmit={submitSearch} className="md:hidden pb-3">
+          <div className="flex w-full items-center gap-2.5 rounded-md bg-white/10 border border-white/18 px-3 py-2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbc000" strokeWidth="2.4" className="shrink-0">
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="M15.5 15.5 21 21" />
+            </svg>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              type="search"
+              placeholder={t("nav.search")}
+              className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder-white/50 outline-none"
+            />
+            <button type="submit" className="shrink-0 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500">
+              {t("hero.searchOk")}
+            </button>
+          </div>
+        </form>
 
         {menuOpen && <MegaMenu families={menu} onNavigate={() => setMenuOpen(false)} />}
       </header>
