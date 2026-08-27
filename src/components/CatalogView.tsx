@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ProductGrid from "./ProductGrid";
 import CatalogControls from "./CatalogControls";
+import CatalogVehicleBar from "./CatalogVehicleBar";
 import type { CardProduct } from "./ProductCard";
 
 type Sibling = { id: string; name: string; slug: string };
@@ -43,9 +44,11 @@ export default function CatalogView({
       </nav>
 
       <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mb-1 tracking-tight">{title}</h1>
-      <p className="text-sm text-gray-500 mb-5">
+      <p className="text-sm text-gray-500 mb-4">
         {products.length} référence{products.length > 1 ? "s" : ""} · 24h Grand Tunis, 48–72h régions
       </p>
+
+      <CatalogVehicleBar />
 
       <div className="flex flex-col lg:flex-row gap-6">
         <aside className="lg:w-56 shrink-0 flex flex-col gap-6">

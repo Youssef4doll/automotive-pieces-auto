@@ -26,7 +26,7 @@ export default function MegaMenu({
 
   return (
     <div className="absolute top-full inset-x-0 z-40">
-      <div className="mx-auto max-w-7xl bg-white text-navy-950 shadow-2xl border-b-[3px] border-gold-500 grid grid-cols-[264px_1fr] max-h-[70vh]">
+      <div className="mx-auto max-w-7xl bg-white text-navy-950 shadow-2xl border-b-[3px] border-gold-500 grid grid-cols-[264px_1fr] h-[min(460px,70vh)]">
         <div className="border-e border-gray-200 bg-[#fafbfd] overflow-y-auto py-2.5">
           {families.map((family, i) => (
             <Link
