@@ -65,7 +65,7 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
               {items.map((item) => (
                 <div key={item.productId} className="flex gap-3 p-4">
                   <div className="w-16 h-16 shrink-0 rounded-lg bg-gray-100 overflow-hidden relative">
-                    <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
+                    <Image src={item.imageUrl} alt={item.name} fill sizes="64px" className="object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-navy-900 line-clamp-2">{item.name}</p>
@@ -75,14 +75,14 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border rounded-lg">
                         <button
-                          className="w-7 h-7 text-sm font-bold"
+                          className="w-8 h-8 text-sm font-bold"
                           onClick={() => setQty(item.productId, item.qty - 1)}
                         >
                           −
                         </button>
-                        <span className="w-7 text-center text-sm">{item.qty}</span>
+                        <span className="w-8 text-center text-sm">{item.qty}</span>
                         <button
-                          className="w-7 h-7 text-sm font-bold"
+                          className="w-8 h-8 text-sm font-bold"
                           onClick={() => setQty(item.productId, item.qty + 1)}
                         >
                           +
@@ -95,7 +95,7 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
                   </div>
                   <button
                     onClick={() => remove(item.productId)}
-                    className="self-start text-gray-300 hover:text-red-600 p-1"
+                    className="self-start text-gray-300 hover:text-red-600 p-2 -m-1"
                     aria-label={t("cart.remove")}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -133,7 +133,7 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
               </Link>
               <button
                 onClick={close}
-                className="block text-center w-full py-2 text-sm text-gray-500 font-medium"
+                className="block text-center w-full py-3 text-sm text-gray-500 font-medium"
               >
                 {t("cart.continue")}
               </button>

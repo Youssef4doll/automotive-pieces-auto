@@ -11,7 +11,13 @@ export default async function StoreSection() {
     <section id="magasin" className="mx-auto max-w-7xl px-4 py-10">
       <div className="grid sm:grid-cols-2 gap-8 items-center">
         <div className="relative h-56 sm:h-80 rounded-2xl overflow-hidden border border-gray-200">
-          <Image src="/images/storefront.png" alt="Notre magasin" fill className="object-cover" />
+          <Image
+            src="/images/storefront.png"
+            alt="Notre magasin"
+            fill
+            sizes="(max-width: 640px) 100vw, 50vw"
+            className="object-cover"
+          />
         </div>
         <div>
           <Eyebrow k="store.title" />

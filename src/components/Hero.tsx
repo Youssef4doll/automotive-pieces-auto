@@ -52,7 +52,7 @@ export default function Hero() {
               <a
                 key={p.href}
                 href={p.href}
-                className="px-3 py-1.5 min-h-9 flex items-center rounded-full border border-white/25 text-xs sm:text-sm text-white/85 hover:bg-white/10"
+                className="px-3 py-1.5 min-h-10 flex items-center rounded-full border border-white/25 text-xs sm:text-sm text-white/85 hover:bg-white/10"
               >
                 {p.label}
               </a>

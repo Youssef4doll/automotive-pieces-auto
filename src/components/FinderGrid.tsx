@@ -83,7 +83,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
             </form>
             <button
               onClick={() => openPicker()}
-              className="mt-auto w-full py-2.5 rounded-lg bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-xs tracking-wide flex items-center justify-center gap-2"
+              className="mt-auto w-full py-3 rounded-lg bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-xs tracking-wide flex items-center justify-center gap-2"
             >
               {t("finder.browse")}
             </button>
@@ -97,7 +97,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
             {plateSent ? (
               <span className="text-xs font-semibold text-green-700 py-2.5">{t("finder.plateReceived")}</span>
             ) : (
-              <label className="w-full py-2.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-xs tracking-wide text-center cursor-pointer flex items-center justify-center gap-2">
+              <label className="w-full py-3 rounded-lg bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-xs tracking-wide text-center cursor-pointer flex items-center justify-center gap-2">
                 {t("finder.uploadPhoto")}
                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={() => setPlateSent(true)} />
               </label>
@@ -106,7 +106,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
               href={`https://wa.me/${whatsapp}`}
               target="_blank"
               rel="noreferrer"
-              className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-display font-bold uppercase text-xs tracking-wide text-center flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-display font-bold uppercase text-xs tracking-wide text-center flex items-center justify-center gap-2"
             >
               WhatsApp
             </a>
@@ -135,7 +135,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
               <button
                 type="submit"
                 disabled={vin.length !== 17}
-                className="mt-auto w-full py-2.5 rounded-lg bg-gray-200 enabled:bg-navy-900 disabled:text-gray-400 enabled:text-white enabled:hover:bg-navy-800 font-display font-bold uppercase text-xs tracking-wide"
+                className="mt-auto w-full py-3 rounded-lg bg-gray-200 enabled:bg-navy-900 disabled:text-gray-400 enabled:text-white enabled:hover:bg-navy-800 font-display font-bold uppercase text-xs tracking-wide"
               >
                 {t("finder.identify")}
               </button>
@@ -166,7 +166,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
               )}
               <button
                 type="submit"
-                className="mt-auto w-full py-2.5 rounded-lg bg-gray-200 hover:bg-navy-900 hover:text-white text-gray-600 font-display font-bold uppercase text-xs tracking-wide transition"
+                className="mt-auto w-full py-3 rounded-lg bg-gray-200 hover:bg-navy-900 hover:text-white text-gray-600 font-display font-bold uppercase text-xs tracking-wide transition"
               >
                 {t("finder.search")}
               </button>

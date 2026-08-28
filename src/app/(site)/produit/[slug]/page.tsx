@@ -62,11 +62,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <nav className="text-xs text-gray-500 mb-4 flex items-center gap-1.5 flex-wrap">
-        <Link href="/" className="hover:text-navy-900">Accueil</Link>
+        <Link href="/" className="hover:text-navy-900 py-3 -my-3">Accueil</Link>
         <span>›</span>
         {product.category.parent && (
           <>
-            <Link href={`/catalogue/${product.category.parent.slug}`} className="hover:text-navy-900">
+            <Link href={`/catalogue/${product.category.parent.slug}`} className="hover:text-navy-900 py-3 -my-3">
               {product.category.parent.name}
             </Link>
             <span>›</span>
@@ -78,7 +78,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               ? `/catalogue/${product.category.parent.slug}/${product.category.slug}`
               : `/catalogue/${product.category.slug}`
           }
-          className="hover:text-navy-900"
+          className="hover:text-navy-900 py-3 -my-3"
         >
           {product.category.name}
         </Link>
@@ -86,7 +86,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       <div className="grid md:grid-cols-2 gap-8">
         <div className="relative aspect-square bg-gray-50 rounded-xl overflow-hidden border border-gray-200">
-          <Image src={product.imageUrl} alt={product.name} fill className="object-cover" priority />
+          <Image
+            src={product.imageUrl}
+            alt={product.name}
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover"
+            priority
+          />
           {discount && (
             <span className="absolute top-3 end-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1.5 rounded">
               -{discount}%

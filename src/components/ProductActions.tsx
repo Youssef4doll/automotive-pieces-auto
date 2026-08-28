@@ -66,7 +66,7 @@ export default function ProductActions({
         )}
         <button
           onClick={() => setPickerOpen(true)}
-          className="text-xs font-semibold text-navy-900 underline mt-1"
+          className="inline-flex items-center min-h-11 px-3 -ms-3 mt-0.5 rounded-lg text-xs font-semibold text-navy-900 underline underline-offset-2 hover:bg-navy-900/5 active:bg-navy-900/10 transition"
         >
           {vehicle ? t("finder.changeVehicle") : t("compat.check")}
         </button>

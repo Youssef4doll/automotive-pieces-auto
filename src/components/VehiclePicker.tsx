@@ -64,7 +64,7 @@ export default function VehiclePicker({
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2 text-sm">
             <button
-              className={step === "make" ? "font-bold text-navy-900" : "text-gray-400"}
+              className={`py-2.5 px-1.5 -my-2.5 -ms-1.5 ${step === "make" ? "font-bold text-navy-900" : "text-gray-400"}`}
               onClick={() => {
                 setStep("make");
                 setFilter("");
@@ -76,7 +76,7 @@ export default function VehiclePicker({
               <>
                 <span className="text-gray-300">›</span>
                 <button
-                  className={step === "model" ? "font-bold text-navy-900" : "text-gray-400"}
+                  className={`py-2.5 px-1.5 -my-2.5 ${step === "model" ? "font-bold text-navy-900" : "text-gray-400"}`}
                   onClick={() => {
                     setStep("model");
                     setFilter("");

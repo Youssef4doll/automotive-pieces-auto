@@ -45,7 +45,7 @@ export default function ProductCard({ product }: { product: CardProduct }) {
           alt={product.name}
           fill
           className="object-cover group-hover:scale-105 transition-transform duration-300"
-          sizes="(max-width: 640px) 50vw, 25vw"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
         {badge === "discount" && (
           <span className="absolute top-2 start-2 bg-red-600 text-white text-[10px] font-display font-bold uppercase px-2 py-1 rounded">
@@ -123,7 +123,7 @@ export default function ProductCard({ product }: { product: CardProduct }) {
               stockQty: product.stockQty,
             })
           }
-          className="mt-2 w-full py-2.5 rounded-lg bg-gold-500 hover:bg-gold-400 disabled:bg-gray-200 disabled:cursor-not-allowed text-navy-950 font-display font-bold uppercase text-xs sm:text-sm tracking-wide"
+          className="mt-2 w-full py-3 rounded-lg bg-gold-500 hover:bg-gold-400 disabled:bg-gray-200 disabled:cursor-not-allowed text-navy-950 font-display font-bold uppercase text-xs sm:text-sm tracking-wide"
         >
           {t("product.addToCart")}
         </button>

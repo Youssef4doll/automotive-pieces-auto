@@ -32,9 +32,9 @@ export default function CatalogView({
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <nav className="text-xs text-gray-500 mb-3 flex items-center gap-1.5 flex-wrap">
-        <Link href="/" className="hover:text-navy-900">Accueil</Link>
+        <Link href="/" className="hover:text-navy-900 py-3 -my-3">Accueil</Link>
         <span>›</span>
-        <Link href={`/catalogue/${family.slug}`} className="hover:text-navy-900">{family.name}</Link>
+        <Link href={`/catalogue/${family.slug}`} className="hover:text-navy-900 py-3 -my-3">{family.name}</Link>
         {subfamily && (
           <>
             <span>›</span>

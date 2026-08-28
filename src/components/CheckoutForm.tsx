@@ -114,7 +114,7 @@ export default function CheckoutForm({
                   key={g}
                   type="button"
                   onClick={() => setGovernorate(g)}
-                  className={`px-3 py-2 rounded-full text-xs font-medium border ${governorate === g ? "bg-navy-900 text-white border-navy-900" : "border-gray-300 text-gray-600"}`}
+                  className={`px-3 py-2.5 rounded-full text-xs font-medium border ${governorate === g ? "bg-navy-900 text-white border-navy-900" : "border-gray-300 text-gray-600"}`}
                 >
                   {g}
                 </button>

@@ -30,7 +30,13 @@ export default function PackCard({ pack }: { pack: Pack }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col">
       <div className="relative aspect-[16/9] bg-gray-50">
-        <Image src={pack.imageUrl} alt={pack.name} fill className="object-cover" />
+        <Image
+          src={pack.imageUrl}
+          alt={pack.name}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover"
+        />
         {savings > 0 && (
           <span className="absolute top-3 start-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded">
             -{savings} DT

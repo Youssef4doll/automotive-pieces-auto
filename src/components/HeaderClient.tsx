@@ -120,9 +120,12 @@ export default function HeaderClient({
                 onChange={(e) => setQ(e.target.value)}
                 type="search"
                 placeholder={t("nav.search")}
-                className="flex-1 min-w-0 bg-transparent text-[13.5px] text-white placeholder-white/50 outline-none"
+                className="flex-1 min-w-0 bg-transparent text-[13.5px] text-white placeholder-white/50 outline-none py-3 -my-3"
               />
-              <button type="submit" className="shrink-0 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500 whitespace-nowrap">
+              <button
+                type="submit"
+                className="shrink-0 ps-2 pe-3 py-3 -ms-2 -me-3 -my-3 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500 whitespace-nowrap"
+              >
                 {t("hero.searchOk")}
               </button>
             </div>
@@ -191,9 +194,12 @@ export default function HeaderClient({
               onChange={(e) => setQ(e.target.value)}
               type="search"
               placeholder={t("nav.search")}
-              className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder-white/50 outline-none"
+              className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder-white/50 outline-none py-3 -my-3"
             />
-            <button type="submit" className="shrink-0 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500">
+            <button
+              type="submit"
+              className="shrink-0 ps-2 pe-3 py-3 -ms-2 -me-3 -my-3 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500 whitespace-nowrap"
+            >
               {t("hero.searchOk")}
             </button>
           </div>
