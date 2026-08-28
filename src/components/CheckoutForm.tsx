@@ -9,6 +9,7 @@ import Price from "./Price";
 import { GOVERNORATES, GRAND_TUNIS } from "@/lib/governorates";
 import { placeOrder } from "@/app/actions/orders";
 import { track } from "@/lib/track";
+import { getAttribution } from "@/lib/attribution";
 
 export default function CheckoutForm({
   freeShippingThreshold,
@@ -61,6 +62,7 @@ export default function CheckoutForm({
     setError(null);
     if (items.length === 0) return;
     setSubmitting(true);
+    const attribution = getAttribution();
     const result = await placeOrder({
       customerName: name,
       phone,
@@ -71,6 +73,9 @@ export default function CheckoutForm({
       paymentMethod,
       notes: notes || undefined,
       items: items.map((i) => ({ productId: i.productId, qty: i.qty })),
+      source: attribution?.source,
+      medium: attribution?.medium,
+      campaign: attribution?.campaign ?? undefined,
     });
     setSubmitting(false);
     if (!result.ok) {

@@ -3,6 +3,13 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatTND, toNumber } from "@/lib/money";
 import { ORDER_STATUS_LABEL } from "@/lib/order-status";
+import { computeSegment } from "@/lib/segment";
+
+const SEGMENT_STYLE: Record<string, string> = {
+  VIP: "bg-gold-500/25 text-navy-900",
+  REGULAR: "bg-navy-900/10 text-navy-900",
+  NEW: "bg-gray-100 text-gray-500",
+};
 
 export default async function AdminClientDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,7 +19,9 @@ export default async function AdminClientDetail({ params }: { params: Promise<{ 
   });
   if (!customer) notFound();
 
-  const ltv = customer.orders.filter((o) => o.status !== "CANCELLED").reduce((s, o) => s + toNumber(o.total), 0);
+  const completedOrders = customer.orders.filter((o) => o.status !== "CANCELLED");
+  const ltv = completedOrders.reduce((s, o) => s + toNumber(o.total), 0);
+  const segment = computeSegment(completedOrders.length, ltv);
 
   return (
     <div className="flex flex-col gap-5 max-w-3xl">
@@ -29,8 +38,8 @@ export default async function AdminClientDetail({ params }: { params: Promise<{ 
         <div className="text-end">
           <p className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide">Valeur totale</p>
           <p className="text-xl font-heading font-extrabold text-navy-900">{formatTND(ltv)}</p>
-          <span className="text-xs font-display font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-gold-500/20 text-navy-900">
-            {customer.segment}
+          <span className={`text-xs font-display font-bold uppercase tracking-wide px-2.5 py-1 rounded-full ${SEGMENT_STYLE[segment]}`}>
+            {segment}
           </span>
         </div>
       </div>

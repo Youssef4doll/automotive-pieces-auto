@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { toNumber } from "@/lib/money";
+import { computeSegment } from "@/lib/segment";
 
 const itemSchema = z.object({
   productId: z.string(),
@@ -21,6 +22,13 @@ const placeOrderSchema = z.object({
   paymentMethod: z.enum(["COD", "CARD"]),
   notes: z.string().optional(),
   items: z.array(itemSchema).min(1),
+  // First-touch marketing attribution, read client-side from localStorage
+  // at submit time — see lib/attribution.ts. Never trusted for anything
+  // but reporting (it doesn't affect price, stock, or order validity), so
+  // it's fine that a client could send anything here.
+  source: z.string().optional(),
+  medium: z.string().optional(),
+  campaign: z.string().optional(),
 });
 
 export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
@@ -109,6 +117,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           deliveryMethod: data.deliveryMethod,
           paymentMethod: data.paymentMethod,
           status: "PENDING",
+          source: data.source,
+          medium: data.medium,
+          campaign: data.campaign,
           subtotal,
           shippingFee,
           total,
@@ -126,6 +137,21 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
             reason: "order",
             note: `Commande ${ref}`,
           },
+        });
+      }
+
+      // Keep the stored segment truthful — see lib/segment.ts. Guest
+      // checkouts (no account) have nothing to update here.
+      if (user) {
+        const priorOrders = await tx.order.findMany({
+          where: { userId: user.id, status: { not: "CANCELLED" } },
+          select: { total: true },
+        });
+        const completedCount = priorOrders.length + 1; // + the order just created
+        const totalSpent = priorOrders.reduce((s, o) => s + toNumber(o.total), 0) + total;
+        await tx.user.update({
+          where: { id: user.id },
+          data: { segment: computeSegment(completedCount, totalSpent) },
         });
       }
 

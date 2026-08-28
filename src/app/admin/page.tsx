@@ -15,9 +15,44 @@ export default async function AdminDashboard() {
     { label: "Clients", value: data.customerCount.toString(), sub: "comptes créés" },
   ];
 
+  const ALERT_STYLE: Record<string, string> = {
+    critical: "bg-red-50 border-red-200 text-red-800",
+    warning: "bg-amber-50 border-amber-200 text-amber-800",
+    opportunity: "bg-blue-50 border-blue-200 text-blue-800",
+    success: "bg-green-50 border-green-200 text-green-800",
+  };
+  const ALERT_ICON: Record<string, string> = { critical: "🔴", warning: "🟠", opportunity: "🔵", success: "🟢" };
+
+  const periodTiles = [
+    { label: "Aujourd'hui", revenue: data.periods.today.revenue, orders: data.periods.today.orders },
+    { label: "Cette semaine", revenue: data.periods.week.revenue, orders: data.periods.week.orders },
+    { label: "Ce mois", revenue: data.periods.month.revenue, orders: data.periods.month.orders },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-heading font-extrabold uppercase tracking-tight text-navy-950">Dashboard</h1>
+
+      {data.alerts.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {data.alerts.map((a, i) => (
+            <div key={i} className={`px-4 py-2.5 rounded-lg border text-sm font-medium flex items-center gap-2 ${ALERT_STYLE[a.level]}`}>
+              <span>{ALERT_ICON[a.level]}</span>
+              {a.text}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-4">
+        {periodTiles.map((p) => (
+          <div key={p.label} className="p-4 rounded-xl bg-white border border-navy-900/10 shadow-sm">
+            <p className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide">{p.label}</p>
+            <p className="text-xl font-heading font-extrabold text-navy-950 mt-1">{formatTND(p.revenue)}</p>
+            <p className="text-xs text-navy-900/40 mt-0.5">{p.orders} commande{p.orders > 1 ? "s" : ""}</p>
+          </div>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((k) => (
@@ -112,6 +147,34 @@ export default async function AdminDashboard() {
             {data.lowStock.length === 0 && <p className="text-sm text-navy-900/40">Aucune alerte de stock</p>}
           </div>
         </div>
+      </div>
+
+      <div className="p-5 rounded-xl bg-white border border-navy-900/10 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display font-bold uppercase tracking-wide text-sm text-navy-950">Revenu par source d&rsquo;acquisition</h2>
+          <Link href="/admin/analytics" className="text-xs font-display font-bold uppercase tracking-wide text-red-500">
+            Voir analytics
+          </Link>
+        </div>
+        {data.revenueBySource.length === 0 ? (
+          <p className="text-sm text-navy-900/40">Aucune commande pour le moment</p>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {data.revenueBySource.map((s) => {
+              const pct = data.revenue > 0 ? Math.round((s.revenue / data.revenue) * 100) : 0;
+              return (
+                <div key={s.source} className="flex items-center gap-3">
+                  <span className="text-sm text-navy-900/70 w-32 shrink-0 truncate capitalize">{s.source}</span>
+                  <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                    <div className="h-full bg-gold-500 rounded-full" style={{ width: `${Math.max(2, pct)}%` }} />
+                  </div>
+                  <span className="text-xs text-navy-900/40 w-10 text-end shrink-0">{pct}%</span>
+                  <span className="text-sm font-bold text-navy-900 w-20 text-end shrink-0">{formatTND(s.revenue)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

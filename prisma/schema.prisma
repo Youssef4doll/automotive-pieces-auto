@@ -192,6 +192,14 @@ model Order {
   shippingFee    Decimal        @db.Decimal(10, 2) @default(0)
   total          Decimal        @db.Decimal(10, 2)
   notes          String?
+  // First-touch marketing attribution, carried from the visitor's first
+  // page load through to the order that eventually resulted — this is
+  // what lets "campaign X generated Y TND" be answered from real data
+  // instead of guessed. All nullable: a returning visitor with no stored
+  // attribution, or an admin-created order, simply has none.
+  source         String?
+  medium         String?
+  campaign       String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -200,6 +208,7 @@ model Order {
 
   @@index([status])
   @@index([userId])
+  @@index([source])
 }
 
 model OrderItem {

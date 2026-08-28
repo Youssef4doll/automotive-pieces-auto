@@ -55,6 +55,67 @@ export async function getDashboardData() {
     0
   );
 
+  // Real period revenue, not just the 7-day chart — this is what "how is
+  // the business doing right now" actually asks for.
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nonCancelled = orders.filter((o) => o.status !== "CANCELLED");
+  const revenueSince = (since: Date) =>
+    nonCancelled.filter((o) => o.createdAt >= since).reduce((s, o) => s + toNumber(o.total), 0);
+  const ordersSince = (since: Date) => nonCancelled.filter((o) => o.createdAt >= since).length;
+  const periods = {
+    today: { revenue: revenueSince(startOfToday), orders: ordersSince(startOfToday) },
+    week: { revenue: revenueSince(startOfWeek), orders: ordersSince(startOfWeek) },
+    month: { revenue: revenueSince(startOfMonth), orders: ordersSince(startOfMonth) },
+  };
+
+  // Revenue by acquisition source — only populated going forward (orders
+  // placed before attribution capture shipped have source=null, grouped
+  // under "Direct / inconnu" rather than silently dropped).
+  const bySource = new Map<string, { revenue: number; orders: number }>();
+  for (const o of nonCancelled) {
+    // Orders placed before attribution shipped have source=null; group them
+    // with real "direct" traffic rather than as a separate "unknown"
+    // bucket — to a business owner these both just mean "not a tracked
+    // campaign," and showing two similarly-named rows ("Direct" and
+    // "Direct / Inconnu") read as a bug, not two real segments.
+    const key = o.source || "direct";
+    const existing = bySource.get(key) ?? { revenue: 0, orders: 0 };
+    existing.revenue += toNumber(o.total);
+    existing.orders += 1;
+    bySource.set(key, existing);
+  }
+  const revenueBySource = [...bySource.entries()]
+    .map(([source, v]) => ({ source, ...v }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // Alerts — the whole point of #23/#24: surface what needs attention
+  // instead of making the owner go hunting for it.
+  const outOfStock = products.filter((p) => p.stockQty <= 0).length;
+  const criticalLowStock = products.filter((p) => p.stockQty > 0 && p.stockQty <= p.lowStockThreshold).length;
+  const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const [checkoutStarted7d, checkoutCompleted7d] = await Promise.all([
+    prisma.analyticsEvent.count({ where: { name: "checkout_started", createdAt: { gte: since7d } } }),
+    prisma.analyticsEvent.count({ where: { name: "checkout_completed", createdAt: { gte: since7d } } }),
+  ]);
+  const abandonedCheckouts7d = Math.max(0, checkoutStarted7d - checkoutCompleted7d);
+
+  const alerts: { level: "critical" | "warning" | "opportunity" | "success"; text: string }[] = [];
+  if (outOfStock > 0) alerts.push({ level: "critical", text: `${outOfStock} produit(s) en rupture de stock` });
+  if (criticalLowStock > 0) alerts.push({ level: "warning", text: `${criticalLowStock} produit(s) sous le seuil de stock` });
+  if (abandonedCheckouts7d > 0) {
+    alerts.push({ level: "warning", text: `${abandonedCheckouts7d} commande(s) démarrée(s) sans être finalisées (7j)` });
+  }
+  if (periods.week.orders > 0 && revenueBySource.length > 0) {
+    const top = revenueBySource[0];
+    if (top.source !== "direct" && top.revenue / (periods.week.revenue || 1) > 0.3) {
+      alerts.push({ level: "opportunity", text: `${top.source} a généré ${Math.round((top.revenue / (revenue || 1)) * 100)}% du revenu total` });
+    }
+  }
+
   return {
     revenue,
     orderCount,
@@ -67,6 +128,9 @@ export async function getDashboardData() {
     recentOrders,
     totalMargin,
     productCount: products.length,
+    periods,
+    revenueBySource,
+    alerts,
   };
 }
 

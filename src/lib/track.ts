@@ -1,6 +1,7 @@
 "use client";
 
 import { logEvent } from "@/app/actions/analytics";
+import { getAttribution } from "./attribution";
 
 const SESSION_KEY = "apa-session-id";
 
@@ -28,7 +29,11 @@ export function track(name: string, properties?: Record<string, unknown>) {
   try {
     const sessionId = getSessionId();
     const path = typeof window !== "undefined" ? window.location.pathname : undefined;
-    void logEvent(name, sessionId, path, properties);
+    const attribution = getAttribution();
+    void logEvent(name, sessionId, path, {
+      ...properties,
+      ...(attribution && { source: attribution.source, medium: attribution.medium, campaign: attribution.campaign }),
+    });
   } catch {
     // never throw from tracking
   }

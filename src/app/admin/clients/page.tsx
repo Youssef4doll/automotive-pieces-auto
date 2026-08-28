@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatTND, toNumber } from "@/lib/money";
+import { computeSegment } from "@/lib/segment";
+
+const SEGMENT_STYLE: Record<string, string> = {
+  VIP: "bg-gold-500/25 text-navy-900",
+  REGULAR: "bg-navy-900/10 text-navy-900",
+  NEW: "bg-gray-100 text-gray-500",
+};
 
 export default async function AdminClientsPage({
   searchParams,
@@ -48,7 +55,9 @@ export default async function AdminClientsPage({
           </thead>
           <tbody className="divide-y divide-navy-900/8">
             {customers.map((c) => {
-              const ltv = c.orders.filter((o) => o.status !== "CANCELLED").reduce((s, o) => s + toNumber(o.total), 0);
+              const completedOrders = c.orders.filter((o) => o.status !== "CANCELLED");
+              const ltv = completedOrders.reduce((s, o) => s + toNumber(o.total), 0);
+              const segment = computeSegment(completedOrders.length, ltv);
               return (
                 <tr key={c.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
@@ -56,8 +65,8 @@ export default async function AdminClientsPage({
                     <p className="text-xs text-navy-900/40">{c.email}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs font-display font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-gold-500/20 text-navy-900">
-                      {c.segment}
+                    <span className={`text-xs font-display font-bold uppercase tracking-wide px-2.5 py-1 rounded-full ${SEGMENT_STYLE[segment]}`}>
+                      {segment}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-end">{c.orders.length}</td>

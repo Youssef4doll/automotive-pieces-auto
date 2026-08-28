@@ -1,7 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f5f7;
+  /* White, not off-white gray: the storefront's own product/category cards
+     already carry their separation via borders (border-gray-200 etc.), not
+     background contrast, so a pure-white page reads as clean and shop-
+     focused rather than losing card definition. Matches how most serious
+     e-commerce sites (Amazon, most DTC storefronts) keep the canvas white
+     and let content, not chrome, carry the visual weight. */
+  --background: #ffffff;
   --foreground: #0f2352;
 
   /* Exact brand tokens lifted from the Claude Design reference export. */
