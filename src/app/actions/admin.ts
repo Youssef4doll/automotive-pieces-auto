@@ -34,6 +34,7 @@ const productSchema = z.object({
   categoryId: z.string().min(1),
   brandId: z.string().optional(),
   description: z.string().optional(),
+  imageUrl: z.string().optional(),
   priceBuy: z.coerce.number().min(0),
   priceSell: z.coerce.number().min(0),
   compareAtPrice: z.coerce.number().optional(),
@@ -77,6 +78,9 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
           categoryId: data.categoryId,
           brandId: data.brandId || null,
           description: data.description ?? "",
+          // Blank means "keep the current picture" on edit — clearing the box
+          // by accident should not wipe an image the admin cannot re-upload.
+          ...(data.imageUrl?.trim() ? { imageUrl: data.imageUrl.trim() } : {}),
           priceBuy: data.priceBuy,
           priceSell: data.priceSell,
           compareAtPrice: data.compareAtPrice || null,
@@ -95,6 +99,7 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
           categoryId: data.categoryId,
           brandId: data.brandId || null,
           description: data.description ?? "",
+          ...(data.imageUrl?.trim() ? { imageUrl: data.imageUrl.trim() } : {}),
           priceBuy: data.priceBuy,
           priceSell: data.priceSell,
           compareAtPrice: data.compareAtPrice || null,
@@ -109,15 +114,22 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
     return { error: e instanceof Error ? e.message : "Erreur lors de l'enregistrement" };
   }
 
-  revalidatePath("/admin/stock");
-  revalidatePath("/");
+  revalidateProductSurfaces();
   return { ok: true };
+}
+
+// A product shows up on the home page, its own page, every catalogue listing
+// and the search results, so a price or stock edit has to invalidate the whole
+// storefront tree — revalidating "/" alone left the listings stale.
+function revalidateProductSurfaces() {
+  revalidatePath("/admin/stock");
+  revalidatePath("/", "layout");
 }
 
 export async function deleteProduct(productId: string) {
   await assertAdmin();
   await prisma.product.delete({ where: { id: productId } });
-  revalidatePath("/admin/stock");
+  revalidateProductSurfaces();
 }
 
 export async function adjustStock(productId: string, change: number, note?: string) {
@@ -129,7 +141,7 @@ export async function adjustStock(productId: string, change: number, note?: stri
   await prisma.stockMovement.create({
     data: { productId, change, reason: "adjustment", note },
   });
-  revalidatePath("/admin/stock");
+  revalidateProductSurfaces();
 }
 
 export async function updateSiteSettings(patch: Partial<SettingsMap>) {

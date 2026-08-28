@@ -18,6 +18,7 @@ export default function ProductForm({
     categoryId: string;
     brandId: string | null;
     description: string;
+    imageUrl?: string;
     priceBuy: number;
     priceSell: number;
     compareAtPrice: number | null;
@@ -69,6 +70,10 @@ export default function ProductForm({
         <textarea name="description" defaultValue={product?.description} rows={3} className="input" />
       </Field>
 
+      <Field label="Image (chemin — laisser vide pour conserver l'actuelle)">
+        <input name="imageUrl" defaultValue={product?.imageUrl ?? ""} placeholder="/images/parts-lineup.png" className="input" />
+      </Field>
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Field label="Prix d'achat (DT)">
           <input name="priceBuy" type="number" step="0.01" min="0" required defaultValue={product?.priceBuy} className="input" />
@@ -88,12 +93,14 @@ export default function ProductForm({
         <input name="lowStockThreshold" type="number" min="0" defaultValue={product?.lowStockThreshold ?? 5} className="input max-w-32" />
       </Field>
 
-      <div className="flex gap-6">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="isTopSeller" defaultChecked={product?.isTopSeller} /> Top vente
+      {/* The default 13px checkbox is a miss-tap on a phone; the label is the
+          real target, so it carries the tap height and the box is scaled up. */}
+      <div className="flex gap-6 flex-wrap">
+        <label className="flex items-center gap-2 text-sm min-h-tap cursor-pointer">
+          <input type="checkbox" name="isTopSeller" defaultChecked={product?.isTopSeller} className="w-[18px] h-[18px]" /> Top vente
         </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="active" defaultChecked={product?.active ?? true} /> Actif (visible en ligne)
+        <label className="flex items-center gap-2 text-sm min-h-tap cursor-pointer">
+          <input type="checkbox" name="active" defaultChecked={product?.active ?? true} className="w-[18px] h-[18px]" /> Actif (visible en ligne)
         </label>
       </div>
 
@@ -110,6 +117,9 @@ export default function ProductForm({
       <style jsx>{`
         .input {
           width: 100%;
+          /* 44px is the comfortable-tap floor used across the site; the
+             padding alone left these fields at 42. */
+          min-height: 44px;
           padding: 0.6rem 0.75rem;
           border: 1px solid rgba(15, 35, 82, 0.15);
           border-radius: 0.5rem;
