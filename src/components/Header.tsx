@@ -27,6 +27,7 @@ export default async function Header() {
       menu={menu}
       whatsapp={settings.shop_whatsapp}
       phone={settings.shop_phone}
+      storeAddress={settings.shop_address}
       userName={user?.name ?? null}
       isAdmin={user?.role === "ADMIN"}
     />

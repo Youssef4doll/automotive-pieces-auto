@@ -3,24 +3,27 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { track } from "@/lib/track";
 import { useCart, cartCount } from "@/lib/cart-store";
 import LanguageSwitcher from "./LanguageSwitcher";
 import MegaMenu, { type MegaMenuFamily } from "./MegaMenu";
 import VehiclePicker from "./VehiclePicker";
+import VehicleStoreBar from "./VehicleStoreBar";
 
 export default function HeaderClient({
   menu,
   whatsapp,
   phone,
+  storeAddress,
   userName,
   isAdmin,
 }: {
   menu: MegaMenuFamily[];
   whatsapp: string;
   phone: string;
+  storeAddress: string;
   userName: string | null;
   isAdmin: boolean;
 }) {
@@ -36,6 +39,27 @@ export default function HeaderClient({
   const [expandedFamily, setExpandedFamily] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
+  // The delivery/returns strip sits on every page. It is useful once, then it
+  // is permanent chrome the shopper cannot get rid of — so let them close it,
+  // and remember that. Starts hidden until we have read localStorage so a
+  // dismissed bar never flashes back on navigation.
+  const [noticeOpen, setNoticeOpen] = useState<boolean | null>(null);
+  useEffect(() => {
+    try {
+      setNoticeOpen(localStorage.getItem("apa-notice-dismissed") !== "1");
+    } catch {
+      setNoticeOpen(true);
+    }
+  }, []);
+  function dismissNotice() {
+    setNoticeOpen(false);
+    try {
+      localStorage.setItem("apa-notice-dismissed", "1");
+    } catch {
+      /* private mode — it will simply show again next visit */
+    }
+  }
+
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!q.trim()) return;
@@ -48,8 +72,18 @@ export default function HeaderClient({
     <>
       {/* 12px floor (var(--text-min)): this bar carries real delivery/returns
           info on every page, so it must be readable without zooming. */}
-      <div className="bg-red-500 text-white text-[clamp(12px,3vw,13px)] leading-[1.35] font-semibold">
-        <div className="px-[14px] py-2 flex items-center justify-center flex-wrap gap-x-[clamp(10px,3vw,34px)] gap-y-1.5 overflow-x-auto no-scrollbar tracking-[.02em]">
+      {noticeOpen && (
+      <div className="relative bg-red-500 text-white text-[clamp(12px,3vw,13px)] leading-[1.35] font-semibold">
+        <button
+          onClick={dismissNotice}
+          aria-label={t("cart.dismiss")}
+          className="absolute end-0 inset-y-0 w-tap flex items-center justify-center text-white/70 hover:text-white"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+        <div className="px-[14px] pe-tap py-2 flex items-center justify-center flex-wrap gap-x-[clamp(10px,3vw,34px)] gap-y-1.5 overflow-x-auto no-scrollbar tracking-[.02em]">
           <span className="whitespace-nowrap">{t("top.delivery")}</span>
           <span className="hidden sm:inline opacity-55">•</span>
           <span className="hidden sm:inline whitespace-nowrap">{t("top.cod")}</span>
@@ -57,6 +91,7 @@ export default function HeaderClient({
           <span className="hidden md:inline whitespace-nowrap">{t("top.returns")}</span>
         </div>
       </div>
+      )}
 
       <header
         className="relative sticky top-0 z-40 bg-navy-900 text-white shadow-md px-[clamp(12px,3.5vw,28px)]"
@@ -219,6 +254,8 @@ export default function HeaderClient({
 
         {menuOpen && <MegaMenu families={menu} onNavigate={() => setMenuOpen(false)} />}
       </header>
+
+      <VehicleStoreBar storeAddress={storeAddress} />
 
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">

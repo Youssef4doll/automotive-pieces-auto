@@ -1,7 +1,6 @@
 import Link from "next/link";
 import ProductGrid from "./ProductGrid";
 import CatalogControls from "./CatalogControls";
-import CatalogVehicleBar from "./CatalogVehicleBar";
 import TrackEvent from "./TrackEvent";
 import type { CardProduct } from "./ProductCard";
 
@@ -52,8 +51,6 @@ export default function CatalogView({
       <p className="text-sm text-gray-500 mb-4">
         {products.length} référence{products.length > 1 ? "s" : ""} · 24h Grand Tunis, 48–72h régions
       </p>
-
-      <CatalogVehicleBar />
 
       <div className="flex flex-col lg:flex-row gap-6">
         <aside className="lg:w-56 shrink-0 flex flex-col gap-6">
