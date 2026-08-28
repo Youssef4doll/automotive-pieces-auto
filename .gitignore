@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Sandbox agent tooling, not part of the app
+.agents/
+.claude/
+skills-lock.json

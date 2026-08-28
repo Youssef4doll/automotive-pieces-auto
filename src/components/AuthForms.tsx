@@ -41,7 +41,7 @@ export default function AuthForms() {
 
       <div className="flex flex-col">
         <div className="flex justify-end px-4 sm:px-8 pt-4">
-          <Link href="/" className="text-xs font-semibold text-gray-500 hover:text-red-600">
+          <Link href="/" className="inline-flex items-center min-h-tap text-xs font-semibold text-gray-500 hover:text-red-600">
             {t("auth.backShop")}
           </Link>
         </div>
@@ -73,7 +73,7 @@ export default function AuthForms() {
                 <button type="submit" disabled={loginPending} className="py-3 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-display font-bold uppercase tracking-wide">
                   {loginPending ? "…" : t("account.submitLogin")}
                 </button>
-                <button type="button" onClick={() => setTab("signup")} className="text-xs text-navy-900 underline">
+                <button type="button" onClick={() => setTab("signup")} className="inline-flex items-center justify-center min-h-tap text-xs text-navy-900 underline">
                   {t("account.switchToSignup")}
                 </button>
                 <p className="text-[11px] text-gray-400 mt-2">
@@ -90,7 +90,7 @@ export default function AuthForms() {
                 <button type="submit" disabled={signupPending} className="py-3 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-display font-bold uppercase tracking-wide">
                   {signupPending ? "…" : t("account.submitSignup")}
                 </button>
-                <button type="button" onClick={() => setTab("login")} className="text-xs text-navy-900 underline">
+                <button type="button" onClick={() => setTab("login")} className="inline-flex items-center justify-center min-h-tap text-xs text-navy-900 underline">
                   {t("account.switchToLogin")}
                 </button>
               </form>
