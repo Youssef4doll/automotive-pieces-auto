@@ -2,7 +2,7 @@ import { getRecentReviews } from "@/lib/data/catalog";
 import SectionHeading from "./SectionHeading";
 
 export default async function ReviewsSection() {
-  const reviews = await getRecentReviews();
+  const reviews = (await getRecentReviews()).slice(0, 3);
   if (reviews.length === 0) return null;
 
   return (

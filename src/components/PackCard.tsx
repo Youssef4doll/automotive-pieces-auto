@@ -43,12 +43,12 @@ export default function PackCard({ pack }: { pack: Pack }) {
           </span>
         )}
       </div>
-      <div className="p-5 flex flex-col flex-1">
+      <div className="p-4 sm:p-5 flex flex-col flex-1">
         <h3 className="font-heading font-extrabold uppercase text-navy-950 text-lg">{pack.name}</h3>
         <p className="text-sm text-gray-500 mt-1.5">{pack.description}</p>
 
-        <p className="text-xs font-bold text-gray-400 uppercase mt-4 mb-2">{t("packs.contents")}</p>
-        <ul className="flex flex-col gap-1.5 mb-4">
+        <p className="hidden sm:block text-xs font-bold text-gray-400 uppercase mt-4 mb-2">{t("packs.contents")}</p>
+        <ul className="hidden sm:flex flex-col gap-1.5 mb-4">
           {pack.contents.map((item) => (
             <li key={item.name} className="flex justify-between items-center text-sm">
               <span className="flex items-center gap-2 text-gray-700">

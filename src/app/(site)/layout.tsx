@@ -2,8 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import AddedToast from "@/components/AddedToast";
-import MascotWidget from "@/components/MascotWidget";
-import StickyCartBar from "@/components/StickyCartBar";
+import ScrollTopButton from "@/components/ScrollTopButton";
 import { getSettings } from "@/lib/settings";
 
 export default async function SiteLayout({ children }: LayoutProps<"/">) {
@@ -17,8 +16,14 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
       <Footer />
       <CartDrawer freeShippingThreshold={freeShippingThreshold} />
       <AddedToast />
-      <StickyCartBar />
-      <MascotWidget whatsapp={settings.shop_whatsapp} />
+      {/* Nothing else floats over the page. The persistent WhatsApp widget and
+          the sticky bottom cart bar were both removed: they covered content on
+          every screen and competed with the page's own actions. WhatsApp is
+          still reachable from the header, footer, the finder, the "can't find
+          your part" band and out-of-stock products — the floating copy added
+          no reach, only noise. Cart feedback is carried by the header badge
+          and the add-to-cart confirmation instead. */}
+      <ScrollTopButton />
     </>
   );
 }

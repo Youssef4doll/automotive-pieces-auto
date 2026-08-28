@@ -60,12 +60,12 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
       </div>
 
       {tab === "fam" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
           {families.map((f) => (
             <Link
               key={f.slug}
               href={`/catalogue/${f.slug}`}
-              className="flex items-center gap-3 p-4 rounded-xl border border-navy-900/10 bg-gray-50 hover:border-gold-500 hover:bg-[#fffdf4] hover:-translate-y-0.5 transition min-h-[92px]"
+              className="flex items-center gap-3 p-4 rounded-xl border border-navy-900/10 bg-gray-50 hover:border-gold-500 hover:bg-[#fffdf4] hover:-translate-y-0.5 transition min-h-[76px]"
             >
               <div className="flex-1 min-w-0 flex flex-col gap-1">
                 <span className="font-display font-bold uppercase tracking-wide text-[15px] text-navy-950 leading-tight">
@@ -84,7 +84,7 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
           {SYMPTOM_LINKS.map((sy) => {
             const fam = families[sy.g];
             const sub = fam?.children[sy.s];
@@ -93,7 +93,7 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
               <Link
                 key={sy.key}
                 href={href}
-                className="flex items-center gap-3 p-4 rounded-xl border border-navy-900/10 bg-white hover:border-red-500 hover:bg-[#fff8f8] hover:-translate-y-0.5 transition min-h-[92px]"
+                className="flex items-center gap-3 p-4 rounded-xl border border-navy-900/10 bg-white hover:border-red-500 hover:bg-[#fff8f8] hover:-translate-y-0.5 transition min-h-[76px]"
               >
                 <div className="flex-1 min-w-0 flex flex-col gap-1">
                   <span className="font-bold text-[14.5px] text-navy-950 leading-tight">{t(sy.key)}</span>

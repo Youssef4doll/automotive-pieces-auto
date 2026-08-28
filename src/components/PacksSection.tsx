@@ -5,7 +5,9 @@ import T from "./T";
 import PackCard from "./PackCard";
 
 export default async function PacksSection() {
-  const packs = await getPacks();
+  // Three packs is a taste of the range, not the whole catalogue — the
+  // section links onward for the rest.
+  const packs = (await getPacks()).slice(0, 3);
   if (packs.length === 0) return null;
 
   return (

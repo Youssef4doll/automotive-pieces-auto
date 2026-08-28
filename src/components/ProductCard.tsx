@@ -71,25 +71,11 @@ export default function ProductCard({ product }: { product: CardProduct }) {
         >
           {product.name}
         </Link>
-        {product.description && (
-          <p className="text-xs text-gray-400 line-clamp-1">{product.description}</p>
-        )}
-
-        <div className="flex items-center gap-3 text-xs mt-1">
-          <Link
-            href={`/produit/${product.slug}`}
-            className="text-red-500 font-semibold hover:underline inline-flex items-center gap-1 min-h-tap-compact"
-          >
-            {t("product.viewPage")} →
-          </Link>
-          <Link
-            href={`/produit/${product.slug}`}
-            className="text-gray-400 hover:text-gray-600 underline inline-flex items-center min-h-tap-compact"
-          >
-            {t("product.quickView")}
-          </Link>
-        </div>
-
+        {/* The description line and the two "voir la page / aperçu rapide"
+            links were removed: both links pointed at the same product page
+            the image and title already link to, so they added three tappable
+            things per card that all did the same thing. A card only has to
+            answer: what is it, does it fit, is it available, how much. */}
         {compatible === true && (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700">
             ✓ {t("compat.compatible")}
@@ -101,6 +87,8 @@ export default function ProductCard({ product }: { product: CardProduct }) {
           </span>
         )}
 
+        {/* One availability line, not two — "Expédié aujourd'hui" was
+            printed twice on every card. */}
         <div className="text-xs">
           {outOfStock ? (
             <span className="text-red-600 font-semibold">{t("product.outOfStock")}</span>
@@ -108,11 +96,8 @@ export default function ProductCard({ product }: { product: CardProduct }) {
             <span className="text-green-700 font-semibold">● {t("product.inStock")} — {t("product.shippedToday")}</span>
           )}
         </div>
-        <p className="text-[11px] text-gray-400">
-          {t("product.shippedToday")} · {t("trust.cod")}
-        </p>
 
-        <div className="mt-2 flex items-baseline gap-2">
+        <div className="mt-auto pt-2 flex items-baseline gap-2">
           {product.compareAtPrice && product.compareAtPrice > product.priceSell && (
             <Price value={product.compareAtPrice} className="text-xs text-gray-400 line-through" />
           )}

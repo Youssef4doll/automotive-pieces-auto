@@ -15,18 +15,18 @@ import TrustBadges from "@/components/TrustBadges";
 import T from "@/components/T";
 import { getTopSellers, getActivePromotions } from "@/lib/data/catalog";
 import { getSettings } from "@/lib/settings";
-import PromoCarousel from "@/components/PromoCarousel";
+import PromoGrid from "@/components/PromoGrid";
 
 export default async function HomePage() {
   const [topSellers, settings, promos] = await Promise.all([
-    getTopSellers(8),
+    getTopSellers(6),
     getSettings(),
     getActivePromotions(),
   ]);
 
   return (
     <>
-      <PromoCarousel promos={promos} />
+      <PromoGrid promos={promos} />
       <Hero />
       <BrandMarquee />
       <FinderGrid whatsapp={settings.shop_whatsapp} />

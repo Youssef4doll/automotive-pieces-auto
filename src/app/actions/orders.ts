@@ -55,6 +55,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const freeShippingThreshold = Number(settings.free_shipping_threshold) || 150;
   const user = await getCurrentUser();
 
+  // Two simultaneous checkouts can read the same MAX(ref) and try to write
+  // the same reference. The unique index makes that fail loudly rather than
+  // duplicate, so retry a couple of times before surfacing an error.
+  const MAX_REF_ATTEMPTS = 4;
+  for (let attempt = 1; ; attempt++) {
   try {
     const result = await prisma.$transaction(async (tx) => {
       // Price and stock are read fresh inside the transaction — the client
@@ -102,8 +107,18 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
         data.deliveryMethod === "PICKUP" ? 0 : subtotal >= freeShippingThreshold ? 0 : 8;
       const total = subtotal + shippingFee;
 
-      const orderCount = await tx.order.count();
-      const ref = `CMD-${1000 + orderCount + 1}`;
+      // Derive the reference from the highest existing one, never from
+      // row count. count() breaks permanently the first time any order is
+      // deleted or cancelled-and-purged: this database had 24 orders while
+      // the highest ref was CMD-1041, so count+1001 landed on a ref that
+      // already existed and EVERY checkout failed with a unique-constraint
+      // 500. Parsed numerically in SQL so it stays correct past CMD-9999,
+      // where a lexicographic max would start returning the wrong row.
+      const [{ max }] = await tx.$queryRaw<{ max: number }[]>`
+        SELECT COALESCE(MAX(CAST(SUBSTRING(ref FROM '[0-9]+$') AS INTEGER)), 1000) AS max
+        FROM "Order"
+      `;
+      const ref = `CMD-${Number(max) + 1}`;
 
       const order = await tx.order.create({
         data: {
@@ -161,7 +176,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     return { ok: true, ref: result.ref };
   } catch (e) {
     if (e instanceof OrderError) return { ok: false, error: e.message };
+    const isRefCollision =
+      typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "P2002";
+    if (isRefCollision && attempt < MAX_REF_ATTEMPTS) continue;
     throw e;
+  }
   }
 }
 

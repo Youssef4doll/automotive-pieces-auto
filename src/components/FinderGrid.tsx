@@ -61,7 +61,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-10">
-      <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-8">
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-6">
           <h2 className="font-heading font-extrabold uppercase text-xl sm:text-2xl text-navy-950 tracking-tight">
             {t("finder.title")}
@@ -73,7 +73,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
           {/* Par modèle */}
           <div className="flex flex-col gap-2.5">
             <FinderTitle k="finder.byModel" />
-            <p className="text-xs text-gray-500 min-h-8">{t("finder.byModelDesc")}</p>
+            <p className="hidden sm:block text-xs text-gray-500 min-h-8">{t("finder.byModelDesc")}</p>
             <form onSubmit={submitModel}>
               <input
                 value={modelQuery}
@@ -93,7 +93,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
           {/* Par carte grise */}
           <div className="flex flex-col gap-2.5">
             <FinderTitle k="finder.byPlate" />
-            <p className="text-xs text-gray-500 min-h-8">{t("finder.byPlateDesc")}</p>
+            <p className="hidden sm:block text-xs text-gray-500 min-h-8">{t("finder.byPlateDesc")}</p>
             <div className="flex-1" />
             {plateSent ? (
               <span className="text-xs font-semibold text-green-700 py-2.5">{t("finder.plateReceived")}</span>
@@ -117,7 +117,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
           {/* Par VIN */}
           <div className="flex flex-col gap-2.5">
             <FinderTitle k="finder.byVin" />
-            <p className="text-xs text-gray-500 min-h-8">{t("finder.byVinDesc")}</p>
+            <p className="hidden sm:block text-xs text-gray-500 min-h-8">{t("finder.byVinDesc")}</p>
             <form onSubmit={submitVin} className="flex flex-col gap-2.5 flex-1">
               <div>
                 <input
@@ -147,7 +147,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
           {/* Par référence */}
           <div className="flex flex-col gap-2.5">
             <FinderTitle k="finder.byRef" />
-            <p className="text-xs text-gray-500 min-h-8">{t("finder.byRefDesc")}</p>
+            <p className="hidden sm:block text-xs text-gray-500 min-h-8">{t("finder.byRefDesc")}</p>
             <form onSubmit={submitRef} className="flex flex-col gap-2.5 flex-1">
               <input
                 dir="ltr"
