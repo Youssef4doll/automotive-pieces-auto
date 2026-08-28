@@ -7,6 +7,14 @@ import { decodeVinMakeSlug, isValidVinFormat } from "@/lib/vin";
 import VehiclePicker from "./VehiclePicker";
 import { track } from "@/lib/track";
 
+const METHODS = [
+  { id: "model", tab: "finder.tabModel" },
+  { id: "plate", tab: "finder.tabPlate" },
+  { id: "vin", tab: "finder.tabVin" },
+  { id: "ref", tab: "finder.tabRef" },
+] as const;
+type Method = (typeof METHODS)[number]["id"];
+
 export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
   const { t } = useLocale();
   const router = useRouter();
@@ -21,6 +29,12 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
   const [refMsg, setRefMsg] = useState<string | null>(null);
 
   const [plateSent, setPlateSent] = useState(false);
+
+  // On a phone the four methods stack into four tall boxes — ~830px of
+  // form for a decision the shopper makes once. Show one at a time behind
+  // tabs instead; desktop keeps all four side by side, where the space is
+  // free. Same markup tree: the inactive panels are hidden below lg.
+  const [method, setMethod] = useState<Method>("model");
 
   function openPicker(makeSlug?: string) {
     setPresetMake(makeSlug);
@@ -62,16 +76,42 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
   return (
     <section className="mx-auto max-w-7xl px-4 py-10">
       <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-6">
-          <h2 className="font-heading font-extrabold uppercase text-xl sm:text-2xl text-navy-950 tracking-tight">
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-4 sm:mb-6">
+          <h2 className="font-heading font-extrabold uppercase text-lg sm:text-2xl text-navy-950 tracking-tight">
             {t("finder.title")}
           </h2>
-          <p className="text-sm text-gray-500">{t("finder.subtitle")}</p>
+          {/* The subtitle just names the four methods, which the tabs below
+              already show on mobile. */}
+          <p className="hidden sm:block text-sm text-gray-500">{t("finder.subtitle")}</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div role="tablist" aria-label={t("finder.title")} className="lg:hidden flex gap-1.5 mb-4 p-1 rounded-xl bg-gray-100">
+          {METHODS.map((m) => {
+            const active = method === m.id;
+            return (
+              <button
+                key={m.id}
+                role="tab"
+                aria-selected={active}
+                aria-controls={`finder-panel-${m.id}`}
+                onClick={() => setMethod(m.id)}
+                className={`flex-1 min-h-tap px-1 rounded-lg text-[11px] font-display font-bold uppercase tracking-wide transition ${
+                  active ? "bg-white text-navy-950 shadow-sm" : "text-navy-900/55"
+                }`}
+              >
+                {t(m.tab)}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Par modèle */}
-          <div className="flex flex-col gap-2.5">
+          <div
+            id="finder-panel-model"
+            role="tabpanel"
+            className={`flex-col gap-2.5 lg:flex ${method === "model" ? "flex" : "hidden"}`}
+          >
             <FinderTitle k="finder.byModel" />
             <p className="hidden sm:block text-xs text-gray-500 min-h-8">{t("finder.byModelDesc")}</p>
             <form onSubmit={submitModel}>
@@ -91,7 +131,11 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
           </div>
 
           {/* Par carte grise */}
-          <div className="flex flex-col gap-2.5">
+          <div
+            id="finder-panel-plate"
+            role="tabpanel"
+            className={`flex-col gap-2.5 lg:flex ${method === "plate" ? "flex" : "hidden"}`}
+          >
             <FinderTitle k="finder.byPlate" />
             <p className="hidden sm:block text-xs text-gray-500 min-h-8">{t("finder.byPlateDesc")}</p>
             <div className="flex-1" />
@@ -115,7 +159,11 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
           </div>
 
           {/* Par VIN */}
-          <div className="flex flex-col gap-2.5">
+          <div
+            id="finder-panel-vin"
+            role="tabpanel"
+            className={`flex-col gap-2.5 lg:flex ${method === "vin" ? "flex" : "hidden"}`}
+          >
             <FinderTitle k="finder.byVin" />
             <p className="hidden sm:block text-xs text-gray-500 min-h-8">{t("finder.byVinDesc")}</p>
             <form onSubmit={submitVin} className="flex flex-col gap-2.5 flex-1">
@@ -145,7 +193,11 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
           </div>
 
           {/* Par référence */}
-          <div className="flex flex-col gap-2.5">
+          <div
+            id="finder-panel-ref"
+            role="tabpanel"
+            className={`flex-col gap-2.5 lg:flex ${method === "ref" ? "flex" : "hidden"}`}
+          >
             <FinderTitle k="finder.byRef" />
             <p className="hidden sm:block text-xs text-gray-500 min-h-8">{t("finder.byRefDesc")}</p>
             <form onSubmit={submitRef} className="flex flex-col gap-2.5 flex-1">
@@ -184,5 +236,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
 
 function FinderTitle({ k }: { k: "finder.byModel" | "finder.byPlate" | "finder.byVin" | "finder.byRef" }) {
   const { t } = useLocale();
-  return <h3 className="font-display font-bold uppercase text-red-500 text-sm tracking-wide">{t(k)}</h3>;
+  // Hidden below lg: the selected tab already names the method, so this
+  // heading would just repeat it.
+  return <h3 className="hidden lg:block font-display font-bold uppercase text-red-500 text-sm tracking-wide">{t(k)}</h3>;
 }
