@@ -187,3 +187,11 @@ export async function getVehicleMakes() {
     include: { models: { orderBy: { name: "asc" }, include: { engines: { orderBy: { name: "asc" } } } } },
   });
 }
+
+export async function getActivePromotions() {
+  return prisma.promotion.findMany({
+    where: { active: true },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    select: { id: true, title: true, imageUrl: true, href: true },
+  });
+}

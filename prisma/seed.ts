@@ -553,6 +553,32 @@ async function main() {
   }
 
   console.log("Done.");
+  // Homepage deals carousel. Seeded from the images the project actually
+  // ships so the strip renders real content out of the box; the shop edits
+  // these from /admin/promotions without a redeploy.
+  // Only the storefront photo ships as a default banner: it is a real
+  // photograph and fills a wide strip properly. The product-cutout images
+  // are transparent PNGs that look broken when cropped to a banner, so the
+  // shop adds its own artwork from /admin/promotions instead of us shipping
+  // something half-right.
+  const promos = [
+    {
+      title: "Notre magasin — retrait gratuit en 2h",
+      imageUrl: "/images/storefront.png",
+      href: "/#magasin",
+      order: 0,
+    },
+  ];
+  for (const promo of promos) {
+    const existing = await prisma.promotion.findFirst({ where: { title: promo.title } });
+    if (existing) {
+      await prisma.promotion.update({ where: { id: existing.id }, data: promo });
+    } else {
+      await prisma.promotion.create({ data: promo });
+    }
+  }
+  console.log(`Seeded ${promos.length} promotions`);
+
   console.log("Admin login: admin@automotive-pieces-auto.tn / admin1234");
   console.log("Demo customer login: karim.bensalah@example.com / client1234");
 }

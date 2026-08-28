@@ -176,6 +176,64 @@ body {
       transform: translateX(50%);
     }
   }
+  /* Cart motion. Short and functional: they communicate where the sheet came
+     from, nothing more. All are disabled by the prefers-reduced-motion block. */
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-in-end {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  [dir="rtl"] .sm\:motion-safe\:animate-\[slide-in-end_240ms_cubic-bezier\(0\.32\,0\.72\,0\,1\)\] {
+    animation-name: slide-in-start;
+  }
+  @keyframes slide-in-start {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes badge-pop {
+    0% {
+      transform: scale(1);
+    }
+    45% {
+      transform: scale(1.28);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
   @keyframes check-pop {
     0% {
       opacity: 0;

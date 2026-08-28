@@ -182,7 +182,15 @@ export default function HeaderClient({
                 <circle cx="9.5" cy="19" r="1.6" />
                 <circle cx="17.5" cy="19" r="1.6" />
               </svg>
-              <span className="whitespace-nowrap">{t("nav.cart")} ({count})</span>
+              <span className="whitespace-nowrap">
+                {t("nav.cart")} (
+                {/* key={count} restarts the pop each time the count changes, so
+                    the badge itself confirms the add without any interruption. */}
+                <span key={count} className="inline-block motion-safe:animate-[badge-pop_320ms_ease-out]">
+                  {count}
+                </span>
+                )
+              </span>
             </button>
           </div>
         </div>

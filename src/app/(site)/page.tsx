@@ -13,14 +13,20 @@ import SectionHeading from "@/components/SectionHeading";
 import Eyebrow from "@/components/Eyebrow";
 import TrustBadges from "@/components/TrustBadges";
 import T from "@/components/T";
-import { getTopSellers } from "@/lib/data/catalog";
+import { getTopSellers, getActivePromotions } from "@/lib/data/catalog";
 import { getSettings } from "@/lib/settings";
+import PromoCarousel from "@/components/PromoCarousel";
 
 export default async function HomePage() {
-  const [topSellers, settings] = await Promise.all([getTopSellers(8), getSettings()]);
+  const [topSellers, settings, promos] = await Promise.all([
+    getTopSellers(8),
+    getSettings(),
+    getActivePromotions(),
+  ]);
 
   return (
     <>
+      <PromoCarousel promos={promos} />
       <Hero />
       <BrandMarquee />
       <FinderGrid whatsapp={settings.shop_whatsapp} />

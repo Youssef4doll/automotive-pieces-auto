@@ -168,3 +168,67 @@ export async function updateSettingsAction(
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+// --- Promotions (homepage deals carousel) -----------------------------------
+
+const promotionSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(2),
+  imageUrl: z.string().min(1),
+  href: z.string().optional(),
+  order: z.coerce.number().int().min(0),
+  active: z.coerce.boolean().optional(),
+});
+
+export type PromotionFormState = { error?: string; ok?: boolean } | undefined;
+
+export async function upsertPromotion(
+  _prev: PromotionFormState,
+  formData: FormData
+): Promise<PromotionFormState> {
+  await assertAdmin();
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = promotionSchema.safeParse({
+    ...raw,
+    active: raw.active === "on" || raw.active === "true",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide" };
+  }
+  const d = parsed.data;
+  // Only same-origin paths: a banner is a link the whole storefront trusts,
+  // so don't let it become an open redirect to an arbitrary external host.
+  if (d.href && !d.href.startsWith("/")) {
+    return { error: "Le lien doit être un chemin interne commençant par /" };
+  }
+  const data = {
+    title: d.title,
+    imageUrl: d.imageUrl,
+    href: d.href || null,
+    order: d.order,
+    active: d.active ?? true,
+  };
+  try {
+    if (d.id) await prisma.promotion.update({ where: { id: d.id }, data });
+    else await prisma.promotion.create({ data });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erreur lors de l'enregistrement" };
+  }
+  revalidatePath("/admin/promotions");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function togglePromotion(id: string, active: boolean) {
+  await assertAdmin();
+  await prisma.promotion.update({ where: { id }, data: { active } });
+  revalidatePath("/admin/promotions");
+  revalidatePath("/");
+}
+
+export async function deletePromotion(id: string) {
+  await assertAdmin();
+  await prisma.promotion.delete({ where: { id } });
+  revalidatePath("/admin/promotions");
+  revalidatePath("/");
+}

@@ -264,6 +264,22 @@ model NewsletterSubscriber {
   createdAt DateTime @default(now())
 }
 
+// Admin-managed promotional banners shown as the homepage deals carousel.
+// Kept as its own table rather than hardcoded JSX so the shop can rotate
+// deals without a redeploy — which is the whole point of a deals strip.
+model Promotion {
+  id        String   @id @default(cuid())
+  title     String // used as the image alt text — required, for accessibility
+  imageUrl  String
+  href      String? // where the banner links, e.g. /catalogue/freinage
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, order])
+}
+
 // First-party product analytics — no external service, no keys required.
 // Deliberately has no FK/relation to User: an event log is append-only and
 // high-volume, and shouldn't gain a cascade-delete dependency on accounts

@@ -18,6 +18,15 @@ export type CartItem = {
 type CartState = {
   items: CartItem[];
   isOpen: boolean;
+  /**
+   * The item just added, shown as a lightweight confirmation toast. Adding a
+   * product deliberately does NOT open the cart any more: on a phone that
+   * meant a full-screen takeover on every add, which threw the shopper out
+   * of the page they were browsing. The toast confirms and gets out of the
+   * way; opening the cart is now an explicit choice.
+   */
+  justAdded: CartItem | null;
+  dismissJustAdded: () => void;
   open: () => void;
   close: () => void;
   add: (item: Omit<CartItem, "qty">, qty?: number) => void;
@@ -31,7 +40,9 @@ export const useCart = create<CartState>()(
     (set, get) => ({
       items: [],
       isOpen: false,
-      open: () => set({ isOpen: true }),
+      justAdded: null,
+      dismissJustAdded: () => set({ justAdded: null }),
+      open: () => set({ isOpen: true, justAdded: null }),
       close: () => set({ isOpen: false }),
       add: (item, qty = 1) => {
         const items = [...get().items];
@@ -44,7 +55,8 @@ export const useCart = create<CartState>()(
         } else {
           items.push({ ...item, qty: Math.min(qty, item.stockQty || 99) });
         }
-        set({ items, isOpen: true });
+        const added = items[idx >= 0 ? idx : items.length - 1];
+        set({ items, justAdded: added });
         track("add_to_cart", { productId: item.productId, sku: item.sku, qty, unitPrice: item.unitPrice });
       },
       remove: (productId) =>
