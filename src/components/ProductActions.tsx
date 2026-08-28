@@ -50,27 +50,57 @@ export default function ProductActions({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="p-3 rounded-xl bg-gray-50 border border-gray-200">
-        {compatible === true && (
-          <p className="text-sm font-semibold text-green-700 flex items-center gap-1.5">
-            ✓ {t("compat.compatible")} — {vehicleLabel(vehicle)}
-          </p>
-        )}
-        {compatible === false && (
-          <p className="text-sm font-medium text-amber-700 flex items-center gap-1.5">
-            ? {vehicleLabel(vehicle)} — vérifiez la compatibilité
-          </p>
-        )}
-        {compatible === null && (
-          <p className="text-sm text-gray-600">{t("finder.notSet")}</p>
-        )}
-        <button
-          onClick={() => setPickerOpen(true)}
-          className="inline-flex items-center min-h-11 px-3 -ms-3 mt-0.5 rounded-lg text-xs font-semibold text-navy-900 underline underline-offset-2 hover:bg-navy-900/5 active:bg-navy-900/10 transition"
-        >
-          {vehicle ? t("finder.changeVehicle") : t("compat.check")}
-        </button>
-      </div>
+      {compatible === true && (
+        <div className="rounded-xl bg-green-50 border border-green-200 p-3.5 sm:p-4 flex items-center gap-3">
+          <span className="shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center motion-safe:animate-[check-pop_450ms_ease-out]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-heading font-extrabold uppercase text-green-800 text-sm sm:text-[15px] tracking-tight leading-tight">
+              {t("compat.fitsYourCar")}
+            </p>
+            <p className="text-xs text-green-700/75 mt-0.5 truncate">{vehicleLabel(vehicle)}</p>
+          </div>
+          <button
+            onClick={() => setPickerOpen(true)}
+            className="shrink-0 self-stretch flex items-center text-xs font-semibold text-green-800/60 hover:text-green-800 underline underline-offset-2 px-1"
+          >
+            {t("hero.changeVehicle")}
+          </button>
+        </div>
+      )}
+      {compatible === false && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 sm:p-4 flex items-center gap-3">
+          <span className="shrink-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-extrabold text-sm">
+            !
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-heading font-extrabold uppercase text-amber-800 text-sm sm:text-[15px] tracking-tight leading-tight">
+              {t("compat.doesntMatch")}
+            </p>
+            <p className="text-xs text-amber-700/75 mt-0.5 truncate">{vehicleLabel(vehicle)}</p>
+          </div>
+          <button
+            onClick={() => setPickerOpen(true)}
+            className="shrink-0 self-stretch flex items-center text-xs font-semibold text-amber-800/60 hover:text-amber-800 underline underline-offset-2 px-1"
+          >
+            {t("hero.changeVehicle")}
+          </button>
+        </div>
+      )}
+      {compatible === null && (
+        <div className="rounded-xl bg-gray-50 border border-gray-200 p-3.5 sm:p-4 flex items-center gap-3">
+          <p className="text-sm text-gray-600 flex-1">{t("finder.notSet")}</p>
+          <button
+            onClick={() => setPickerOpen(true)}
+            className="shrink-0 px-4 min-h-11 rounded-lg bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold uppercase tracking-wide"
+          >
+            {t("compat.check")}
+          </button>
+        </div>
+      )}
 
       <div className="flex items-center gap-3">
         <div className="flex items-center border border-gray-300 rounded-lg">
