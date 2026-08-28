@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { decodeVinMakeSlug, isValidVinFormat } from "@/lib/vin";
 import VehiclePicker from "./VehiclePicker";
+import { track } from "@/lib/track";
 
 export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
   const { t } = useLocale();
@@ -106,6 +107,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
               href={`https://wa.me/${whatsapp}`}
               target="_blank"
               rel="noreferrer"
+              onClick={() => track("whatsapp_clicked", { source: "finder_plate" })}
               className="w-full py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-display font-bold uppercase text-xs tracking-wide text-center flex items-center justify-center gap-2"
             >
               WhatsApp

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCart, cartCount } from "@/lib/cart-store";
 import { useLocale } from "@/i18n/LocaleProvider";
+import { track } from "@/lib/track";
 
 export default function MascotWidget({ whatsapp }: { whatsapp: string }) {
   const { t } = useLocale();
@@ -18,6 +19,7 @@ export default function MascotWidget({ whatsapp }: { whatsapp: string }) {
       href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(t("mascot.title"))}`}
       target="_blank"
       rel="noreferrer"
+      onClick={() => track("whatsapp_clicked", { source: "mascot_widget" })}
       className="fixed z-40 start-3 sm:start-4 flex items-center gap-3 rounded-full bg-navy-950 shadow-xl pe-4 sm:pe-5 py-2 hover:bg-navy-900 transition-colors max-w-[calc(100vw-1.5rem)]"
       style={{ bottom: liftedByCart ? "5.5rem" : "1.25rem" }}
     >

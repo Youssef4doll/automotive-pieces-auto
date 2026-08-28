@@ -69,3 +69,70 @@ export async function getDashboardData() {
     productCount: products.length,
   };
 }
+
+// groupBy on a JSON `properties` field isn't portable across Prisma's
+// query engines, so the handful of "top N by JSON property" breakdowns
+// below just fetch the raw recent rows and aggregate in JS — perfectly
+// fine at this stage's event volume, and simple to read.
+export async function getAnalyticsData() {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const where = { createdAt: { gte: since } };
+
+  const [totalEvents, byName, sessionRows, searchRows, productViewRows, categoryViewRows] = await Promise.all([
+    prisma.analyticsEvent.count({ where }),
+    prisma.analyticsEvent.groupBy({ by: ["name"], where, _count: { _all: true } }),
+    prisma.analyticsEvent.findMany({ where, select: { sessionId: true }, distinct: ["sessionId"] }),
+    prisma.analyticsEvent.findMany({
+      where: { ...where, name: "search_started" },
+      select: { properties: true },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    }),
+    prisma.analyticsEvent.findMany({
+      where: { ...where, name: "product_viewed" },
+      select: { properties: true },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    }),
+    prisma.analyticsEvent.findMany({
+      where: { ...where, name: "category_viewed" },
+      select: { properties: true },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    }),
+  ]);
+
+  const countByName = new Map(byName.map((r) => [r.name, r._count._all]));
+  const funnelStep = (name: string) => countByName.get(name) ?? 0;
+  const funnel = [
+    { step: "Vue produit", key: "product_viewed", count: funnelStep("product_viewed") },
+    { step: "Ajout au panier", key: "add_to_cart", count: funnelStep("add_to_cart") },
+    { step: "Commande démarrée", key: "checkout_started", count: funnelStep("checkout_started") },
+    { step: "Commande confirmée", key: "checkout_completed", count: funnelStep("checkout_completed") },
+  ];
+
+  function topJsonValues(rows: { properties: unknown }[], key: string, take = 8) {
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const props = row.properties as Record<string, unknown> | null;
+      const value = props?.[key];
+      if (typeof value !== "string" || !value) continue;
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, take)
+      .map(([value, count]) => ({ value, count }));
+  }
+
+  return {
+    totalEvents,
+    uniqueSessions: sessionRows.length,
+    whatsappClicks: funnelStep("whatsapp_clicked"),
+    byName: byName.map((r) => ({ name: r.name, count: r._count._all })).sort((a, b) => b.count - a.count),
+    funnel,
+    topSearches: topJsonValues(searchRows, "query"),
+    topProductsViewed: topJsonValues(productViewRows, "slug"),
+    topCategoriesViewed: topJsonValues(categoryViewRows, "family"),
+  };
+}

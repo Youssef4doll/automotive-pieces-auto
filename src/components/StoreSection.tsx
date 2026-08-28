@@ -3,6 +3,7 @@ import { getSettings } from "@/lib/settings";
 import SectionHeading from "./SectionHeading";
 import Eyebrow from "./Eyebrow";
 import T from "./T";
+import WhatsAppLink from "./WhatsAppLink";
 
 export default async function StoreSection() {
   const settings = await getSettings();
@@ -42,14 +43,13 @@ export default async function StoreSection() {
               <span dir="ltr">{settings.shop_phone}</span>
             </li>
           </ul>
-          <a
-            href={`https://wa.me/${settings.shop_whatsapp}`}
-            target="_blank"
-            rel="noreferrer"
+          <WhatsAppLink
+            whatsapp={settings.shop_whatsapp}
+            source="store_section"
             className="inline-flex items-center gap-2 mt-5 px-5 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-display font-bold uppercase tracking-wide"
           >
             WhatsApp
-          </a>
+          </WhatsAppLink>
         </div>
       </div>
     </section>

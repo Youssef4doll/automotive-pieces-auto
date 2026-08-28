@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { track } from "./track";
 
 export type CartItem = {
   productId: string;
@@ -44,6 +45,7 @@ export const useCart = create<CartState>()(
           items.push({ ...item, qty: Math.min(qty, item.stockQty || 99) });
         }
         set({ items, isOpen: true });
+        track("add_to_cart", { productId: item.productId, sku: item.sku, qty, unitPrice: item.unitPrice });
       },
       remove: (productId) =>
         set({ items: get().items.filter((i) => i.productId !== productId) }),

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useLocale } from "@/i18n/LocaleProvider";
+import { track } from "@/lib/track";
 import { useCart, cartCount } from "@/lib/cart-store";
 import LanguageSwitcher from "./LanguageSwitcher";
 import MegaMenu, { type MegaMenuFamily } from "./MegaMenu";
@@ -38,6 +39,7 @@ export default function HeaderClient({
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!q.trim()) return;
+    track("search_started", { query: q.trim(), source: "header" });
     router.push(`/recherche?q=${encodeURIComponent(q.trim())}`);
     setMobileOpen(false);
   }

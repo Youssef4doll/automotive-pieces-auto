@@ -6,6 +6,7 @@ import { getProductBySlug, getRelatedProducts } from "@/lib/data/catalog";
 import Price from "@/components/Price";
 import ProductActions from "@/components/ProductActions";
 import ProductGrid from "@/components/ProductGrid";
+import TrackEvent from "@/components/TrackEvent";
 
 export async function generateMetadata({
   params,
@@ -60,6 +61,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <TrackEvent
+        name="product_viewed"
+        properties={{ slug: product.slug, sku: product.sku, category: product.category.slug, price: product.priceSell }}
+      />
 
       <nav className="text-xs text-gray-500 mb-4 flex items-center gap-1.5 flex-wrap">
         <Link href="/" className="hover:text-navy-900 py-3 -my-3">Accueil</Link>

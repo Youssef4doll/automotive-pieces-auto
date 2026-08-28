@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { track } from "./track";
 
 export type SavedVehicle = {
   makeId: string;
@@ -37,12 +38,14 @@ export const useVehicle = create<VehicleState>()(
     (set, get) => ({
       vehicles: [],
       vehicle: null,
-      set: (v) =>
+      set: (v) => {
         set((state) => {
           const rest = state.vehicles.filter((x) => x.engineId !== v.engineId);
           const vehicles = [v, ...rest].slice(0, MAX_GARAGE_SIZE);
           return { vehicles, vehicle: v };
-        }),
+        });
+        track("vehicle_selected", { makeName: v.makeName, modelName: v.modelName, engineName: v.engineName });
+      },
       selectActive: (engineId) => {
         const found = get().vehicles.find((x) => x.engineId === engineId);
         if (found) set({ vehicle: found });

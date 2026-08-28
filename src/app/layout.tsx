@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import "./globals.css";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
 import { localeMeta, type Locale } from "@/i18n/dictionaries";
+import Analytics from "@/components/Analytics";
 
 const barlow = Barlow({
   variable: "--font-barlow",
@@ -52,6 +53,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${barlow.variable} ${barlowCondensed.variable} ${archivo.variable} ${cairo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        <Analytics />
         <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
       </body>
     </html>

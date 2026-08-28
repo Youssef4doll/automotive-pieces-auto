@@ -2,6 +2,7 @@ import Link from "next/link";
 import ProductGrid from "./ProductGrid";
 import CatalogControls from "./CatalogControls";
 import CatalogVehicleBar from "./CatalogVehicleBar";
+import TrackEvent from "./TrackEvent";
 import type { CardProduct } from "./ProductCard";
 
 type Sibling = { id: string; name: string; slug: string };
@@ -31,6 +32,10 @@ export default function CatalogView({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
+      <TrackEvent
+        name="category_viewed"
+        properties={{ family: family.slug, subfamily: subfamily?.slug ?? null, resultCount: products.length }}
+      />
       <nav className="text-xs text-gray-500 mb-3 flex items-center gap-1.5 flex-wrap">
         <Link href="/" className="hover:text-navy-900 py-3 -my-3">Accueil</Link>
         <span>›</span>

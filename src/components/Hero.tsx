@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useLocale } from "@/i18n/LocaleProvider";
+import { track } from "@/lib/track";
 
 const POPULAR = [
   { label: "Plaquettes de frein", href: "/catalogue/freinage/freinage-kit-de-plaquettes-de-frein" },
@@ -19,6 +20,7 @@ export default function Hero() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!q.trim()) return;
+    track("search_started", { query: q.trim(), source: "hero" });
     router.push(`/recherche?q=${encodeURIComponent(q.trim())}`);
   }
 

@@ -254,3 +254,21 @@ model NewsletterSubscriber {
   email     String   @unique
   createdAt DateTime @default(now())
 }
+
+// First-party product analytics — no external service, no keys required.
+// Deliberately has no FK/relation to User: an event log is append-only and
+// high-volume, and shouldn't gain a cascade-delete dependency on accounts
+// or slow down under referential-integrity checks on every insert.
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  name       String // e.g. "product_viewed", "add_to_cart", "checkout_completed"
+  sessionId  String // anonymous, persisted client-side (apa-session cookie)
+  userId     String?
+  path       String?
+  properties Json?
+  createdAt  DateTime @default(now())
+
+  @@index([name])
+  @@index([sessionId])
+  @@index([createdAt])
+}

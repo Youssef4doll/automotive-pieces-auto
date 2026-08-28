@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
@@ -8,6 +8,7 @@ import { useCart, cartSubtotal } from "@/lib/cart-store";
 import Price from "./Price";
 import { GOVERNORATES, GRAND_TUNIS } from "@/lib/governorates";
 import { placeOrder } from "@/app/actions/orders";
+import { track } from "@/lib/track";
 
 export default function CheckoutForm({
   freeShippingThreshold,
@@ -40,6 +41,21 @@ export default function CheckoutForm({
   const total = subtotal + shippingFee;
   const estimate = deliveryMethod === "PICKUP" ? "2h" : isGrandTunis ? deliveryGrandTunis : deliveryRegions;
 
+  // items.length, not [] — the cart is a zustand `persist` store, so on
+  // first paint it's still empty until localStorage rehydrates a moment
+  // later. Firing this on an empty `[]`-effect raced that hydration and
+  // silently dropped the event for real checkouts (caught via the
+  // analytics dashboard itself: checkout_started read 0 while
+  // checkout_completed read 1 — an impossible funnel). The ref keeps it
+  // to exactly one fire even though the effect can now re-run.
+  const trackedStart = useRef(false);
+  useEffect(() => {
+    if (items.length > 0 && !trackedStart.current) {
+      trackedStart.current = true;
+      track("checkout_started", { itemCount: items.length, subtotal });
+    }
+  }, [items.length, subtotal]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -59,8 +75,10 @@ export default function CheckoutForm({
     setSubmitting(false);
     if (!result.ok) {
       setError(result.error);
+      track("checkout_failed", { error: result.error });
       return;
     }
+    track("checkout_completed", { ref: result.ref, total, itemCount: items.length });
     clear();
     router.push(`/commande/confirmation/${result.ref}`);
   }
