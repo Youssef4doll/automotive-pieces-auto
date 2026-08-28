@@ -80,7 +80,7 @@ export default function PackCard({ pack }: { pack: Pack }) {
               stockQty: pack.stockQty,
             })
           }
-          className="w-full py-3 rounded-lg bg-gold-500 hover:bg-gold-400 disabled:bg-gray-200 text-navy-950 font-display font-bold uppercase tracking-wide text-sm"
+          className="w-full min-h-tap rounded-lg bg-gold-500 hover:bg-gold-400 active:scale-[0.98] transition-transform disabled:bg-gray-200 text-navy-950 font-display font-bold uppercase tracking-wide text-sm"
         >
           {t("packs.add")}
         </button>

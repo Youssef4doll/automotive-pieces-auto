@@ -37,7 +37,9 @@ export default async function HomePage() {
                 className="text-2xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight"
               />
             </div>
-            <div className="flex gap-2">
+            {/* Wraps instead of overflowing: four fixed chips in a nowrap row
+                pushed this section past the viewport on 320px phones. */}
+            <div className="flex flex-wrap gap-2">
               <span className="text-sm font-semibold px-3.5 py-2 rounded-full bg-navy-900 text-white">
                 <T k="product.chipAll" />
               </span>

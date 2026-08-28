@@ -35,7 +35,7 @@ export default function CatalogControls({
       <select
         defaultValue={activeSort ?? ""}
         onChange={onSortChange}
-        className="text-sm border border-gray-300 rounded-lg px-2.5 py-2 outline-none"
+        className="text-sm border border-gray-300 rounded-lg px-2.5 min-h-tap outline-none"
       >
         <option value="">Popularité</option>
         <option value="price-asc">Prix croissant</option>

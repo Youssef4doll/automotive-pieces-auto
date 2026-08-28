@@ -26,7 +26,7 @@ export default function OrderStatusTimeline({ status }: { status: string }) {
               >
                 {done ? "✓" : i + 1}
               </div>
-              <span className={`text-[10px] whitespace-nowrap ${done ? "text-green-700 font-semibold" : "text-gray-400"}`}>
+              <span className={`text-[11px] whitespace-nowrap ${done ? "text-green-700 font-semibold" : "text-gray-400"}`}>
                 {step.label}
               </span>
             </div>

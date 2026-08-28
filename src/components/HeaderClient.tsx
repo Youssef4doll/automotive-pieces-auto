@@ -46,7 +46,9 @@ export default function HeaderClient({
 
   return (
     <>
-      <div className="bg-red-500 text-white text-[clamp(11px,3vw,13px)] leading-[1.35] font-semibold">
+      {/* 12px floor (var(--text-min)): this bar carries real delivery/returns
+          info on every page, so it must be readable without zooming. */}
+      <div className="bg-red-500 text-white text-[clamp(12px,3vw,13px)] leading-[1.35] font-semibold">
         <div className="px-[14px] py-2 flex items-center justify-center flex-wrap gap-x-[clamp(10px,3vw,34px)] gap-y-1.5 overflow-x-auto no-scrollbar tracking-[.02em]">
           <span className="whitespace-nowrap">{t("top.delivery")}</span>
           <span className="hidden sm:inline opacity-55">•</span>
@@ -62,7 +64,7 @@ export default function HeaderClient({
       >
         <div className="flex items-center flex-wrap gap-x-[clamp(10px,2vw,18px)] gap-y-2 py-2.5">
           <button
-            className="lg:hidden p-2 -ms-2 rounded hover:bg-white/10 shrink-0"
+            className="lg:hidden w-tap h-tap -ms-2 rounded hover:bg-white/10 shrink-0 flex items-center justify-center"
             aria-label="Menu"
             onClick={() => setMobileOpen(true)}
           >
@@ -71,7 +73,7 @@ export default function HeaderClient({
             </svg>
           </button>
 
-          <Link href="/" className="shrink-0 flex items-center">
+          <Link href="/" className="shrink-0 flex items-center min-h-tap">
             <Image
               src="/images/logo-white.png"
               alt="Automotive Pièces Auto"
@@ -126,7 +128,7 @@ export default function HeaderClient({
               />
               <button
                 type="submit"
-                className="shrink-0 ps-2 pe-3 py-3 -ms-2 -me-3 -my-3 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500 whitespace-nowrap"
+                className="shrink-0 flex items-center justify-center min-w-tap min-h-tap -me-3 -my-3 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500 whitespace-nowrap"
               >
                 {t("hero.searchOk")}
               </button>
@@ -140,7 +142,7 @@ export default function HeaderClient({
               rel="noreferrer"
               className="hidden xl:flex flex-col gap-px items-end leading-tight"
             >
-              <span className="text-[10.5px] uppercase text-white/60 tracking-[.1em]">{t("nav.callToOrder")}</span>
+              <span className="text-[11.5px] uppercase text-white/60 tracking-[.1em]">{t("nav.callToOrder")}</span>
               <span dir="ltr" className="font-heading text-base font-bold tracking-[.01em] text-white">{phone}</span>
             </a>
             <Link
@@ -155,7 +157,7 @@ export default function HeaderClient({
             </Link>
             <Link
               href="/compte"
-              className="sm:hidden flex items-center justify-center w-10 h-10 rounded-md hover:bg-white/10"
+              className="sm:hidden flex items-center justify-center w-tap h-tap rounded-md hover:bg-white/10"
               aria-label={t("nav.account")}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -166,7 +168,7 @@ export default function HeaderClient({
             {isAdmin && (
               <Link
                 href="/admin"
-                className="hidden sm:inline-flex text-[11px] px-2 py-1 rounded bg-gold-500 text-navy-950 font-bold uppercase"
+                className="hidden sm:inline-flex items-center min-h-tap text-xs px-3 rounded bg-gold-500 text-navy-950 font-bold uppercase"
               >
                 {t("nav.admin")}
               </Link>
@@ -200,7 +202,7 @@ export default function HeaderClient({
             />
             <button
               type="submit"
-              className="shrink-0 ps-2 pe-3 py-3 -ms-2 -me-3 -my-3 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500 whitespace-nowrap"
+              className="shrink-0 flex items-center justify-center min-w-tap min-h-tap -me-3 -my-3 text-[11px] font-bold uppercase tracking-[.07em] text-gold-500 whitespace-nowrap"
             >
               {t("hero.searchOk")}
             </button>

@@ -65,10 +65,10 @@ export default async function Footer() {
             <NewsletterForm />
           </div>
           <div className="flex flex-wrap gap-2 mt-3">
-            <span className="text-[10px] px-2 py-1 rounded border border-white/20 text-white/50 uppercase">
+            <span className="text-[11px] px-2 py-1 rounded border border-white/20 text-white/60 uppercase">
               <T k="footer.chipCod" />
             </span>
-            <span className="text-[10px] px-2 py-1 rounded border border-white/20 text-white/50 uppercase">
+            <span className="text-[11px] px-2 py-1 rounded border border-white/20 text-white/60 uppercase">
               <T k="footer.chipCard" />
             </span>
           </div>

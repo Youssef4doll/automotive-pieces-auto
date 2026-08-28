@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getProductBySlug, getRelatedProducts } from "@/lib/data/catalog";
+import { getSettings } from "@/lib/settings";
 import Price from "@/components/Price";
 import ProductActions from "@/components/ProductActions";
 import ProductGrid from "@/components/ProductGrid";
@@ -27,7 +28,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const related = await getRelatedProducts(product.categoryId, product.id, 4);
+  const [related, settings] = await Promise.all([
+    getRelatedProducts(product.categoryId, product.id, 4),
+    getSettings(),
+  ]);
 
   const outOfStock = product.stockQty <= 0;
   const lowStock = !outOfStock && product.stockQty <= product.lowStockThreshold;
@@ -67,11 +71,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       />
 
       <nav className="text-xs text-gray-500 mb-4 flex items-center gap-1.5 flex-wrap">
-        <Link href="/" className="hover:text-navy-900 py-3 -my-3">Accueil</Link>
+        <Link href="/" className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2">Accueil</Link>
         <span>›</span>
         {product.category.parent && (
           <>
-            <Link href={`/catalogue/${product.category.parent.slug}`} className="hover:text-navy-900 py-3 -my-3">
+            <Link href={`/catalogue/${product.category.parent.slug}`} className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2">
               {product.category.parent.name}
             </Link>
             <span>›</span>
@@ -83,7 +87,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               ? `/catalogue/${product.category.parent.slug}/${product.category.slug}`
               : `/catalogue/${product.category.slug}`
           }
-          className="hover:text-navy-900 py-3 -my-3"
+          className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2"
         >
           {product.category.name}
         </Link>
@@ -131,6 +135,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
 
           <ProductActions
+            whatsapp={settings.shop_whatsapp}
             product={{
               id: product.id,
               slug: product.slug,
@@ -182,7 +187,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="text-sm text-gray-500">Compatibilité universelle / non spécifiée — contactez-nous pour vérifier.</p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table className="w-full text-sm">
+            {/* table-fixed: with auto layout the table expands to its content
+                min-width and pushes past the overflow-x-auto wrapper, making
+                the whole product page scroll sideways on a 320px phone.
+                Fixed layout splits the three columns evenly and wraps long
+                model names instead — better here than sideways scrolling. */}
+            <table className="w-full table-fixed text-sm">
               <thead className="bg-navy-950 text-white/70">
                 <tr>
                   <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Marque</th>

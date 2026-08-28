@@ -20,8 +20,9 @@ export default function MascotWidget({ whatsapp }: { whatsapp: string }) {
       target="_blank"
       rel="noreferrer"
       onClick={() => track("whatsapp_clicked", { source: "mascot_widget" })}
-      className="fixed z-40 start-3 sm:start-4 flex items-center gap-3 rounded-full bg-navy-950 shadow-xl pe-4 sm:pe-5 py-2 hover:bg-navy-900 transition-colors max-w-[calc(100vw-1.5rem)]"
-      style={{ bottom: liftedByCart ? "5.5rem" : "1.25rem" }}
+      className={`fixed z-40 start-3 sm:start-4 flex items-center gap-3 rounded-full bg-navy-950 shadow-xl pe-4 sm:pe-5 py-2 hover:bg-navy-900 transition-colors max-w-[calc(100vw-1.5rem)] ${
+        liftedByCart ? "bottom-safe-lifted" : "bottom-safe"
+      }`}
     >
       <span className="relative shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden ring-2 ring-green-500 bg-navy-900">
         <Image src="/images/mascot-3d.png" alt="" fill sizes="48px" className="object-cover object-top" />

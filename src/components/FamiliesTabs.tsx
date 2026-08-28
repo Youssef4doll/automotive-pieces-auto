@@ -43,7 +43,7 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
       <div className="flex gap-2">
         <button
           onClick={() => setTab("fam")}
-          className={`px-4.5 py-3 rounded-full border text-xs font-display font-bold uppercase tracking-wide ${
+          className={`px-4.5 min-h-tap inline-flex items-center rounded-full border text-xs font-display font-bold uppercase tracking-wide ${
             tab === "fam" ? "bg-navy-900 text-white border-navy-900" : "bg-white text-navy-900/70 border-gray-200"
           }`}
         >
@@ -51,7 +51,7 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
         </button>
         <button
           onClick={() => setTab("sym")}
-          className={`px-4.5 py-3 rounded-full border text-xs font-display font-bold uppercase tracking-wide ${
+          className={`px-4.5 min-h-tap inline-flex items-center rounded-full border text-xs font-display font-bold uppercase tracking-wide ${
             tab === "sym" ? "bg-navy-900 text-white border-navy-900" : "bg-white text-navy-900/70 border-gray-200"
           }`}
         >

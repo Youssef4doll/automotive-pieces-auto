@@ -75,14 +75,14 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border rounded-lg">
                         <button
-                          className="w-8 h-8 text-sm font-bold"
+                          className="w-tap h-tap text-base font-bold"
                           onClick={() => setQty(item.productId, item.qty - 1)}
                         >
                           −
                         </button>
                         <span className="w-8 text-center text-sm">{item.qty}</span>
                         <button
-                          className="w-8 h-8 text-sm font-bold"
+                          className="w-tap h-tap text-base font-bold"
                           onClick={() => setQty(item.productId, item.qty + 1)}
                         >
                           +

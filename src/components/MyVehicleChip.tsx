@@ -15,7 +15,7 @@ export default function MyVehicleChip() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 bg-white/95 rounded-full ps-3 pe-1.5 py-2 shadow-sm border border-gray-200 text-xs sm:text-sm"
+        className="inline-flex items-center gap-2 bg-white/95 rounded-full ps-3 pe-1.5 min-h-tap shadow-sm border border-gray-200 text-xs sm:text-sm"
       >
         <span className="text-gray-500">{t("finder.myVehicle")}:</span>
         <span className="font-bold text-navy-900">{label ?? t("finder.notSet")}</span>

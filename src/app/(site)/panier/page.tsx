@@ -28,25 +28,47 @@ export default function CartPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mb-6 tracking-tight">{t("cart.title")}</h1>
+      {/* Tighter thumbnail + gaps below sm: the 44px quantity stepper is
+          non-negotiable for thumbs, so the space comes from chrome instead —
+          otherwise this row's minimum width exceeds a 320px screen. */}
       <div className="flex flex-col gap-3 mb-6">
         {items.map((item) => (
-          <div key={item.productId} className="flex gap-4 p-4 rounded-xl border border-gray-200 bg-white">
-            <div className="w-20 h-20 shrink-0 rounded-lg bg-gray-100 overflow-hidden relative">
-              <Image src={item.imageUrl} alt={item.name} fill sizes="80px" className="object-cover" />
+          <div key={item.productId} className="flex gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-200 bg-white">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-lg bg-gray-100 overflow-hidden relative">
+              <Image src={item.imageUrl} alt={item.name} fill sizes="(max-width: 640px) 64px, 80px" className="object-cover" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-navy-900">{item.name}</p>
               <p className="text-xs text-gray-400 mt-0.5">{t("product.reference")} {item.sku}</p>
-              <div className="flex items-center justify-between mt-3">
+              {/* flex-wrap: the 44px tap targets on the stepper make this row's
+                  minimum width exceed a 320px screen, so let the price drop to
+                  its own line there rather than forcing the page to scroll. */}
+              <div className="flex items-center justify-between gap-2 flex-wrap mt-3">
                 <div className="flex items-center border rounded-lg">
-                  <button className="w-8 h-8 font-bold" onClick={() => setQty(item.productId, item.qty - 1)}>−</button>
-                  <span className="w-8 text-center text-sm">{item.qty}</span>
-                  <button className="w-8 h-8 font-bold" onClick={() => setQty(item.productId, item.qty + 1)}>+</button>
+                  <button
+                    className="w-tap h-tap font-bold text-lg"
+                    aria-label={t("cart.decrease")}
+                    onClick={() => setQty(item.productId, item.qty - 1)}
+                  >
+                    −
+                  </button>
+                  <span className="w-8 text-center text-sm font-semibold">{item.qty}</span>
+                  <button
+                    className="w-tap h-tap font-bold text-lg"
+                    aria-label={t("cart.increase")}
+                    onClick={() => setQty(item.productId, item.qty + 1)}
+                  >
+                    +
+                  </button>
                 </div>
                 <Price value={item.unitPrice * item.qty} className="font-bold text-navy-900" />
               </div>
             </div>
-            <button onClick={() => remove(item.productId)} className="self-start text-gray-300 hover:text-red-600 p-2 -m-1" aria-label={t("cart.remove")}>
+            <button
+              onClick={() => remove(item.productId)}
+              className="self-start shrink-0 w-tap h-tap -me-2 -mt-2 flex items-center justify-center text-gray-300 hover:text-red-600"
+              aria-label={t("cart.remove")}
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
               </svg>
@@ -67,7 +89,7 @@ export default function CartPage() {
         <Link href="/commande" className="block text-center py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold">
           {t("cart.checkout")}
         </Link>
-        <Link href="/" className="block text-center text-sm text-gray-500 font-medium py-2.5">
+        <Link href="/" className="flex items-center justify-center text-center text-sm text-gray-500 font-medium min-h-tap">
           {t("cart.continue")}
         </Link>
       </div>

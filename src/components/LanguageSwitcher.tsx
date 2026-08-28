@@ -12,7 +12,7 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
         <button
           key={l}
           onClick={() => setLocale(l)}
-          className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition ${
+          className={`inline-flex items-center justify-center min-h-tap px-3 rounded-md text-xs font-semibold transition ${
             locale === l
               ? "bg-gold-500 text-navy-950"
               : compact

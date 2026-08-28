@@ -37,9 +37,9 @@ export default function CatalogView({
         properties={{ family: family.slug, subfamily: subfamily?.slug ?? null, resultCount: products.length }}
       />
       <nav className="text-xs text-gray-500 mb-3 flex items-center gap-1.5 flex-wrap">
-        <Link href="/" className="hover:text-navy-900 py-3 -my-3">Accueil</Link>
+        <Link href="/" className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2">Accueil</Link>
         <span>›</span>
-        <Link href={`/catalogue/${family.slug}`} className="hover:text-navy-900 py-3 -my-3">{family.name}</Link>
+        <Link href={`/catalogue/${family.slug}`} className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2">{family.name}</Link>
         {subfamily && (
           <>
             <span>›</span>
@@ -65,7 +65,7 @@ export default function CatalogView({
                   <li key={s.id}>
                     <Link
                       href={`/catalogue/${family.slug}/${s.slug}`}
-                      className={`block px-2 py-2 rounded-lg text-sm min-h-10 flex items-center ${
+                      className={`block px-2 rounded-lg text-sm min-h-tap flex items-center ${
                         subfamily?.slug === s.slug
                           ? "bg-navy-900 text-white font-semibold"
                           : "text-gray-700 hover:bg-gray-100"
@@ -86,7 +86,7 @@ export default function CatalogView({
                   <li key={b.slug}>
                     <Link
                       href={`${basePath}?brand=${activeBrandSlug === b.slug ? "" : b.slug}${activeSort ? `&sort=${activeSort}` : ""}`}
-                      className={`flex items-center justify-between px-2 py-2 rounded-lg text-sm min-h-10 ${
+                      className={`flex items-center justify-between px-2 rounded-lg text-sm min-h-tap ${
                         activeBrandSlug === b.slug ? "bg-gold-500/20 text-navy-900 font-semibold" : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >

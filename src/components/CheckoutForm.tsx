@@ -104,12 +104,57 @@ export default function CheckoutForm({
       <h1 className="text-xl sm:text-2xl font-extrabold text-navy-950 mb-6">{t("checkout.title")}</h1>
 
       <form onSubmit={submit} className="grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-2 flex flex-col gap-6">
+        {/* min-w-0 on BOTH grid children is required, not optional: a grid
+            item defaults to min-width:auto, so it reserves its content's
+            min-content width. The order summary contains a `truncate`
+            (white-space:nowrap) product name, whose min-content is the full
+            untruncated string — that forced the whole checkout page to 385px
+            and made it scroll sideways on every phone. Giving the span
+            min-w-0 alone is NOT enough; the grid item itself must opt out. */}
+        <div className="md:col-span-2 flex flex-col gap-6 min-w-0">
           <fieldset className="flex flex-col gap-3">
             <h2 className="font-bold text-navy-900">{t("checkout.contact")}</h2>
-            <input required value={name} onChange={(e) => setName(e.target.value)} placeholder={t("checkout.name")} className="px-3 py-3 border border-gray-300 rounded-lg text-sm" />
-            <input required dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder={t("checkout.phone")} className="px-3 py-3 border border-gray-300 rounded-lg text-sm" />
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder={t("checkout.email")} className="px-3 py-3 border border-gray-300 rounded-lg text-sm" />
+            {/* Persistent labels, not placeholder-only: a placeholder vanishes
+                the moment the user types, so on review they can't tell which
+                field is which. autoComplete/inputMode give mobile browsers
+                what they need for autofill and the right keyboard. */}
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-gray-600">{t("checkout.name")}</span>
+              <input
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                placeholder={t("checkout.name")}
+                className="px-3 min-h-tap border border-gray-300 rounded-lg text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-gray-600">{t("checkout.phone")}</span>
+              <input
+                required
+                dir="ltr"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder={t("checkout.phone")}
+                className="px-3 min-h-tap border border-gray-300 rounded-lg text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-gray-600">{t("checkout.email")}</span>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder={t("checkout.email")}
+                className="px-3 min-h-tap border border-gray-300 rounded-lg text-sm"
+              />
+            </label>
           </fieldset>
 
           <fieldset className="flex flex-col gap-3">
@@ -137,7 +182,7 @@ export default function CheckoutForm({
                   key={g}
                   type="button"
                   onClick={() => setGovernorate(g)}
-                  className={`px-3 py-2.5 rounded-full text-xs font-medium border ${governorate === g ? "bg-navy-900 text-white border-navy-900" : "border-gray-300 text-gray-600"}`}
+                  className={`inline-flex items-center min-h-tap px-4 rounded-full text-xs font-medium border ${governorate === g ? "bg-navy-900 text-white border-navy-900" : "border-gray-300 text-gray-600"}`}
                 >
                   {g}
                 </button>
@@ -147,7 +192,17 @@ export default function CheckoutForm({
               {t("checkout.estimate")}: <strong dir="ltr">{estimate}</strong>
             </p>
             {deliveryMethod === "DELIVERY" && (
-              <input required value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("checkout.address")} className="px-3 py-3 border border-gray-300 rounded-lg text-sm" />
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-gray-600">{t("checkout.address")}</span>
+                <input
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  autoComplete="street-address"
+                  placeholder={t("checkout.address")}
+                  className="px-3 min-h-tap border border-gray-300 rounded-lg text-sm"
+                />
+              </label>
             )}
           </fieldset>
 
@@ -169,12 +224,16 @@ export default function CheckoutForm({
           </fieldset>
         </div>
 
-        <div className="p-4 rounded-xl border border-gray-200 bg-white h-fit flex flex-col gap-3 sticky top-24">
+        <div className="p-4 rounded-xl border border-gray-200 bg-white h-fit flex flex-col gap-3 sticky top-24 min-w-0">
           <h2 className="font-bold text-navy-900">{t("cart.title")}</h2>
+          {/* min-w-0 below is load-bearing: `truncate` sets white-space:nowrap,
+              and without it this flex item's min-content is the full
+              untruncated product name, which forced the entire checkout page
+              to 385px and made it scroll sideways on every phone. */}
           <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
             {items.map((i) => (
-              <div key={i.productId} className="flex justify-between text-sm">
-                <span className="text-gray-600 truncate pe-2">{i.qty}× {i.name}</span>
+              <div key={i.productId} className="flex justify-between text-sm min-w-0">
+                <span className="text-gray-600 truncate pe-2 min-w-0">{i.qty}× {i.name}</span>
                 <span className="font-medium whitespace-nowrap"><Price value={i.unitPrice * i.qty} /></span>
               </div>
             ))}

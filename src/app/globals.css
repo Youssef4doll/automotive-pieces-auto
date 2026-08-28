@@ -23,6 +23,29 @@
 
   --color-red-600: #c50e26;
   --color-red-500: #e1112c;
+
+  /* ---------------------------------------------------------------
+     DESIGN TOKENS
+     Centralised so a system-wide decision ("mobile controls need to be
+     bigger", "page gutters are too tight") is one edit here rather than
+     a sweep through 40 components.
+     --------------------------------------------------------------- */
+
+  /* Touch targets. 44px is the accessibility floor for a primary control;
+     40px is the accepted minimum for secondary/inline controls that sit
+     inside a comfortably-spaced row. */
+  --tap-primary: 48px;
+  --tap-min: 44px;
+  --tap-compact: 40px;
+
+  /* Page gutter — breathable but not wasteful. Scales with the viewport
+     so a 320px phone keeps usable content width while a large phone gets
+     real margin. */
+  --gutter: clamp(14px, 4vw, 24px);
+
+  /* Type floor: never render body/meta copy below this on mobile, or the
+     user has to zoom — which the whole layout is designed to avoid. */
+  --text-min: 12px;
 }
 
 @theme inline {
@@ -41,10 +64,48 @@
   --font-sans: var(--font-barlow);
   --font-display: var(--font-barlow-condensed);
   --font-heading: var(--font-archivo);
+
+  /* Expose the tap/gutter tokens to Tailwind so components can use
+     h-tap-primary / min-h-tap / px-gutter instead of magic numbers. */
+  --spacing-tap-primary: var(--tap-primary);
+  --spacing-tap: var(--tap-min);
+  --spacing-tap-compact: var(--tap-compact);
+  --spacing-gutter: var(--gutter);
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+/* Keyboard focus. The codebase uses `outline-none` on ~20 inputs to get the
+   custom border-on-focus look, which also removed the only focus indicator
+   keyboard users had (WCAG 2.4.7 failure). :focus-visible only fires for
+   keyboard/AT navigation, so this restores a clear ring for them without
+   putting an outline on mouse clicks. Defined once, globally, rather than
+   per-component so it cannot be forgotten on the next component added. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-gold-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* On the navy header/footer the gold ring is low-contrast against gold
+   buttons; use white there instead. */
+.bg-navy-900 :where(a, button, input):focus-visible,
+.bg-navy-950 :where(a, button, input):focus-visible {
+  outline-color: #ffffff;
+}
+
+/* Respect the OS "reduce motion" setting for every transition/animation the
+   app ships, including the brand marquee. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {
@@ -74,6 +135,18 @@ body {
 }
 
 @layer utilities {
+  /* Safe-area helpers for notched / home-indicator phones. Without these,
+     bottom-fixed UI (sticky cart bar, floating WhatsApp widget) sits under
+     the iOS home indicator and becomes hard or impossible to tap. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .bottom-safe {
+    bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+  .bottom-safe-lifted {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

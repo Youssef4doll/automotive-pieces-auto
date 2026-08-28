@@ -48,24 +48,27 @@ export default function ProductCard({ product }: { product: CardProduct }) {
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
         {badge === "discount" && (
-          <span className="absolute top-2 start-2 bg-red-600 text-white text-[10px] font-display font-bold uppercase px-2 py-1 rounded">
+          <span className="absolute top-2 start-2 bg-red-600 text-white text-[11px] font-display font-bold uppercase px-2 py-1 rounded">
             -{discount}%
           </span>
         )}
         {badge === "topSeller" && (
-          <span className="absolute top-2 start-2 bg-navy-900 text-white text-[10px] font-display font-bold uppercase px-2 py-1 rounded">
+          <span className="absolute top-2 start-2 bg-navy-900 text-white text-[11px] font-display font-bold uppercase px-2 py-1 rounded">
             {t("product.topSeller")}
           </span>
         )}
         {badge === "lowStock" && (
-          <span className="absolute top-2 start-2 bg-red-600 text-white text-[10px] font-display font-bold uppercase px-2 py-1 rounded">
+          <span className="absolute top-2 start-2 bg-red-600 text-white text-[11px] font-display font-bold uppercase px-2 py-1 rounded">
             {t("product.lowStock")}
           </span>
         )}
       </Link>
 
       <div className="p-4 flex flex-col gap-1.5 flex-1">
-        <Link href={`/produit/${product.slug}`} className="font-heading font-bold uppercase text-navy-950 hover:text-red-600 leading-tight text-[15px]">
+        <Link
+          href={`/produit/${product.slug}`}
+          className="font-heading font-bold uppercase text-navy-950 hover:text-red-600 leading-tight text-[15px] flex items-center min-h-tap-compact"
+        >
           {product.name}
         </Link>
         {product.description && (
@@ -73,10 +76,16 @@ export default function ProductCard({ product }: { product: CardProduct }) {
         )}
 
         <div className="flex items-center gap-3 text-xs mt-1">
-          <Link href={`/produit/${product.slug}`} className="text-red-500 font-semibold hover:underline flex items-center gap-1">
+          <Link
+            href={`/produit/${product.slug}`}
+            className="text-red-500 font-semibold hover:underline inline-flex items-center gap-1 min-h-tap-compact"
+          >
             {t("product.viewPage")} →
           </Link>
-          <Link href={`/produit/${product.slug}`} className="text-gray-400 hover:text-gray-600 underline">
+          <Link
+            href={`/produit/${product.slug}`}
+            className="text-gray-400 hover:text-gray-600 underline inline-flex items-center min-h-tap-compact"
+          >
             {t("product.quickView")}
           </Link>
         </div>
@@ -123,7 +132,7 @@ export default function ProductCard({ product }: { product: CardProduct }) {
               stockQty: product.stockQty,
             })
           }
-          className="mt-2 w-full py-3 rounded-lg bg-gold-500 hover:bg-gold-400 disabled:bg-gray-200 disabled:cursor-not-allowed text-navy-950 font-display font-bold uppercase text-xs sm:text-sm tracking-wide"
+          className="mt-2 w-full min-h-tap rounded-lg bg-gold-500 hover:bg-gold-400 active:scale-[0.98] transition-transform disabled:bg-gray-200 disabled:cursor-not-allowed text-navy-950 font-display font-bold uppercase text-xs sm:text-sm tracking-wide"
         >
           {t("product.addToCart")}
         </button>

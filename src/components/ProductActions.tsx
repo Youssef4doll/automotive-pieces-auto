@@ -6,9 +6,11 @@ import { useCart } from "@/lib/cart-store";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import Price from "./Price";
 import VehiclePicker from "./VehiclePicker";
+import { track } from "@/lib/track";
 
 export default function ProductActions({
   product,
+  whatsapp,
 }: {
   product: {
     id: string;
@@ -20,6 +22,7 @@ export default function ProductActions({
     stockQty: number;
     fitmentEngineIds: string[];
   };
+  whatsapp: string;
 }) {
   const { t } = useLocale();
   const add = useCart((s) => s.add);
@@ -102,36 +105,59 @@ export default function ProductActions({
         </div>
       )}
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center border border-gray-300 rounded-lg">
-          <button
-            className="w-10 h-11 text-lg font-bold text-gray-600"
-            onClick={() => setQty((q) => Math.max(1, q - 1))}
+      {/* Out of stock is not a dead end. A disabled button leaves the customer
+          with nowhere to go; here the expert channel becomes the primary
+          action instead, which is also the one case where WhatsApp should
+          outrank "add to cart". */}
+      {outOfStock ? (
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 flex flex-col gap-3">
+          <p className="text-sm font-semibold text-navy-900">{t("product.outOfStockTitle")}</p>
+          <p className="text-xs text-gray-600">{t("product.outOfStockHelp")}</p>
+          <a
+            href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(
+              `${t("product.outOfStockMsg")} ${product.name} (${product.sku})`
+            )}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => track("whatsapp_clicked", { source: "product_out_of_stock", sku: product.sku })}
+            className="flex items-center justify-center gap-2 min-h-tap-primary rounded-lg bg-green-600 hover:bg-green-700 text-white font-display font-bold uppercase tracking-wide text-sm"
           >
-            −
-          </button>
-          <span className="w-10 text-center font-semibold">{qty}</span>
+            {t("product.checkAvailability")}
+          </a>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <div className="flex items-center border border-gray-300 rounded-lg">
+            <button
+              className="w-tap h-tap text-lg font-bold text-gray-600"
+              aria-label={t("cart.decrease")}
+              onClick={() => setQty((q) => Math.max(1, q - 1))}
+            >
+              −
+            </button>
+            <span className="w-10 text-center font-semibold">{qty}</span>
+            <button
+              className="w-tap h-tap text-lg font-bold text-gray-600"
+              aria-label={t("cart.increase")}
+              onClick={() => setQty((q) => Math.min(product.stockQty || 99, q + 1))}
+            >
+              +
+            </button>
+          </div>
           <button
-            className="w-10 h-11 text-lg font-bold text-gray-600"
-            onClick={() => setQty((q) => Math.min(product.stockQty || 99, q + 1))}
+            onClick={handleAdd}
+            className="flex-1 min-h-tap-primary rounded-lg bg-gold-500 hover:bg-gold-400 active:scale-[0.98] transition-transform text-navy-950 font-display font-bold uppercase tracking-wide text-sm sm:text-base"
           >
-            +
+            {added ? (
+              `✓ ${t("product.added")}`
+            ) : (
+              <>
+                {t("product.addToCart")} · <Price value={product.priceSell * qty} />
+              </>
+            )}
           </button>
         </div>
-        <button
-          disabled={outOfStock}
-          onClick={handleAdd}
-          className="flex-1 h-12 rounded-lg bg-gold-500 hover:bg-gold-400 disabled:bg-gray-300 text-navy-950 font-display font-bold uppercase tracking-wide text-sm sm:text-base"
-        >
-          {added ? (
-            "✓ Ajouté"
-          ) : (
-            <>
-              {t("product.addToCart")} · <Price value={product.priceSell * qty} />
-            </>
-          )}
-        </button>
-      </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200">

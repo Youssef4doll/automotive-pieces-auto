@@ -20,12 +20,12 @@ export default function NewsletterForm() {
           type="email"
           required
           placeholder={t("footer.newsletterPlaceholder")}
-          className="flex-1 min-w-0 px-3 py-2.5 bg-white text-sm text-navy-900 outline-none"
+          className="flex-1 min-w-0 px-3 min-h-tap bg-white text-sm text-navy-900 outline-none"
         />
         <button
           type="submit"
           disabled={pending}
-          className="px-4 bg-gold-500 hover:bg-gold-400 disabled:opacity-60 text-navy-950 font-display font-bold uppercase text-sm"
+          className="px-4 min-h-tap min-w-tap bg-gold-500 hover:bg-gold-400 disabled:opacity-60 text-navy-950 font-display font-bold uppercase text-sm"
         >
           {t("footer.newsletterOk")}
         </button>
