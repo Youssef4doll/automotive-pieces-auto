@@ -13,27 +13,15 @@ import SectionHeading from "@/components/SectionHeading";
 import Eyebrow from "@/components/Eyebrow";
 import TrustBadges from "@/components/TrustBadges";
 import T from "@/components/T";
-import { getTopSellers, getMegaMenu } from "@/lib/data/catalog";
+import { getTopSellers } from "@/lib/data/catalog";
 import { getSettings } from "@/lib/settings";
 
 export default async function HomePage() {
-  const [topSellers, settings, families] = await Promise.all([getTopSellers(8), getSettings(), getMegaMenu()]);
-  const heroFamilies = families
-    .map((f) => ({
-      id: f.id,
-      slug: f.slug,
-      name: f.name,
-      partCount: f.children.reduce((sum, c) => sum + c._count.products, 0),
-    }))
-    // Curated, not exhaustive: the "what does your car need" moment should
-    // read as 6 confident choices, not a full 16-row category dump — the
-    // rest stay one tap away via "view all parts".
-    .sort((a, b) => b.partCount - a.partCount)
-    .slice(0, 6);
+  const [topSellers, settings] = await Promise.all([getTopSellers(8), getSettings()]);
 
   return (
     <>
-      <Hero families={heroFamilies} />
+      <Hero />
       <BrandMarquee />
       <FinderGrid whatsapp={settings.shop_whatsapp} />
       <CategoryGrid />

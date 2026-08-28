@@ -97,16 +97,6 @@ body {
       transform: translateX(50%);
     }
   }
-  @keyframes hero-reveal {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
   @keyframes check-pop {
     0% {
       opacity: 0;

@@ -59,13 +59,13 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-7">
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-5">
-          <h2 className="font-heading font-bold uppercase text-base sm:text-lg text-navy-900/80 tracking-tight">
-            {t("finder.otherWays")}
+    <section className="mx-auto max-w-7xl px-4 py-10">
+      <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-8">
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-6">
+          <h2 className="font-heading font-extrabold uppercase text-xl sm:text-2xl text-navy-950 tracking-tight">
+            {t("finder.title")}
           </h2>
-          <p className="text-xs text-gray-400">{t("finder.subtitle")}</p>
+          <p className="text-sm text-gray-500">{t("finder.subtitle")}</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
