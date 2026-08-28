@@ -66,7 +66,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       // only ever sends productId + qty, never a price, so there's nothing
       // for a tampered request to override here.
       const productIds = data.items.map((i) => i.productId);
-      const products = await tx.product.findMany({ where: { id: { in: productIds } } });
+      const products = await tx.product.findMany({
+        where: { id: { in: productIds } },
+        include: { images: { orderBy: { order: "asc" }, take: 1, select: { id: true } } },
+      });
       const productMap = new Map(products.map((p) => [p.id, p]));
 
       const lineItems = data.items.map((item) => {
@@ -77,7 +80,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           productId: product.id,
           name: product.name,
           sku: product.sku,
-          imageUrl: product.imageUrl,
+          // Snapshot the photo the shopper actually saw, not the generic
+          // catalogue placeholder sitting in the imageUrl column.
+          imageUrl: product.images[0] ? `/api/images/${product.images[0].id}` : product.imageUrl,
           unitPrice,
           qty: item.qty,
           lineTotal: unitPrice * item.qty,

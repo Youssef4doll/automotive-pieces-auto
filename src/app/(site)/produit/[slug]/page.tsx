@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import ProductGallery from "@/components/ProductGallery";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getProductBySlug, getRelatedProducts } from "@/lib/data/catalog";
@@ -94,21 +94,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </nav>
 
       <div className="grid md:grid-cols-2 gap-8">
-        <div className="relative aspect-square bg-gray-50 rounded-xl overflow-hidden border border-gray-200">
-          <Image
-            src={product.imageUrl}
-            alt={product.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover"
-            priority
-          />
-          {discount && (
-            <span className="absolute top-3 end-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1.5 rounded">
-              -{discount}%
-            </span>
-          )}
-        </div>
+        <ProductGallery
+          images={
+            product.gallery.length > 0
+              ? product.gallery
+              : [{ src: product.imageUrl, alt: product.name }]
+          }
+          name={product.name}
+          discount={discount}
+        />
 
         <div>
           {product.brand && (

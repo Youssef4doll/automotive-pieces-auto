@@ -20,15 +20,32 @@ export async function getCategoryBySlug(slug: string) {
   });
 }
 
+/**
+ * Include this in any product query whose result reaches the storefront: it is
+ * what lets serializeProduct swap in the uploaded photo. Only the id is read,
+ * so the image bytes never travel with the listing query.
+ */
+export const primaryImageSelect = {
+  images: { orderBy: { order: "asc" }, take: 1, select: { id: true } },
+} as const;
+
 export function serializeProduct<
   T extends {
     priceBuy: unknown;
     priceSell: unknown;
     compareAtPrice: unknown;
+    imageUrl?: string;
+    images?: { id: string }[];
   },
 >(p: T) {
+  // Uploaded photos win over the seeded static path, so a product that has
+  // been given a real picture shows it everywhere — cards, cart, search,
+  // packs — without each of those components knowing about ProductImage.
+  const uploaded = p.images?.[0]?.id;
+  const { images: _images, ...rest } = p;
   return {
-    ...p,
+    ...rest,
+    ...(p.imageUrl !== undefined ? { imageUrl: uploaded ? `/api/images/${uploaded}` : p.imageUrl } : {}),
     priceBuy: toNumber(p.priceBuy),
     priceSell: toNumber(p.priceSell),
     compareAtPrice: p.compareAtPrice ? toNumber(p.compareAtPrice) : null,
@@ -57,7 +74,7 @@ export async function getProductsForCategory(
       active: true,
       ...(opts.brandSlug ? { brand: { slug: opts.brandSlug } } : {}),
     },
-    include: { brand: true, category: true, fitments: { select: { engineId: true } } },
+    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
     orderBy,
   });
   return products.map(serializeProduct);
@@ -91,16 +108,20 @@ export async function getProductBySlug(slug: string) {
       category: { include: { parent: true } },
       fitments: { include: { engine: { include: { model: { include: { make: true } } } } } },
       reviews: { orderBy: { createdAt: "desc" }, take: 10 },
+      // The product page shows a gallery, so it needs every photo, not just
+      // the primary one the listings use.
+      images: { orderBy: { order: "asc" }, select: { id: true, alt: true } },
     },
   });
   if (!product) return null;
-  return serializeProduct(product);
+  const gallery = product.images.map((i) => ({ src: `/api/images/${i.id}`, alt: i.alt }));
+  return { ...serializeProduct(product), gallery };
 }
 
 export async function getRelatedProducts(categoryId: string, excludeId: string, take = 4) {
   const products = await prisma.product.findMany({
     where: { categoryId, active: true, id: { not: excludeId } },
-    include: { brand: true, fitments: { select: { engineId: true } } },
+    include: { brand: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
     take,
   });
   return products.map(serializeProduct);
@@ -109,7 +130,7 @@ export async function getRelatedProducts(categoryId: string, excludeId: string, 
 export async function getTopSellers(take = 8) {
   const products = await prisma.product.findMany({
     where: { isTopSeller: true, active: true },
-    include: { brand: true, category: true, fitments: { select: { engineId: true } } },
+    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
     take,
   });
   return products.map(serializeProduct);
@@ -126,7 +147,7 @@ export async function searchProducts(query: string, take = 20) {
         { description: { contains: query, mode: "insensitive" } },
       ],
     },
-    include: { brand: true, category: true, fitments: { select: { engineId: true } } },
+    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
     take,
   });
   return products.map(serializeProduct);
@@ -139,7 +160,7 @@ export async function findProductByReference(query: string) {
     where: {
       OR: [{ sku: { equals: q, mode: "insensitive" } }, { oemRefs: { has: q } }],
     },
-    include: { category: true },
+    include: { category: true, ...primaryImageSelect },
   });
   return product;
 }
@@ -148,6 +169,7 @@ export async function getPacks() {
   const packs = await prisma.product.findMany({
     where: { sku: { startsWith: "PACK-" }, active: true },
     orderBy: { priceSell: "asc" },
+    include: { ...primaryImageSelect },
   });
 
   const allContentSkus = packs.flatMap((p) => {

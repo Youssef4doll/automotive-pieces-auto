@@ -51,7 +51,7 @@ export default async function AnalyticsPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 [&>*]:min-w-0">
             {kpis.map((k) => (
               <div key={k.label} className="p-4 rounded-xl bg-white border border-navy-900/10 border-l-4 border-l-gold-500 shadow-sm">
                 <p className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide">{k.label}</p>
@@ -61,7 +61,7 @@ export default async function AnalyticsPage() {
             ))}
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-4">
+          <div className="grid lg:grid-cols-3 gap-4 [&>*]:min-w-0">
             <div className="lg:col-span-2 p-5 rounded-xl bg-white border border-navy-900/10 shadow-sm">
               <h2 className="font-display font-bold uppercase tracking-wide text-sm text-navy-950 mb-4">
                 Entonnoir d&rsquo;achat
@@ -108,7 +108,7 @@ export default async function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-4">
+          <div className="grid lg:grid-cols-3 gap-4 [&>*]:min-w-0">
             <TopList title="Recherches les plus fréquentes" empty="Aucune recherche enregistrée" rows={data.topSearches} />
             <TopList title="Produits les plus consultés" empty="Aucune vue produit enregistrée" rows={data.topProductsViewed} mono />
             <TopList title="Catégories les plus consultées" empty="Aucune vue catégorie enregistrée" rows={data.topCategoriesViewed} />

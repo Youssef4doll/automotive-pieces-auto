@@ -31,12 +31,12 @@ export default async function AdminClientsPage({
     <div className="flex flex-col gap-5">
       <h1 className="text-2xl font-heading font-extrabold uppercase tracking-tight text-navy-950">Clients</h1>
 
-      <form className="flex gap-2">
+      <form className="flex gap-2 flex-wrap">
         <input
           name="q"
           defaultValue={q}
           placeholder="Nom ou email…"
-          className="px-3 py-2 border border-navy-900/15 rounded-lg text-sm outline-none focus:border-gold-500"
+          className="flex-1 min-w-0 px-3 min-h-tap border border-navy-900/15 rounded-lg text-sm outline-none focus:border-gold-500"
         />
         <button className="px-4 py-2 bg-navy-900 hover:bg-navy-800 text-white rounded-lg text-sm font-display font-bold uppercase tracking-wide">
           Rechercher

@@ -44,7 +44,9 @@ export default async function AdminDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
+      {/* Three fixed columns squeezed the figures past the edge of a small
+          phone; they stack to one column until there is room. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 [&>*]:min-w-0">
         {periodTiles.map((p) => (
           <div key={p.label} className="p-4 rounded-xl bg-white border border-navy-900/10 shadow-sm">
             <p className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide">{p.label}</p>
@@ -54,7 +56,7 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 [&>*]:min-w-0">
         {kpis.map((k) => (
           <div key={k.label} className="p-4 rounded-xl bg-white border border-navy-900/10 border-l-4 border-l-gold-500 shadow-sm">
             <p className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide">{k.label}</p>
@@ -64,7 +66,7 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid lg:grid-cols-3 gap-4 [&>*]:min-w-0">
         <div className="lg:col-span-2 p-5 rounded-xl bg-white border border-navy-900/10 shadow-sm">
           <h2 className="font-display font-bold uppercase tracking-wide text-sm text-navy-950 mb-4">Revenu — 7 derniers jours</h2>
           <div className="flex items-end gap-2 h-40">
@@ -101,7 +103,7 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid lg:grid-cols-2 gap-4 [&>*]:min-w-0">
         <div className="p-5 rounded-xl bg-white border border-navy-900/10 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-bold uppercase tracking-wide text-sm text-navy-950">Commandes récentes</h2>
@@ -164,12 +166,15 @@ export default async function AdminDashboard() {
               const pct = data.revenue > 0 ? Math.round((s.revenue / data.revenue) * 100) : 0;
               return (
                 <div key={s.source} className="flex items-center gap-3">
-                  <span className="text-sm text-navy-900/70 w-32 shrink-0 truncate capitalize">{s.source}</span>
+                  {/* The three fixed widths in this row add up to more than a
+                      320px card can hold, so the label and the amount give
+                      ground on small screens. */}
+                  <span className="text-sm text-navy-900/70 w-20 sm:w-32 shrink-0 truncate capitalize">{s.source}</span>
                   <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
                     <div className="h-full bg-gold-500 rounded-full" style={{ width: `${Math.max(2, pct)}%` }} />
                   </div>
                   <span className="text-xs text-navy-900/40 w-10 text-end shrink-0">{pct}%</span>
-                  <span className="text-sm font-bold text-navy-900 w-20 text-end shrink-0">{formatTND(s.revenue)}</span>
+                  <span className="text-sm font-bold text-navy-900 w-16 sm:w-20 text-end shrink-0">{formatTND(s.revenue)}</span>
                 </div>
               );
             })}

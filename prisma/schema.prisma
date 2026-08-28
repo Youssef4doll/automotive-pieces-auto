@@ -147,9 +147,27 @@ model Product {
   orderItems    OrderItem[]
   reviews       Review[]
   stockMoves    StockMovement[]
+  images        ProductImage[]
 
   @@index([categoryId])
   @@index([brandId])
+}
+
+// Photos live in Postgres rather than on disk so they survive a redeploy and
+// work on hosts with a read-only filesystem, and so a database backup carries
+// the shop's pictures with it. Bytes are served by /api/images/[id].
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  data      Bytes
+  mimeType  String
+  alt       String   @default("")
+  // 0 is the primary photo: the one shown on cards, in the cart and in search.
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId, order])
 }
 
 model ProductFitment {
