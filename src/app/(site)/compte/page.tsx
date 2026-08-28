@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import { logout } from "@/app/actions/auth";
 import AuthForms from "@/components/AuthForms";
+import MyGarage from "@/components/MyGarage";
 
 export const metadata = { title: "Mon compte" };
 
@@ -20,6 +21,8 @@ export default async function AccountPage() {
         <p className="text-sm text-gray-500">{user.email}</p>
         {user.phone && <p className="text-sm text-gray-500" dir="ltr">{user.phone}</p>}
       </div>
+
+      <MyGarage />
 
       <div className="flex flex-col gap-2">
         <Link href="/compte/commandes" className="px-4 py-3 rounded-lg bg-navy-900 text-white font-semibold text-center">

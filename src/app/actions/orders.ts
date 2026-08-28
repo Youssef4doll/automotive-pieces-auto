@@ -26,6 +26,12 @@ const placeOrderSchema = z.object({
 export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
 export type PlaceOrderResult = { ok: true; ref: string } | { ok: false; error: string };
 
+// Thrown for expected business-rule failures inside the transaction (out of
+// stock, deleted product) so we can turn them into a friendly error and roll
+// back cleanly — anything else (a real bug, a DB outage) propagates instead
+// of being swallowed as if it were the customer's fault.
+class OrderError extends Error {}
+
 export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   const parsed = placeOrderSchema.safeParse(input);
   if (!parsed.success) {
@@ -39,84 +45,98 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   const settings = await getSettings();
   const freeShippingThreshold = Number(settings.free_shipping_threshold) || 150;
-
-  const productIds = data.items.map((i) => i.productId);
-  const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
-  const productMap = new Map(products.map((p) => [p.id, p]));
-
-  for (const item of data.items) {
-    const product = productMap.get(item.productId);
-    if (!product) return { ok: false, error: "Un produit du panier n'existe plus." };
-    if (product.stockQty < item.qty) {
-      return { ok: false, error: `Stock insuffisant pour ${product.name} (${product.stockQty} disponible(s)).` };
-    }
-  }
-
-  const lineItems = data.items.map((item) => {
-    const product = productMap.get(item.productId)!;
-    const unitPrice = toNumber(product.priceSell);
-    return {
-      productId: product.id,
-      name: product.name,
-      sku: product.sku,
-      imageUrl: product.imageUrl,
-      unitPrice,
-      qty: item.qty,
-      lineTotal: unitPrice * item.qty,
-    };
-  });
-
-  const subtotal = lineItems.reduce((s, l) => s + l.lineTotal, 0);
-  const shippingFee =
-    data.deliveryMethod === "PICKUP" ? 0 : subtotal >= freeShippingThreshold ? 0 : 8;
-  const total = subtotal + shippingFee;
-
   const user = await getCurrentUser();
 
-  const result = await prisma.$transaction(async (tx) => {
-    const count = await tx.order.count();
-    const ref = `CMD-${1000 + count + 1}`;
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Price and stock are read fresh inside the transaction — the client
+      // only ever sends productId + qty, never a price, so there's nothing
+      // for a tampered request to override here.
+      const productIds = data.items.map((i) => i.productId);
+      const products = await tx.product.findMany({ where: { id: { in: productIds } } });
+      const productMap = new Map(products.map((p) => [p.id, p]));
 
-    const order = await tx.order.create({
-      data: {
-        ref,
-        userId: user?.id,
-        customerName: data.customerName,
-        phone: data.phone,
-        email: data.email || undefined,
-        governorate: data.governorate,
-        address: data.address,
-        deliveryMethod: data.deliveryMethod,
-        paymentMethod: data.paymentMethod,
-        status: "PENDING",
-        subtotal,
-        shippingFee,
-        total,
-        notes: data.notes,
-        items: { create: lineItems },
-        history: { create: { status: "PENDING" } },
-      },
-    });
-
-    for (const item of data.items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stockQty: { decrement: item.qty } },
+      const lineItems = data.items.map((item) => {
+        const product = productMap.get(item.productId);
+        if (!product) throw new OrderError("Un produit du panier n'existe plus.");
+        const unitPrice = toNumber(product.priceSell);
+        return {
+          productId: product.id,
+          name: product.name,
+          sku: product.sku,
+          imageUrl: product.imageUrl,
+          unitPrice,
+          qty: item.qty,
+          lineTotal: unitPrice * item.qty,
+        };
       });
-      await tx.stockMovement.create({
+
+      // Claim stock atomically per item: the `stockQty: { gte: item.qty }`
+      // guard means the decrement only applies if enough stock is *still*
+      // there at the moment of the write. Checking stockQty earlier and
+      // decrementing later (the previous version of this code) left a gap
+      // where two concurrent checkouts for the last unit could both pass
+      // the check and both decrement — overselling and driving stock
+      // negative. `updateMany`'s matched count tells us which case we're in.
+      for (const item of data.items) {
+        const product = productMap.get(item.productId)!;
+        const { count } = await tx.product.updateMany({
+          where: { id: item.productId, stockQty: { gte: item.qty } },
+          data: { stockQty: { decrement: item.qty } },
+        });
+        if (count === 0) {
+          throw new OrderError(`Stock insuffisant pour ${product.name} (${product.stockQty} disponible(s)).`);
+        }
+      }
+
+      const subtotal = lineItems.reduce((s, l) => s + l.lineTotal, 0);
+      const shippingFee =
+        data.deliveryMethod === "PICKUP" ? 0 : subtotal >= freeShippingThreshold ? 0 : 8;
+      const total = subtotal + shippingFee;
+
+      const orderCount = await tx.order.count();
+      const ref = `CMD-${1000 + orderCount + 1}`;
+
+      const order = await tx.order.create({
         data: {
-          productId: item.productId,
-          change: -item.qty,
-          reason: "order",
-          note: `Commande ${ref}`,
+          ref,
+          userId: user?.id,
+          customerName: data.customerName,
+          phone: data.phone,
+          email: data.email || undefined,
+          governorate: data.governorate,
+          address: data.address,
+          deliveryMethod: data.deliveryMethod,
+          paymentMethod: data.paymentMethod,
+          status: "PENDING",
+          subtotal,
+          shippingFee,
+          total,
+          notes: data.notes,
+          items: { create: lineItems },
+          history: { create: { status: "PENDING" } },
         },
       });
-    }
 
-    return order;
-  });
+      for (const item of data.items) {
+        await tx.stockMovement.create({
+          data: {
+            productId: item.productId,
+            change: -item.qty,
+            reason: "order",
+            note: `Commande ${ref}`,
+          },
+        });
+      }
 
-  return { ok: true, ref: result.ref };
+      return order;
+    });
+
+    return { ok: true, ref: result.ref };
+  } catch (e) {
+    if (e instanceof OrderError) return { ok: false, error: e.message };
+    throw e;
+  }
 }
 
 export async function getOrderByRef(ref: string) {
