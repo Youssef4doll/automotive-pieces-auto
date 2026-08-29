@@ -4,7 +4,7 @@ import CatalogControls from "./CatalogControls";
 import TrackEvent from "./TrackEvent";
 import type { CardProduct } from "./ProductCard";
 
-type Sibling = { id: string; name: string; slug: string };
+type Sibling = { id: string; name: string; slug: string; productCount?: number };
 type BrandFacet = { name: string; slug: string; count: number };
 
 export default function CatalogView({
@@ -26,6 +26,10 @@ export default function CatalogView({
   activeSort?: string;
   whatsapp: string;
 }) {
+  // The sidebar and chips list sibling categories; ones with nothing in them
+  // are dead ends, so they are filtered out here too rather than only in the
+  // header menu. They come back automatically once they hold stock.
+  const stocked = siblings.filter((s) => s.productCount === undefined || s.productCount > 0);
   const title = subfamily ? subfamily.name : family.name;
   const basePath = subfamily ? `/catalogue/${family.slug}/${subfamily.slug}` : `/catalogue/${family.slug}`;
 
@@ -62,10 +66,10 @@ export default function CatalogView({
           the same links, laid out as one scrollable row each, which puts the
           products back above the fold. The desktop sidebar is unchanged. */}
       <div className="lg:hidden flex flex-col gap-2 mb-4">
-        {siblings.length > 0 && (
+        {stocked.length > 0 && (
           <div className="-mx-4 px-4 overflow-x-auto no-scrollbar">
             <div className="flex gap-2 w-max">
-              {siblings.map((s) => {
+              {stocked.map((s) => {
                 const active = subfamily?.slug === s.slug;
                 return (
                   <Link
@@ -112,11 +116,11 @@ export default function CatalogView({
 
       <div className="flex flex-col lg:flex-row gap-6">
         <aside className="hidden lg:flex lg:w-56 shrink-0 flex-col gap-6">
-          {siblings.length > 0 && (
+          {stocked.length > 0 && (
             <div>
               <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">Type de pièce</h3>
               <ul className="space-y-1">
-                {siblings.map((s) => (
+                {stocked.map((s) => (
                   <li key={s.id}>
                     <Link
                       href={`/catalogue/${family.slug}/${s.slug}`}

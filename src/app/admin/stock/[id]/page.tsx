@@ -9,7 +9,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   const [product, categories, brands] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
-      include: { images: { orderBy: { order: "asc" }, select: { id: true, alt: true } } },
+      include: {
+        images: { orderBy: { order: "asc" }, select: { id: true, alt: true } },
+        references: { select: { type: true, raw: true } },
+      },
     }),
     prisma.category.findMany({ where: { parentId: { not: null } }, include: { parent: true }, orderBy: { name: "asc" } }),
     prisma.brand.findMany({ orderBy: { name: "asc" } }),
@@ -35,6 +38,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           brandId: product.brandId,
           description: product.description,
           imageUrl: product.imageUrl,
+          axle: product.axle,
+          side: product.side,
+          oemRefsText: product.references.filter((r) => r.type === "OEM").map((r) => r.raw).join(", "),
+          aftermarketRefsText: product.references.filter((r) => r.type === "AFTERMARKET").map((r) => r.raw).join(", "),
           priceBuy: toNumber(product.priceBuy),
           priceSell: toNumber(product.priceSell),
           compareAtPrice: product.compareAtPrice ? toNumber(product.compareAtPrice) : null,

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { updateSettings, type SettingsMap } from "@/lib/settings";
 import { OrderStatus } from "@prisma/client";
+import { normalizeReference, parseReferenceList } from "@/lib/reference";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -35,6 +36,10 @@ const productSchema = z.object({
   brandId: z.string().optional(),
   description: z.string().optional(),
   imageUrl: z.string().optional(),
+  axle: z.string().optional(),
+  side: z.string().optional(),
+  oemRefsText: z.string().optional(),
+  aftermarketRefsText: z.string().optional(),
   priceBuy: z.coerce.number().min(0),
   priceSell: z.coerce.number().min(0),
   compareAtPrice: z.coerce.number().optional(),
@@ -68,6 +73,7 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
   }
   const data = parsed.data;
 
+  let productId = data.id ?? "";
   try {
     if (data.id) {
       await prisma.product.update({
@@ -88,10 +94,13 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
           lowStockThreshold: data.lowStockThreshold,
           isTopSeller: !!data.isTopSeller,
           active: data.active ?? true,
+          axle: (data.axle || null) as never,
+          side: (data.side || null) as never,
         },
       });
     } else {
-      await prisma.product.create({
+      const created = await prisma.product.create({
+        select: { id: true },
         data: {
           sku: data.sku,
           name: data.name,
@@ -107,15 +116,43 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
           lowStockThreshold: data.lowStockThreshold,
           isTopSeller: !!data.isTopSeller,
           active: data.active ?? true,
+          axle: (data.axle || null) as never,
+          side: (data.side || null) as never,
         },
       });
+      productId = created.id;
     }
+
+    await syncReferences(productId, "OEM", data.oemRefsText ?? "");
+    await syncReferences(productId, "AFTERMARKET", data.aftermarketRefsText ?? "");
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erreur lors de l'enregistrement" };
   }
 
   revalidateProductSurfaces();
   return { ok: true };
+}
+
+/**
+ * The textarea is the source of truth for this product's references of that
+ * type: whatever is no longer listed is removed, so an admin can correct a
+ * mistyped number by editing the box rather than hunting for a delete button.
+ */
+async function syncReferences(productId: string, type: "OEM" | "AFTERMARKET", text: string) {
+  const entries = parseReferenceList(text)
+    .map((raw) => ({ raw, normalized: normalizeReference(raw) }))
+    .filter((r) => r.normalized.length >= 3);
+
+  await prisma.partReference.deleteMany({
+    where: { productId, type, normalized: { notIn: entries.map((e) => e.normalized) } },
+  });
+  for (const e of entries) {
+    await prisma.partReference.upsert({
+      where: { productId_type_normalized: { productId, type, normalized: e.normalized } },
+      create: { productId, type, raw: e.raw, normalized: e.normalized },
+      update: { raw: e.raw },
+    });
+  }
 }
 
 // A product shows up on the home page, its own page, every catalogue listing

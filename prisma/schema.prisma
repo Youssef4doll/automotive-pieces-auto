@@ -113,10 +113,19 @@ model VehicleEngine {
   name      String        // e.g. "1.5 dCi"
   fuel      String?       // essence / diesel
   powerHp   Int?
+  // The engine code (K9K, CDTI, TDI…) is what distinguishes two engines a
+  // catalogue calls by the same commercial name, and it is what supplier
+  // fitment data is keyed on. Without it, imported compatibility cannot be
+  // matched reliably.
+  engineCode String?
+  displacementCc Int?
+  yearFrom  Int?
+  yearTo    Int?
   fitments  ProductFitment[]
 
   @@unique([modelId, name])
   @@index([modelId])
+  @@index([engineCode])
 }
 
 model Product {
@@ -143,7 +152,16 @@ model Product {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Position is the difference between the right part and an expensive
+  // return. Held as structured fields, never parsed back out of the name.
+  axle          Axle?
+  side          Side?
+  /// Set by the import batch that last touched this row, so an import is
+  /// reversible and its products are traceable to their source file.
+  importBatchId String?
+
   fitments      ProductFitment[]
+  references    PartReference[]
   orderItems    OrderItem[]
   reviews       Review[]
   stockMoves    StockMovement[]
@@ -151,6 +169,17 @@ model Product {
 
   @@index([categoryId])
   @@index([brandId])
+  @@index([importBatchId])
+}
+
+enum Axle {
+  AVANT
+  ARRIERE
+}
+
+enum Side {
+  GAUCHE
+  DROITE
 }
 
 // Photos live in Postgres rather than on disk so they survive a redeploy and
@@ -176,9 +205,74 @@ model ProductFitment {
   product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   engineId  String
   engine    VehicleEngine @relation(fields: [engineId], references: [id], onDelete: Cascade)
+  // How much we actually trust this row. VERIFIED comes from a supplier
+  // catalogue or a confirmed delivery; DERIVED was inferred from a shared
+  // reference. The storefront must never present the two as equally certain.
+  confidence FitmentConfidence @default(VERIFIED)
+  note      String?           // e.g. "châssis à partir de 2016"
+  source    String?           // supplier catalogue, manual, customer confirmation
 
   @@unique([productId, engineId])
   @@index([engineId])
+}
+
+enum FitmentConfidence {
+  VERIFIED
+  DERIVED
+}
+
+enum ReferenceType {
+  OEM        // constructor's own number, stamped on the original part
+  AFTERMARKET // the manufacturer's own catalogue number
+  EQUIVALENT  // a competing brand's number for the same part
+}
+
+/// The lookup key of the parts trade: a mechanic reads the number off the old
+/// part and types it in. `normalized` strips separators and case so that
+/// "GDB 1330", "gdb-1330" and "GDB1330" all resolve to the same row.
+model PartReference {
+  id         String        @id @default(cuid())
+  productId  String
+  product    Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type       ReferenceType
+  brand      String?       // whose number this is (Renault, TRW, Bosch…)
+  raw        String        // exactly as printed, for display
+  normalized String        // uppercase alphanumerics only, for matching
+  createdAt  DateTime      @default(now())
+
+  @@unique([productId, type, normalized])
+  @@index([normalized])
+  @@index([productId])
+}
+
+enum ImportStatus {
+  DRAFT      // uploaded and parsed, not yet applied
+  APPLIED
+  ROLLED_BACK
+  FAILED
+}
+
+/// Every catalogue import is a reversible batch. Rows created or updated by a
+/// batch are tagged with its id, so a bad supplier file can be undone instead
+/// of hand-corrected across thousands of products.
+model ImportBatch {
+  id          String       @id @default(cuid())
+  filename    String
+  status      ImportStatus @default(DRAFT)
+  rowCount    Int          @default(0)
+  createdCount Int         @default(0)
+  updatedCount Int         @default(0)
+  skippedCount Int         @default(0)
+  errorCount   Int         @default(0)
+  /// Parsed rows plus per-row validation verdicts, kept so the preview and the
+  /// apply step operate on exactly the same data.
+  payload     Json         @default("[]")
+  report      Json         @default("{}")
+  createdById String?
+  createdAt   DateTime     @default(now())
+  appliedAt   DateTime?
+
+  @@index([status, createdAt])
 }
 
 model StockMovement {

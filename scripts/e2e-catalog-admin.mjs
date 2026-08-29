@@ -60,10 +60,21 @@ console.log("\n[2] IT APPEARS ON THE PUBLIC STOREFRONT");
   const body = await shop.locator("main").innerText();
   check("the page shows the new family name", body.includes(FAM.toUpperCase()) || body.includes(FAM), body.split("\n")[2] ?? "");
 
+  // An empty family is deliberately kept out of the navigation: it would be a
+  // dead end for the shopper. It has to appear the moment it holds a product,
+  // which is what makes the rule safe as the catalogue is loaded.
   await shop.goto(BASE);
   await shop.waitForTimeout(700);
-  const home = await shop.content();
-  check("it is listed in the storefront navigation", home.includes(FAM_SLUG));
+  check("an empty family is NOT advertised in the navigation",
+        !(await shop.content()).includes(`/catalogue/${FAM_SLUG}"`));
+
+  const spare = await prisma.product.findFirst({ where: { active: true }, select: { id: true, categoryId: true } });
+  await prisma.product.update({ where: { id: spare.id }, data: { categoryId: created.id } });
+  await shop.goto(BASE);
+  await shop.waitForTimeout(900);
+  check("once it holds a product it appears in the navigation",
+        (await shop.content()).includes(FAM_SLUG));
+  await prisma.product.update({ where: { id: spare.id }, data: { categoryId: spare.categoryId } });
   await shop.close();
 }
 

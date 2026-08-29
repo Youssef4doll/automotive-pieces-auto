@@ -18,6 +18,16 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M9 9h6M9 13h6M9 17h4" />
     </svg>
   ),
+  import: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </svg>
+  ),
+  quality: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3l7 4v6c0 4.2-2.9 7.4-7 8.5C7.9 20.4 5 17.2 5 13V7l7-4Z" /><path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
   catalogue: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M4 5h6M4 12h6M4 19h6" />
@@ -61,6 +71,8 @@ const ITEMS = [
   { href: "/admin", label: "Dashboard", icon: "dashboard", exact: true },
   { href: "/admin/commandes", label: "Commandes", icon: "orders" },
   { href: "/admin/catalogue", label: "Catalogue", icon: "catalogue" },
+  { href: "/admin/import", label: "Import", icon: "import" },
+  { href: "/admin/qualite", label: "Qualité", icon: "quality" },
   { href: "/admin/stock", label: "Stock", icon: "stock" },
   { href: "/admin/clients", label: "Clients", icon: "clients" },
   { href: "/admin/promotions", label: "Promotions", icon: "promotions" },

@@ -42,7 +42,7 @@ export default async function SubfamilyPage({
     <CatalogView
       family={{ name: category.parent.name, slug: category.parent.slug }}
       subfamily={{ name: category.name, slug: category.slug }}
-      siblings={(siblingCategory?.children ?? []).map((c) => ({ id: c.id, name: c.name, slug: c.slug }))}
+      siblings={(siblingCategory?.children ?? []).map((c) => ({ id: c.id, name: c.name, slug: c.slug, productCount: c._count.products }))}
       products={products}
       brands={brands}
       activeBrandSlug={brand}

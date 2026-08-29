@@ -43,7 +43,7 @@ export default async function FamilyPage({
   return (
     <CatalogView
       family={{ name: category.name, slug: category.slug }}
-      siblings={category.children.map((c) => ({ id: c.id, name: c.name, slug: c.slug }))}
+      siblings={category.children.map((c) => ({ id: c.id, name: c.name, slug: c.slug, productCount: c._count.products }))}
       products={products}
       brands={brands}
       activeBrandSlug={brand}

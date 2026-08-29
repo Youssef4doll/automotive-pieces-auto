@@ -19,6 +19,10 @@ export default function ProductForm({
     brandId: string | null;
     description: string;
     imageUrl?: string;
+    axle?: string | null;
+    side?: string | null;
+    oemRefsText?: string;
+    aftermarketRefsText?: string;
     priceBuy: number;
     priceSell: number;
     compareAtPrice: number | null;
@@ -69,6 +73,47 @@ export default function ProductForm({
       <Field label="Description">
         <textarea name="description" defaultValue={product?.description} rows={3} className="input" />
       </Field>
+
+      {/* References are the lookup key of the trade and position is what stops
+          a wrong-part delivery — both are structured fields, never parsed back
+          out of the product name. */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Field label="Références constructeur (OEM)">
+          <textarea
+            name="oemRefsText"
+            rows={2}
+            defaultValue={product?.oemRefsText ?? ""}
+            placeholder="7701234567, 82 00 123 456"
+            className="input"
+          />
+        </Field>
+        <Field label="Références équipementier">
+          <textarea
+            name="aftermarketRefsText"
+            rows={2}
+            defaultValue={product?.aftermarketRefsText ?? ""}
+            placeholder="GDB1330, 0986424815"
+            className="input"
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Essieu">
+          <select name="axle" defaultValue={product?.axle ?? ""} className="input">
+            <option value="">— Sans objet —</option>
+            <option value="AVANT">Avant</option>
+            <option value="ARRIERE">Arrière</option>
+          </select>
+        </Field>
+        <Field label="Côté">
+          <select name="side" defaultValue={product?.side ?? ""} className="input">
+            <option value="">— Sans objet —</option>
+            <option value="GAUCHE">Gauche</option>
+            <option value="DROITE">Droite</option>
+          </select>
+        </Field>
+      </div>
 
       <Field label="Image (chemin — laisser vide pour conserver l'actuelle)">
         <input name="imageUrl" defaultValue={product?.imageUrl ?? ""} placeholder="/images/parts-lineup.png" className="input" />

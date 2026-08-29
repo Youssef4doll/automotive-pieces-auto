@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import ProductGallery from "@/components/ProductGallery";
+import FitConfidence from "@/components/FitConfidence";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getProductBySlug, getRelatedProducts } from "@/lib/data/catalog";
@@ -127,6 +128,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <span className="text-sm text-green-700 font-semibold">● En stock · prête aujourd&rsquo;hui</span>
             )}
           </div>
+
+          <FitConfidence
+            whatsapp={settings.shop_whatsapp}
+            product={{
+              name: product.name,
+              sku: product.sku,
+              fitmentEngineIds: product.fitments.map((f) => f.engineId),
+              axle: product.axle,
+              side: product.side,
+              hasFitmentData: product.fitments.length > 0,
+            }}
+          />
 
           <ProductActions
             whatsapp={settings.shop_whatsapp}

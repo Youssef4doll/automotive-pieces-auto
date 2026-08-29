@@ -1,22 +1,56 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/money";
+import { looksLikeReference, normalizeReference } from "@/lib/reference";
 
+/**
+ * Navigation shows only what a shopper can actually buy.
+ *
+ * The category tree is deliberately larger than the catalogue: it describes the
+ * whole trade and is filled in as stock arrives. Showing every branch made 77%
+ * of taps land on an empty page, which reads as an abandoned shop rather than a
+ * young one. Categories reappear on their own the moment they hold a product,
+ * so this needs no maintenance as the catalogue grows.
+ */
 export async function getMegaMenu() {
   const families = await prisma.category.findMany({
     where: { parentId: null },
     orderBy: { order: "asc" },
     include: {
-      children: { orderBy: { order: "asc" }, include: { _count: { select: { products: true } } } },
+      children: {
+        orderBy: { order: "asc" },
+        include: { _count: { select: { products: true } } },
+      },
+      _count: { select: { products: true } },
     },
   });
-  return families;
+
+  return families
+    .map((f) => ({ ...f, children: f.children.filter((c) => c._count.products > 0) }))
+    .filter((f) => f.children.length > 0 || f._count.products > 0);
+}
+
+/** The full tree, empty branches included — for the admin, never the storefront. */
+export async function getFullCategoryTree() {
+  return prisma.category.findMany({
+    where: { parentId: null },
+    orderBy: { order: "asc" },
+    include: {
+      children: { orderBy: { order: "asc" }, include: { _count: { select: { products: true } } } },
+      _count: { select: { products: true } },
+    },
+  });
 }
 
 export async function getCategoryBySlug(slug: string) {
   return prisma.category.findUnique({
     where: { slug },
-    include: { parent: true, children: { orderBy: { order: "asc" } } },
+    include: {
+      parent: true,
+      // Counts come along so the storefront can hide subcategories that hold
+      // nothing — see getMegaMenu for why.
+      children: { orderBy: { order: "asc" }, include: { _count: { select: { products: true } } } },
+    },
   });
 }
 
@@ -137,14 +171,39 @@ export async function getTopSellers(take = 8) {
 }
 
 export async function searchProducts(query: string, take = 20) {
-  if (!query.trim()) return [];
+  const q = query.trim();
+  if (!q) return [];
+
+  // A mechanic holding the broken part types the number stamped on it. That is
+  // the highest-intent query in the business, so it is answered first and
+  // exactly: an exact reference match outranks any fuzzy name match. If the
+  // query only looked like a reference, this finds nothing and we fall through
+  // to ordinary text search, which makes a false positive here harmless.
+  if (looksLikeReference(q)) {
+    const normalized = normalizeReference(q);
+    const hits = await prisma.product.findMany({
+      where: {
+        active: true,
+        OR: [
+          { references: { some: { normalized } } },
+          { sku: { equals: q, mode: "insensitive" } },
+          { oemRefs: { has: q } },
+        ],
+      },
+      include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
+      take,
+    });
+    if (hits.length > 0) return hits.map(serializeProduct);
+  }
+
   const products = await prisma.product.findMany({
     where: {
       active: true,
       OR: [
-        { name: { contains: query, mode: "insensitive" } },
-        { sku: { contains: query, mode: "insensitive" } },
-        { description: { contains: query, mode: "insensitive" } },
+        { name: { contains: q, mode: "insensitive" } },
+        { sku: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+        { references: { some: { normalized: { contains: normalizeReference(q) } } } },
       ],
     },
     include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
@@ -158,7 +217,11 @@ export async function findProductByReference(query: string) {
   if (!q) return null;
   const product = await prisma.product.findFirst({
     where: {
-      OR: [{ sku: { equals: q, mode: "insensitive" } }, { oemRefs: { has: q } }],
+      OR: [
+        { references: { some: { normalized: normalizeReference(q) } } },
+        { sku: { equals: q, mode: "insensitive" } },
+        { oemRefs: { has: q } },
+      ],
     },
     include: { category: true, ...primaryImageSelect },
   });
