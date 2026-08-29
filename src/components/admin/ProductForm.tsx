@@ -100,6 +100,11 @@ export default function ProductForm({
           <input type="checkbox" name="isTopSeller" defaultChecked={product?.isTopSeller} className="w-[18px] h-[18px]" /> Top vente
         </label>
         <label className="flex items-center gap-2 text-sm min-h-tap cursor-pointer">
+          {/* An unchecked checkbox submits nothing at all, and the action read
+              "missing" as "keep it active" — so a product could never be taken
+              offline. The hidden field always submits a value; when the box is
+              ticked the checkbox's "on" comes later and wins. */}
+          <input type="hidden" name="active" value="false" />
           <input type="checkbox" name="active" defaultChecked={product?.active ?? true} className="w-[18px] h-[18px]" /> Actif (visible en ligne)
         </label>
       </div>

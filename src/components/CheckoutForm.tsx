@@ -11,14 +11,24 @@ import { placeOrder } from "@/app/actions/orders";
 import { track } from "@/lib/track";
 import { getAttribution } from "@/lib/attribution";
 
+export type CheckoutDefaults = {
+  name: string;
+  phone: string;
+  email: string;
+  governorate: string;
+  address: string;
+};
+
 export default function CheckoutForm({
   freeShippingThreshold,
   deliveryGrandTunis,
   deliveryRegions,
+  defaults,
 }: {
   freeShippingThreshold: number;
   deliveryGrandTunis: string;
   deliveryRegions: string;
+  defaults?: CheckoutDefaults;
 }) {
   const { t } = useLocale();
   const router = useRouter();
@@ -26,11 +36,11 @@ export default function CheckoutForm({
   const clear = useCart((s) => s.clear);
   const subtotal = cartSubtotal(items);
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [governorate, setGovernorate] = useState("Tunis");
-  const [address, setAddress] = useState("");
+  const [name, setName] = useState(defaults?.name ?? "");
+  const [phone, setPhone] = useState(defaults?.phone ?? "");
+  const [email, setEmail] = useState(defaults?.email ?? "");
+  const [governorate, setGovernorate] = useState(defaults?.governorate || "Tunis");
+  const [address, setAddress] = useState(defaults?.address ?? "");
   const [deliveryMethod, setDeliveryMethod] = useState<"DELIVERY" | "PICKUP">("DELIVERY");
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "CARD">("COD");
   const [notes, setNotes] = useState("");
