@@ -89,7 +89,10 @@ await p.waitForTimeout(900);
 body = await p.locator("main").innerText();
 check("last order shown without another click", body.includes(ref), ref);
 check("with its status", /En attente|Confirmée/.test(body));
-check("order count on the link", /Mes commandes \(\d+\)/.test(body), body.match(/Mes commandes \(\d+\)/)?.[0]);
+// The count now sits on the account navigation rather than inside the link
+// label, so assert it where a customer actually reads it.
+const navCount = await p.locator('main nav a:visible:has-text("Commandes")').first().innerText();
+check("the order count is shown on the navigation", /\d+/.test(navCount), navCount.replace(/\n/g, " "));
 check("support is reachable from the account page", (await p.locator('a[href^="tel:"]').count()) > 0);
 
 console.log("\n[5] THE ORDER LIST IS RECOGNISABLE AND ACTIONABLE");

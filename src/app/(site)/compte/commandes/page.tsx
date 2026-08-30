@@ -10,6 +10,7 @@ import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 import Price from "@/components/Price";
 import SupportCard from "@/components/SupportCard";
 import ReorderButton, { type ReorderItem } from "@/components/ReorderButton";
+import AccountShell from "@/components/account/AccountShell";
 
 export const metadata = { title: "Mes commandes" };
 
@@ -56,11 +57,11 @@ export default async function OrdersTrackingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
-        <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 tracking-tight">Mes commandes</h1>
-        <Link href="/compte" className="text-sm text-navy-900 underline inline-flex items-center min-h-tap-compact">← Mon compte</Link>
-      </div>
+    <AccountShell
+      title="Mes commandes"
+      subtitle={orders.length > 0 ? "Suivi, contenu et rachat en un geste." : undefined}
+      count={orders.length}
+    >
 
       {orders.length === 0 ? (
         <div className="flex flex-col gap-4">
@@ -181,6 +182,6 @@ export default async function OrdersTrackingPage() {
           <SupportCard contact={contact} />
         </div>
       )}
-    </div>
+    </AccountShell>
   );
 }
