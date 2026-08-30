@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { markCartConverted } from "./cart";
 import { getCurrentUser } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { toNumber } from "@/lib/money";
@@ -177,6 +178,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
       return order;
     });
+
+    // The basket is no longer abandoned. Outside the transaction on purpose:
+    // this is bookkeeping for recovery reporting, and it must never be able to
+    // roll back an order that has already claimed stock.
+    await markCartConverted(result.id, data.phone);
 
     return { ok: true, ref: result.ref };
   } catch (e) {

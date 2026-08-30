@@ -134,7 +134,7 @@ export default async function QualityPage({
                   <td className="px-4 py-3 text-end">
                     <Link
                       href={`/admin/stock/${product.id}`}
-                      className="text-xs font-display font-bold uppercase tracking-wide text-red-500 hover:underline"
+                      className="inline-flex items-center justify-end min-h-tap-compact text-xs font-display font-bold uppercase tracking-wide text-red-500 hover:underline"
                     >
                       Compléter
                     </Link>

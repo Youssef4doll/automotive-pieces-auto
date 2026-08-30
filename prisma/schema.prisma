@@ -63,6 +63,7 @@ model User {
   reviews      Review[]
 
   @@index([role])
+  carts     Cart[]
 }
 
 model Brand {
@@ -162,6 +163,7 @@ model Product {
 
   fitments      ProductFitment[]
   references    PartReference[]
+  cartItems     CartItem[]
   orderItems    OrderItem[]
   reviews       Review[]
   stockMoves    StockMovement[]
@@ -242,6 +244,51 @@ model PartReference {
 
   @@unique([productId, type, normalized])
   @@index([normalized])
+  @@index([productId])
+}
+
+enum CartStatus {
+  ACTIVE
+  CONVERTED // became an order
+  ABANDONED // untouched long enough to be worth chasing
+}
+
+/// The cart existed only in the shopper's browser, which made it invisible to
+/// the business: an abandoned basket could not be recovered, and a customer who
+/// moved from phone to laptop lost it. Holding it server-side turns the single
+/// biggest source of lost revenue into something we can see and act on.
+model Cart {
+  id         String     @id @default(cuid())
+  /// Set once the shopper signs in; the anonymous cart is merged into it.
+  userId     String?
+  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Anonymous identity, from the same cookie analytics uses.
+  sessionId  String?
+  status     CartStatus @default(ACTIVE)
+  /// Captured at checkout so an abandoned cart can actually be followed up.
+  phone      String?
+  orderId    String?    @unique
+  /// When a recovery message was last sent, so nobody is chased twice.
+  remindedAt DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  items      CartItem[]
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status, updatedAt])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  qty       Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@unique([cartId, productId])
   @@index([productId])
 }
 

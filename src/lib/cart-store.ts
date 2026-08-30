@@ -33,6 +33,15 @@ type CartState = {
   remove: (productId: string) => void;
   setQty: (productId: string, qty: number) => void;
   clear: () => void;
+  /**
+   * True once zustand has rehydrated from localStorage. The server sync waits
+   * for this: pulling before rehydration would race the local cart and could
+   * wipe a basket the shopper can see on screen.
+   */
+  hydrated: boolean;
+  /** Used by the server sync to merge the two baskets in one atomic update. */
+  replaceAll: (fn: (items: CartItem[]) => CartItem[]) => void;
+  setHydrated: () => void;
 };
 
 export const useCart = create<CartState>()(
@@ -40,7 +49,9 @@ export const useCart = create<CartState>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      hydrated: false,
       justAdded: null,
+      replaceAll: (fn) => set({ items: fn(get().items) }),
       dismissJustAdded: () => set({ justAdded: null }),
       open: () => set({ isOpen: true, justAdded: null }),
       close: () => set({ isOpen: false }),
@@ -68,8 +79,15 @@ export const useCart = create<CartState>()(
           ),
         }),
       clear: () => set({ items: [] }),
+      setHydrated: () => set({ hydrated: true }),
     }),
-    { name: "apa-cart", partialize: (state) => ({ items: state.items }) }
+    {
+      name: "apa-cart",
+      partialize: (state) => ({ items: state.items }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated();
+      },
+    }
   )
 );
 

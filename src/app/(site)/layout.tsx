@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
+import CartSync from "@/components/CartSync";
 import AddedToast from "@/components/AddedToast";
 import ScrollTopButton from "@/components/ScrollTopButton";
 import { getSettings } from "@/lib/settings";
@@ -14,6 +15,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
       <Header />
       <main className="flex-1 flex flex-col">{children}</main>
       <Footer />
+      <CartSync />
       <CartDrawer freeShippingThreshold={freeShippingThreshold} />
       <AddedToast />
       {/* Nothing else floats over the page. The persistent WhatsApp widget and

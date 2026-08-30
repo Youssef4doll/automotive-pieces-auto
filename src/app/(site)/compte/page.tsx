@@ -8,6 +8,7 @@ import AuthForms from "@/components/AuthForms";
 import MyGarage from "@/components/MyGarage";
 import SupportCard from "@/components/SupportCard";
 import Price from "@/components/Price";
+import OrderStatusTimeline from "@/components/OrderStatusTimeline";
 
 export const metadata = { title: "Mon compte" };
 
@@ -32,7 +33,10 @@ export default async function AccountPage() {
     prisma.order.findFirst({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
-      select: { id: true, ref: true, status: true, total: true, createdAt: true },
+      select: {
+        id: true, ref: true, status: true, total: true, createdAt: true,
+        history: { orderBy: { createdAt: "asc" }, select: { status: true, createdAt: true } },
+      },
     }),
     prisma.order.count({ where: { userId: user.id } }),
   ]);
@@ -58,8 +62,9 @@ export default async function AccountPage() {
       {lastOrder && (
         <Link
           href="/compte/commandes"
-          className="p-4 rounded-xl border border-gray-200 bg-white hover:border-navy-300 flex items-center gap-3"
+          className="p-4 rounded-xl border border-gray-200 bg-white hover:border-navy-300 flex flex-col gap-3"
         >
+          <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-xs text-gray-400 uppercase font-bold mb-0.5">Dernière commande</p>
             <p className="font-mono font-bold text-navy-950 text-sm" dir="ltr">{lastOrder.ref}</p>
@@ -79,6 +84,15 @@ export default async function AccountPage() {
           >
             {STATUS_LABEL[lastOrder.status]}
           </span>
+          </div>
+          {/* The progress bar, not just the badge: "Expédiée" alone does not
+              tell someone whether that happened an hour ago or last week. */}
+          {lastOrder.status !== "CANCELLED" && (
+            <OrderStatusTimeline
+              status={lastOrder.status}
+              events={lastOrder.history.map((h) => ({ status: h.status, at: h.createdAt.toISOString() }))}
+            />
+          )}
         </Link>
       )}
 

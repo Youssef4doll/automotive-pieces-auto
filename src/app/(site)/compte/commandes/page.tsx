@@ -13,6 +13,14 @@ import ReorderButton, { type ReorderItem } from "@/components/ReorderButton";
 
 export const metadata = { title: "Mes commandes" };
 
+const NEXT_STEP: Record<string, string> = {
+  PENDING: "Nous confirmons votre commande, en général sous quelques heures.",
+  CONFIRMED: "Nous préparons vos pièces.",
+  PREPARED: "Prête — elle part à la livraison très prochainement.",
+  SHIPPED: "En route. Le livreur vous appelle avant de passer.",
+  DELIVERED: "Livrée. Un souci avec une pièce ? Écrivez-nous, on s'en occupe.",
+};
+
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "En attente",
   CONFIRMED: "Confirmée",
@@ -109,10 +117,17 @@ export default async function OrdersTrackingPage() {
                   </span>
                 </div>
 
-                {order.status !== "CANCELLED" && (
-                  <div className="mb-4">
-                    <OrderStatusTimeline status={order.status} />
-                  </div>
+                <div className="mb-4">
+                  <OrderStatusTimeline
+                    status={order.status}
+                    events={order.history.map((h) => ({ status: h.status, at: h.createdAt.toISOString() }))}
+                  />
+                </div>
+
+                {/* Say what happens next, not just where it got to — the two
+                    together are what stop a customer having to ask. */}
+                {NEXT_STEP[order.status] && (
+                  <p className="text-xs text-gray-500 mb-3 -mt-1">{NEXT_STEP[order.status]}</p>
                 )}
 
                 {/* Photos, not just names: a shopper recognises the part they
