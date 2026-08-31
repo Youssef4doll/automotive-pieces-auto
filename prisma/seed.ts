@@ -222,6 +222,9 @@ const VEHICLES: Record<string, { model: string; years: [number, number]; engines
   ],
 };
 
+/** Opt-in: restore demo stock quantities on an existing database. */
+const RESET_STOCK = process.env.SEED_RESET_STOCK === "1";
+
 async function main() {
   console.log("Seeding categories…");
   const catByName = new Map<string, string>();
@@ -289,7 +292,7 @@ async function main() {
     return shuffled.slice(0, count);
   }
 
-  console.log("Seeding products…");
+  console.log(RESET_STOCK ? "Seeding products… (restoring demo stock)" : "Seeding products…");
 
   type SeedProduct = {
     sku: string; name: string; brand: string; category: string;
@@ -406,7 +409,14 @@ async function main() {
     const brandId = brandByName.get(p.brand);
     const created = await prisma.product.upsert({
       where: { sku: p.sku },
-      update: {},
+      // Non-destructive by default: re-running the seed must never overwrite a
+      // price or a stock count someone has since corrected in the admin.
+      //
+      // `SEED_RESET_STOCK=1` opts into restoring the demo quantities, which the
+      // end-to-end suites need — they buy real stock on every run, and after
+      // enough runs the fixture products sell out and the suites start failing
+      // on a shop that is working correctly.
+      update: RESET_STOCK ? { stockQty: p.stockQty } : {},
       create: {
         sku: p.sku,
         name: p.name,

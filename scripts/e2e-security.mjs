@@ -28,6 +28,20 @@ const STAMP = Date.now();
 const EMAIL = `sec.${STAMP}@example.com`;
 const PASSWORD = "client1234";
 
+/**
+ * The reference API's limiter is per-address and lives in the server process,
+ * so a suite run within a minute of the previous one starts with the window
+ * already spent. Wait it out rather than reporting a working limiter as a
+ * broken endpoint.
+ */
+async function awaitFreshWindow(page, base) {
+  const probe = await page.request.get(`${base}/api/reference?q=GDB1330`);
+  if (probe.status() !== 429) return;
+  const wait = (Number(probe.headers()["retry-after"]) || 60) + 2;
+  console.log(`      rate-limit window already spent; waiting ${wait}s`);
+  await new Promise((r) => setTimeout(r, wait * 1000));
+}
+
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 const p = await ctx.newPage();
@@ -68,6 +82,8 @@ console.log("\n[3] THE PUBLIC LOOKUP API VALIDATES ITS INPUT");
   // Validation is asserted before the rate-limit budget is spent — exhausting
   // it first (as an earlier version of this suite did) makes every later
   // request a 429 and the assertions meaningless.
+  await awaitFreshWindow(p, BASE);
+
   const short = await p.request.get(`${BASE}/api/reference?q=a`);
   check("a too-short reference is answered without a lookup",
         short.status() === 200 && (await short.json()).found === false);
@@ -134,13 +150,22 @@ console.log("\n[5] BOT PROTECTION ON PUBLIC FORMS");
 // ------------------------------------------------------- record access
 console.log("\n[6] ORDERS ARE NOT READABLE BY REFERENCE ALONE");
 {
-  const other = await prisma.order.findFirst({ select: { ref: true, id: true } });
+  const other = await prisma.order.findFirst({
+    select: { ref: true, id: true, customerName: true, phone: true, items: { select: { name: true } } },
+  });
   const anon = await browser.newContext();
   const ap = await anon.newPage();
   const res = await ap.request.get(`${BASE}/commande/confirmation/${other.ref}`, { maxRedirects: 0 });
   check("a stranger cannot open someone's order confirmation", res.status() === 404, `status=${res.status()}`);
+  // Assert on the order's private fields rather than on a UI phrase or on the
+  // reference. Translated strings can legitimately contain "Commande
+  // confirmée", and the reference is in the URL the caller just typed — so
+  // neither proves anything. The customer's name, phone and basket do.
   const body = await res.text();
-  check("and no order detail leaks in the body", !body.includes("Commande confirmée"));
+  check("and the customer's name does not appear", !body.includes(other.customerName));
+  check("and their phone number does not appear", !body.includes(other.phone));
+  check("and none of the parts they bought appear",
+        other.items.every((i) => !body.includes(i.name)));
   await anon.close();
 }
 
@@ -223,12 +248,7 @@ console.log("\n[12] THE PUBLIC LOOKUP API IS RATE LIMITED");
   // Last, because it deliberately exhausts the window for this address. If a
   // previous run already spent the budget, wait it out rather than asserting
   // against an exhausted limiter and calling that a failure.
-  const probe = await p.request.get(`${BASE}/api/reference?q=GDB1330`);
-  if (probe.status() === 429) {
-    const wait = (Number(probe.headers()["retry-after"]) || 60) + 2;
-    console.log(`      window already spent; waiting ${wait}s for it to reset`);
-    await new Promise((r) => setTimeout(r, wait * 1000));
-  }
+  await awaitFreshWindow(p, BASE);
 
   let limited = 0;
   let ok = 0;

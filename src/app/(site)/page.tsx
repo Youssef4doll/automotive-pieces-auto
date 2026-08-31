@@ -16,6 +16,16 @@ import T from "@/components/T";
 import { getTopSellers, getActivePromotions } from "@/lib/data/catalog";
 import { getSettings, publicContact, contactHref } from "@/lib/settings";
 import PromoGrid from "@/components/PromoGrid";
+import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
+
+export const metadata: Metadata = pageMeta({
+  title: "Pièces détachées auto en Tunisie — compatibilité vérifiée",
+  description:
+    "Trouvez la bonne pièce pour votre voiture : recherche par véhicule, par référence ou par symptôme. " +
+    "Livraison 24h Grand Tunis, 48–72h en régions, paiement à la livraison.",
+  path: "/",
+});
 
 export default async function HomePage() {
   const [topSellers, settings, promos] = await Promise.all([

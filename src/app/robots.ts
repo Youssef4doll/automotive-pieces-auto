@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         // Account, cart, checkout and admin are private or per-session; search
         // result pages would generate unlimited near-duplicate URLs.
-        disallow: ["/admin", "/compte", "/panier", "/commande", "/api/", "/recherche?"],
+        disallow: ["/admin", "/compte", "/panier", "/commande", "/api/", "/recherche"],
       },
     ],
     sitemap: `${base}/sitemap.xml`,

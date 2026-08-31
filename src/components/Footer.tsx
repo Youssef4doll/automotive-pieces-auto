@@ -61,6 +61,11 @@ export default async function Footer() {
               <span className="min-h-11 inline-flex items-center"><T k="footer.warranty" /></span>
             </li>
             <li>
+              <Link href="/sources" className="hover:text-white min-h-11 inline-flex items-center">
+                Sources et méthode
+              </Link>
+            </li>
+            <li>
               <Link href="/compte/commandes" className="hover:text-white min-h-11 inline-flex items-center">
                 <T k="footer.tracking" />
               </Link>

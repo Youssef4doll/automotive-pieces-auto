@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale } from "@/i18n/LocaleProvider";
-import { locales, localeMeta } from "@/i18n/dictionaries";
+import { locales, localeMeta } from "@/i18n/locales";
 
 export default function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale } = useLocale();

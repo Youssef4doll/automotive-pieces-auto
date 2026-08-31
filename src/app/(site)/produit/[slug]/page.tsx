@@ -10,6 +10,10 @@ import ProductActions from "@/components/ProductActions";
 import ProductGrid from "@/components/ProductGrid";
 import TrackEvent from "@/components/TrackEvent";
 import JsonLd from "@/components/JsonLd";
+import { pageMeta, clampDescription } from "@/lib/seo";
+import { productSchema, breadcrumbSchema } from "@/lib/schema";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { toNumber } from "@/lib/money";
 
 export async function generateMetadata({
   params,
@@ -18,11 +22,32 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  if (!product) return {};
-  return {
-    title: product.name,
-    description: product.description.slice(0, 155),
-  };
+  if (!product) return { title: "Pièce introuvable" };
+
+  // Written to read as a search result rather than as a database row: the part,
+  // the brand, the reference a shopper may be searching by, and the two facts
+  // that decide the click — price and availability.
+  const price = toNumber(product.priceSell);
+  const brand = product.brand?.name ? `${product.brand.name} ` : "";
+  const description = clampDescription(
+    product.description ||
+      `${brand}${product.name}, référence ${product.sku}. ${price.toFixed(2)} DT. ` +
+        `Livraison 24h Grand Tunis, paiement à la livraison.`,
+  );
+
+  // The part's own photo makes a far better share card than the site's generic
+  // one; fall back to the generic when the reference has not been shot yet.
+  const photo = product.gallery?.[0]
+    ? [{ url: product.gallery[0].src, alt: product.gallery[0].alt || product.name }]
+    : undefined;
+
+  return pageMeta({
+    title: `${brand}${product.name} — ${product.sku}`,
+    description,
+    path: `/produit/${product.slug}`,
+    images: photo,
+    type: "article",
+  });
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -49,51 +74,53 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     ([key]) => key !== "packContents"
   );
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    sku: product.sku,
-    brand: product.brand ? { "@type": "Brand", name: product.brand.name } : undefined,
-    description: product.description,
-    offers: {
-      "@type": "Offer",
-      priceCurrency: "TND",
-      price: product.priceSell,
-      availability: outOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+  // The trail, built once and used for both the visible breadcrumb and the
+  // BreadcrumbList that tells a search engine where this page sits.
+  const crumbs = [
+    { name: "Accueil", path: "/" },
+    ...(product.category.parent
+      ? [{ name: product.category.parent.name, path: `/catalogue/${product.category.parent.slug}` }]
+      : []),
+    {
+      name: product.category.name,
+      path: product.category.parent
+        ? `/catalogue/${product.category.parent.slug}/${product.category.slug}`
+        : `/catalogue/${product.category.slug}`,
     },
-  };
+    { name: product.name, path: `/produit/${product.slug}` },
+  ];
+
+  // Only real ratings are declared. With no reviews the field is absent
+  // entirely rather than defaulted to five stars.
+  const reviewCount = product.reviews.length;
+  const ratingAverage =
+    reviewCount > 0 ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : null;
+
+  const jsonLd = productSchema({
+    name: product.name,
+    slug: product.slug,
+    sku: product.sku,
+    description: product.description,
+    brandName: product.brand?.name,
+    price: toNumber(product.priceSell),
+    inStock: !outOfStock,
+    images: product.gallery.length ? product.gallery.map((g) => g.src) : [product.imageUrl],
+    oemRefs: product.oemRefs,
+    reviewCount,
+    ratingAverage,
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <JsonLd data={jsonLd} />
+      <JsonLd data={breadcrumbSchema(crumbs)} />
       <TrackEvent
         name="product_viewed"
         properties={{ slug: product.slug, sku: product.sku, category: product.category.slug, price: product.priceSell }}
       />
 
-      <nav className="text-xs text-gray-500 mb-4 flex items-center gap-1.5 flex-wrap">
-        <Link href="/" className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2">Accueil</Link>
-        <span>›</span>
-        {product.category.parent && (
-          <>
-            <Link href={`/catalogue/${product.category.parent.slug}`} className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2">
-              {product.category.parent.name}
-            </Link>
-            <span>›</span>
-          </>
-        )}
-        <Link
-          href={
-            product.category.parent
-              ? `/catalogue/${product.category.parent.slug}/${product.category.slug}`
-              : `/catalogue/${product.category.slug}`
-          }
-          className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2"
-        >
-          {product.category.name}
-        </Link>
-      </nav>
+      <Breadcrumbs items={crumbs} />
+
 
       <div className="grid md:grid-cols-2 gap-8">
         <ProductGallery

@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
     <div dir="ltr" lang="fr" className="min-h-screen flex bg-gray-50 text-navy-950">
       <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-navy-950 text-white border-b-2 border-gold-500">
         <div className="p-5 border-b border-white/10 flex flex-col gap-1.5">
-          <Image src="/images/logo-white.png" alt="" width={150} height={50} className="h-8 w-auto" />
+          <Image src="/images/logo-white.png" alt="Automotive Pièces Auto" width={150} height={50} className="h-8 w-auto" />
           <span className="font-display font-bold uppercase text-[11px] tracking-[0.16em] text-gold-500">
             Espace admin
           </span>

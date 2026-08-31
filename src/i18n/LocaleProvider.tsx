@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { type DictKey, type Locale, getDictionary, localeMeta } from "./dictionaries";
+import { localeMeta, type Locale } from "./locales";
+import { type DictKey, getDictionary } from "./dictionaries";
 
 type Ctx = {
   locale: Locale;
@@ -14,6 +15,16 @@ const LocaleContext = createContext<Ctx | null>(null);
 
 const COOKIE_NAME = "apa_locale";
 
+/**
+ * Holds the active language for the client tree.
+ *
+ * All three dictionaries ship in this bundle, which is deliberate. Sending only
+ * the active one from the server was measured and was worse: it costs ~4.5KB
+ * gzipped in every page response, against ~11KB saved once from a bundle the
+ * browser then caches — so any shopper who looks at three pages pays more. The
+ * strings also ended up serialised into every HTML document, which made the
+ * payload noisier for no benefit.
+ */
 export function LocaleProvider({
   initialLocale,
   children,

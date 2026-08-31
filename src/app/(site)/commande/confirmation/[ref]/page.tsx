@@ -5,6 +5,20 @@ import { getCurrentUser } from "@/lib/session";
 import { placedInThisBrowser } from "@/lib/order-access";
 import { toNumber } from "@/lib/money";
 import Price from "@/components/Price";
+import type { Metadata } from "next";
+
+// Never indexed and never followed: this page exists for one customer, once.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ ref: string }>;
+}): Promise<Metadata> {
+  const { ref } = await params;
+  return {
+    title: `Commande ${ref} confirmée`,
+    robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
+  };
+}
 
 export default async function ConfirmationPage({ params }: { params: Promise<{ ref: string }> }) {
   const { ref } = await params;

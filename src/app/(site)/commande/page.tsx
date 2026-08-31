@@ -2,8 +2,15 @@ import { getSettings } from "@/lib/settings";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import CheckoutForm from "@/components/CheckoutForm";
+import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata = { title: "Finaliser la commande" };
+export const metadata: Metadata = pageMeta({
+  title: "Finaliser ma commande",
+  description: "Vos coordonnées de livraison et le paiement à la livraison.",
+  path: "/commande",
+  noIndex: true,
+});
 
 export default async function CheckoutPage() {
   const [settings, user] = await Promise.all([getSettings(), getCurrentUser()]);

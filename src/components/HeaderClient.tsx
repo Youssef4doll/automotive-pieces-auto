@@ -117,7 +117,7 @@ export default function HeaderClient({
         <div className="flex items-center flex-wrap gap-x-[clamp(6px,2vw,18px)] gap-y-2 py-2.5">
           <button
             className="lg:hidden w-tap h-tap -ms-2 rounded hover:bg-white/10 shrink-0 flex items-center justify-center"
-            aria-label="Menu"
+            aria-label="Ouvrir le menu"
             onClick={() => setMobileOpen(true)}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -312,7 +312,7 @@ export default function HeaderClient({
           <div className="absolute inset-y-0 start-0 w-[85%] max-w-sm bg-white overflow-y-auto">
             <div className="flex items-center justify-between p-4 bg-navy-900 text-white">
               <Image src="/images/logo-white.png" alt="" width={130} height={43} className="h-7 w-auto" />
-              <button onClick={() => setMobileOpen(false)} className="p-2" aria-label="Close">
+              <button onClick={() => setMobileOpen(false)} className="p-2" aria-label="Fermer le menu">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M6 6l12 12M18 6L6 18" />
                 </svg>

@@ -1,12 +1,7 @@
-export type Locale = "fr" | "ar" | "en";
-
-export const locales: Locale[] = ["fr", "ar", "en"];
-
-export const localeMeta: Record<Locale, { label: string; dir: "ltr" | "rtl" }> = {
-  fr: { label: "Français", dir: "ltr" },
-  ar: { label: "العربية", dir: "rtl" },
-  en: { label: "English", dir: "ltr" },
-};
+// Re-exported so existing imports keep working; the definitions live in
+// ./locales so client components can reach them without the translations.
+export { locales, localeMeta, type Locale } from "./locales";
+import type { Locale } from "./locales";
 
 // Flat dot-path dictionaries for the storefront chrome and checkout flow.
 // Catalog/product/category names stay in French across all three locales —

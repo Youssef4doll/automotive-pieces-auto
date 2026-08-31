@@ -4,6 +4,7 @@ import CatalogControls from "./CatalogControls";
 import TrackEvent from "./TrackEvent";
 import type { CardProduct } from "./ProductCard";
 import { contactLink } from "@/lib/contact-link";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
 type Sibling = { id: string; name: string; slug: string; productCount?: number };
 type BrandFacet = { name: string; slug: string; count: number };
@@ -44,17 +45,17 @@ export default function CatalogView({
         name="category_viewed"
         properties={{ family: family.slug, subfamily: subfamily?.slug ?? null, resultCount: products.length }}
       />
-      <nav className="text-xs text-gray-500 mb-3 flex items-center gap-1.5 flex-wrap">
-        <Link href="/" className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2">Accueil</Link>
-        <span>›</span>
-        <Link href={`/catalogue/${family.slug}`} className="hover:text-navy-900 inline-flex items-center min-h-tap -my-2">{family.name}</Link>
-        {subfamily && (
-          <>
-            <span>›</span>
-            <span className="text-navy-900 font-medium">{subfamily.name}</span>
-          </>
-        )}
-      </nav>
+      <div className="mb-3">
+        <Breadcrumbs
+          items={[
+            { name: "Accueil", path: "/" },
+            { name: family.name, path: `/catalogue/${family.slug}` },
+            ...(subfamily
+              ? [{ name: subfamily.name, path: `/catalogue/${family.slug}/${subfamily.slug}` }]
+              : []),
+          ]}
+        />
+      </div>
 
       <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mb-1 tracking-tight">{title}</h1>
       <p className="text-sm text-gray-500 mb-4">

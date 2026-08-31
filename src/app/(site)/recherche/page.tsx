@@ -4,8 +4,19 @@ import { getSettings, publicContact } from "@/lib/settings";
 import { contactLink, contactLinkProps } from "@/lib/contact-link";
 import ProductGrid from "@/components/ProductGrid";
 import TrackEvent from "@/components/TrackEvent";
+import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata = { title: "Résultats de recherche" };
+// One canonical for every query. A search result page per phrase anyone ever
+// types is an unbounded set of near-identical pages; robots.txt already keeps
+// crawlers off the query strings, and this makes the intent explicit.
+export const metadata: Metadata = pageMeta({
+  title: "Rechercher une pièce",
+  description:
+    "Cherchez une pièce par référence, par marque ou par nom. Nous indiquons la compatibilité avec votre véhicule.",
+  path: "/recherche",
+  noIndex: true,
+});
 
 export default async function SearchPage({
   searchParams,
