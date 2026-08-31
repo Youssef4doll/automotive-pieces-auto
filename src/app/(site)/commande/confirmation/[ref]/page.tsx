@@ -6,6 +6,8 @@ import { placedInThisBrowser } from "@/lib/order-access";
 import { toNumber } from "@/lib/money";
 import Price from "@/components/Price";
 import type { Metadata } from "next";
+import OrderTracker from "@/components/account/OrderTracker";
+import { NEXT_STEP } from "@/components/account/OrderBits";
 
 // Never indexed and never followed: this page exists for one customer, once.
 export async function generateMetadata({
@@ -40,6 +42,21 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
       <p className="text-sm text-gray-400 mb-6">
         Numéro de commande : <span className="font-mono font-bold text-navy-900" dir="ltr">{order.ref}</span>
       </p>
+
+      {/* The question a customer has the second after paying is "what happens
+          now?". Showing the same tracker their account page uses answers it
+          here, at the moment it is asked, instead of making them go looking. */}
+      <section className="text-start p-4 rounded-xl border border-gray-200 bg-white mb-4">
+        <h2 className="text-[11px] font-display font-bold uppercase tracking-[0.14em] text-gray-400 mb-3">
+          Suivi de votre commande
+        </h2>
+        <OrderTracker
+          status={order.status}
+          placedAt={order.createdAt.toISOString()}
+          events={order.history.map((h) => ({ status: h.status, at: h.createdAt.toISOString() }))}
+        />
+        <p className="text-sm text-gray-600 mt-4">{NEXT_STEP[order.status]}</p>
+      </section>
 
       <div className="text-start p-4 rounded-xl border border-gray-200 bg-white mb-6">
         {order.items.map((item) => (

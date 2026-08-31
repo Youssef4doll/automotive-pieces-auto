@@ -11,6 +11,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import MegaMenu, { type MegaMenuFamily } from "./MegaMenu";
 import VehiclePicker from "./VehiclePicker";
 import VehicleStoreBar from "./VehicleStoreBar";
+import SearchSuggest from "@/components/SearchSuggest";
 
 export default function HeaderClient({
   menu,
@@ -45,6 +46,7 @@ export default function HeaderClient({
   // cost a whole band of the sticky header on every page while the shopper
   // was browsing, not searching. The icon opens it on demand.
   const [searchOpen, setSearchOpen] = useState(false);
+  const deskSearchRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus();
@@ -169,16 +171,18 @@ export default function HeaderClient({
               design — rather than all of it collapsing into one gap. */}
           <div className="hidden lg:block flex-1" />
 
-          <form onSubmit={submitSearch} className="hidden md:flex flex-[1_1_150px] min-w-[130px]">
+          <form onSubmit={submitSearch} className="hidden md:flex flex-[1_1_150px] min-w-[130px] relative">
             <div className="flex w-full items-center gap-2.5 rounded-md bg-white/10 border border-white/18 px-3 py-2.5">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbc000" strokeWidth="2.4" className="shrink-0">
                 <circle cx="10.5" cy="10.5" r="6.5" />
                 <path d="M15.5 15.5 21 21" />
               </svg>
               <input
+                ref={deskSearchRef}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 type="search"
+                autoComplete="off"
                 placeholder={t("nav.search")}
                 className="flex-1 min-w-0 bg-transparent text-[13.5px] text-white placeholder-white/50 outline-none py-3 -my-3"
               />
@@ -189,6 +193,7 @@ export default function HeaderClient({
                 {t("hero.searchOk")}
               </button>
             </div>
+            <SearchSuggest query={q} inputRef={deskSearchRef} />
           </form>
 
           <div className="flex items-center gap-1 sm:gap-2.5 shrink-0 ms-auto">
@@ -276,7 +281,7 @@ export default function HeaderClient({
         </div>
 
         {searchOpen && (
-        <form onSubmit={submitSearch} className="md:hidden pb-3">
+        <form onSubmit={submitSearch} className="md:hidden pb-3 relative">
           <div className="flex w-full items-center gap-2.5 rounded-md bg-white/10 border border-white/18 px-3 py-2.5">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbc000" strokeWidth="2.4" className="shrink-0">
               <circle cx="10.5" cy="10.5" r="6.5" />
@@ -287,6 +292,7 @@ export default function HeaderClient({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               type="search"
+              autoComplete="off"
               placeholder={t("nav.search")}
               className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder-white/50 outline-none py-3 -my-3"
             />
@@ -297,6 +303,7 @@ export default function HeaderClient({
               {t("hero.searchOk")}
             </button>
           </div>
+          <SearchSuggest query={q} inputRef={searchInputRef} onPick={() => setSearchOpen(false)} />
         </form>
         )}
 

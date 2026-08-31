@@ -42,16 +42,16 @@ export default function ProductForm({
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Référence (SKU)">
-          <input name="sku" required defaultValue={product?.sku} className="input" />
+          <input name="sku" required defaultValue={product?.sku} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
         </Field>
         <Field label="Nom du produit">
-          <input name="name" required defaultValue={product?.name} className="input" />
+          <input name="name" required defaultValue={product?.name} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
         </Field>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Catégorie">
-          <select name="categoryId" required defaultValue={product?.categoryId} className="input">
+          <select name="categoryId" required defaultValue={product?.categoryId} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors">
             <option value="">— Choisir —</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
@@ -61,7 +61,7 @@ export default function ProductForm({
           </select>
         </Field>
         <Field label="Marque">
-          <select name="brandId" defaultValue={product?.brandId ?? ""} className="input">
+          <select name="brandId" defaultValue={product?.brandId ?? ""} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors">
             <option value="">—</option>
             {brands.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
@@ -71,7 +71,7 @@ export default function ProductForm({
       </div>
 
       <Field label="Description">
-        <textarea name="description" defaultValue={product?.description} rows={3} className="input" />
+        <textarea name="description" defaultValue={product?.description} rows={3} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
       </Field>
 
       {/* References are the lookup key of the trade and position is what stops
@@ -84,7 +84,7 @@ export default function ProductForm({
             rows={2}
             defaultValue={product?.oemRefsText ?? ""}
             placeholder="7701234567, 82 00 123 456"
-            className="input"
+            className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors"
           />
         </Field>
         <Field label="Références équipementier">
@@ -93,21 +93,21 @@ export default function ProductForm({
             rows={2}
             defaultValue={product?.aftermarketRefsText ?? ""}
             placeholder="GDB1330, 0986424815"
-            className="input"
+            className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors"
           />
         </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="Essieu">
-          <select name="axle" defaultValue={product?.axle ?? ""} className="input">
+          <select name="axle" defaultValue={product?.axle ?? ""} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors">
             <option value="">— Sans objet —</option>
             <option value="AVANT">Avant</option>
             <option value="ARRIERE">Arrière</option>
           </select>
         </Field>
         <Field label="Côté">
-          <select name="side" defaultValue={product?.side ?? ""} className="input">
+          <select name="side" defaultValue={product?.side ?? ""} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors">
             <option value="">— Sans objet —</option>
             <option value="GAUCHE">Gauche</option>
             <option value="DROITE">Droite</option>
@@ -116,26 +116,26 @@ export default function ProductForm({
       </div>
 
       <Field label="Image (chemin — laisser vide pour conserver l'actuelle)">
-        <input name="imageUrl" defaultValue={product?.imageUrl ?? ""} placeholder="/images/parts-lineup.png" className="input" />
+        <input name="imageUrl" defaultValue={product?.imageUrl ?? ""} placeholder="/images/parts-lineup.png" className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
       </Field>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Field label="Prix d'achat (DT)">
-          <input name="priceBuy" type="number" step="0.01" min="0" required defaultValue={product?.priceBuy} className="input" />
+          <input name="priceBuy" type="number" step="0.01" min="0" required defaultValue={product?.priceBuy} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
         </Field>
         <Field label="Prix de vente (DT)">
-          <input name="priceSell" type="number" step="0.01" min="0" required defaultValue={product?.priceSell} className="input" />
+          <input name="priceSell" type="number" step="0.01" min="0" required defaultValue={product?.priceSell} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
         </Field>
         <Field label="Prix barré (opt.)">
-          <input name="compareAtPrice" type="number" step="0.01" min="0" defaultValue={product?.compareAtPrice ?? ""} className="input" />
+          <input name="compareAtPrice" type="number" step="0.01" min="0" defaultValue={product?.compareAtPrice ?? ""} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
         </Field>
         <Field label="Stock">
-          <input name="stockQty" type="number" min="0" required defaultValue={product?.stockQty ?? 0} className="input" />
+          <input name="stockQty" type="number" min="0" required defaultValue={product?.stockQty ?? 0} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
         </Field>
       </div>
 
       <Field label="Seuil stock faible">
-        <input name="lowStockThreshold" type="number" min="0" defaultValue={product?.lowStockThreshold ?? 5} className="input max-w-32" />
+        <input name="lowStockThreshold" type="number" min="0" defaultValue={product?.lowStockThreshold ?? 5} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors max-w-32" />
       </Field>
 
       {/* The default 13px checkbox is a miss-tap on a phone; the label is the
@@ -164,22 +164,6 @@ export default function ProductForm({
         {pending ? "Enregistrement…" : "Enregistrer"}
       </button>
 
-      <style jsx>{`
-        .input {
-          width: 100%;
-          /* 44px is the comfortable-tap floor used across the site; the
-             padding alone left these fields at 42. */
-          min-height: 44px;
-          padding: 0.6rem 0.75rem;
-          border: 1px solid rgba(15, 35, 82, 0.15);
-          border-radius: 0.5rem;
-          font-size: 0.875rem;
-          outline: none;
-        }
-        .input:focus {
-          border-color: #fbc000;
-        }
-      `}</style>
     </form>
   );
 }

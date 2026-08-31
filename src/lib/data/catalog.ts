@@ -134,9 +134,17 @@ export async function getBrandsForCategory(categoryId: string, includeDescendant
   return [...counts.values()].sort((a, b) => b.count - a.count);
 }
 
+/**
+ * Only used by the public product page, so it only ever returns a product the
+ * shop is actually selling. Deactivating a part in the admin is how it is
+ * withdrawn; without the `active` filter the page stayed up, kept its price on
+ * screen and stayed in search results, and the shopper only discovered it was
+ * gone when the checkout refused the order. The admin edits it through
+ * /admin/stock, which reads the row directly.
+ */
 export async function getProductBySlug(slug: string) {
-  const product = await prisma.product.findUnique({
-    where: { slug },
+  const product = await prisma.product.findFirst({
+    where: { slug, active: true },
     include: {
       brand: true,
       category: { include: { parent: true } },

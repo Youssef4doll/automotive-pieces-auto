@@ -236,11 +236,20 @@ console.log("\n[10] BROWSE THE CATALOGUE: FAMILY → SUBCATEGORY → PRODUCT");
 {
   await p.goto(BASE + "/");
   await p.waitForTimeout(900);
-  const families = await p.locator('a[href^="/catalogue/"]').evaluateAll((els) =>
-    [...new Set(els.map((a) => a.getAttribute("href")).filter((h) => h && h.split("/").length === 3))]);
-  check("the homepage lists the part families", families.length >= 5, `${families.length} families`);
+  // Families are expandable buttons on the homepage, not links — the panel
+  // they open carries the subcategory links.
+  const famButtons = p.locator('button[aria-controls^="subs-"]');
+  const famCount = await famButtons.count();
+  check("the homepage lists the part families", famCount >= 5, `${famCount} families`);
 
-  await p.goto(BASE + families[0]);
+  await famButtons.first().click();
+  await p.waitForTimeout(400);
+  const panelLinks = await p.locator('[id^="subs-"] a[href^="/catalogue/"]').evaluateAll((els) =>
+    els.map((a) => a.getAttribute("href")));
+  check("expanding one reveals its subcategories in place", panelLinks.length >= 2, `${panelLinks.length} links`);
+
+  const families = [...new Set(panelLinks.filter((h) => h.split("/").length === 3))];
+  await p.goto(BASE + (families[0] ?? "/catalogue/freinage"));
   await p.waitForTimeout(700);
   const subs = await p.locator('a[href^="/catalogue/"]').evaluateAll((els) =>
     [...new Set(els.map((a) => a.getAttribute("href")).filter((h) => h && h.split("/").length === 4))]);

@@ -11,7 +11,7 @@ export default async function CategoryGrid() {
   const familiesForTabs = families.map((f) => ({
     slug: f.slug,
     name: f.name,
-    children: f.children.map((c) => ({ slug: c.slug, name: c.name })),
+    children: f.children.map((c) => ({ slug: c.slug, name: c.name, count: c._count.products })),
   }));
 
   return (

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { track } from "@/lib/track";
+import { useRef } from "react";
+import SearchSuggest from "@/components/SearchSuggest";
 
 const POPULAR = [
   { label: "Plaquettes de frein", href: "/catalogue/freinage/freinage-kit-de-plaquettes-de-frein" },
@@ -16,6 +18,7 @@ export default function Hero() {
   const { t } = useLocale();
   const router = useRouter();
   const [q, setQ] = useState("");
+  const heroInputRef = useRef<HTMLInputElement>(null);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,17 +38,22 @@ export default function Hero() {
           <div className="mt-4 w-24 h-1.5 bg-red-500 rounded-full mx-auto lg:mx-0" />
           <p className="mt-5 text-white/70 text-base sm:text-lg">{t("hero.subtitle")}</p>
 
-          <form onSubmit={submit} className="mt-6 flex rounded-lg overflow-hidden shadow-lg bg-white">
+          <form onSubmit={submit} className="mt-6 relative">
+            <div className="flex rounded-lg overflow-hidden shadow-lg bg-white">
             <input
+              ref={heroInputRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               type="search"
+              autoComplete="off"
               placeholder={t("hero.searchPlaceholder")}
               className="flex-1 min-w-0 px-4 py-3.5 sm:py-4 bg-white text-navy-950 outline-none text-sm sm:text-base"
             />
             <button type="submit" className="px-5 sm:px-8 bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-sm sm:text-base tracking-wide">
               {t("hero.searchCta")}
             </button>
+            </div>
+            <SearchSuggest query={q} inputRef={heroInputRef} />
           </form>
 
           <div className="mt-4 flex flex-wrap gap-2 justify-center lg:justify-start">

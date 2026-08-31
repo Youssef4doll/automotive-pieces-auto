@@ -112,4 +112,6 @@ export const LIMITS = {
   newsletter: { limit: 15, windowMs: 60 * 60_000 },
   /** Reference lookup, the one endpoint that can be walked for the catalogue. */
   reference: { limit: 60, windowMs: 60_000 },
+  /** Type-ahead fires per keystroke (debounced), so the ceiling is higher. */
+  suggest: { limit: 200, windowMs: 60_000 },
 } as const;
