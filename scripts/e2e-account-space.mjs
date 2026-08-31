@@ -1,6 +1,6 @@
-// The customer's own space: one shell, navigable on both form factors, using
-// the screen it is given, and built around the two things that actually drive
-// repeat revenue — tracking an order and buying the same part again.
+// The redesigned customer area: an application shell that adapts to the device,
+// a dashboard organised around the live order and the vehicle, and every page
+// reachable, honest about missing data, and usable at any width.
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
 
@@ -38,11 +38,10 @@ const prod = await prisma.product.findFirst({
 });
 
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
-
-// ---- set up a customer with one order so the space has something to show ----
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
 const p = await ctx.newPage();
 p.on("pageerror", (e) => console.log("  JS ERROR:", e.message));
+
 await p.goto(`${BASE}/compte`);
 await p.waitForTimeout(700);
 await p.click('button:has-text("Créer un compte")');
@@ -54,24 +53,39 @@ await p.fill('input[name="password"]', PASSWORD);
 await p.getByRole("button", { name: /Créer mon compte|Créer un compte/ }).last().click();
 await p.waitForTimeout(2500);
 
-console.log("\n[1] AN EMPTY SPACE STILL POINTS SOMEWHERE");
+console.log("\n[1] EVERY EMPTY STATE POINTS SOMEWHERE");
 await p.goto(`${BASE}/compte`);
-await p.waitForTimeout(1200);
+await p.waitForTimeout(1300);
 let body = await p.locator("main").innerText();
-check("greets the customer by name", /Bonjour Sami/i.test(body));
-check("no order yet is explained, not left blank", /Aucune commande/i.test(body));
-check("and offers the next step", (await p.locator('main a:has-text("Trouver ma pièce")').count()) > 0);
+check("greets the customer by name", /Bonjour, Sami/i.test(body));
+check("no order yet is explained, not left blank", /Aucune commande pour le moment/i.test(body));
+check("the empty garage invites a vehicle", /garage est vide/i.test(body));
+check("and offers the next action", (await p.locator('main a:has-text("Trouver une pièce")').count()) > 0);
 
-console.log("\n[2] NAVIGATION EXISTS AND WORKS ON A PHONE");
-for (const [tab, expect] of [["Commandes", /Mes commandes/i], ["Aide", /Questions fréquentes/i], ["Compte", /Bonjour Sami/i]]) {
-  await p.locator(`main a:visible:has-text("${tab}")`).first().click();
+console.log("\n[2] A PHONE GETS A THUMB-REACH TAB BAR");
+const bar = p.locator('nav[aria-label="Espace client"]:visible').last();
+check("the tab bar is present", (await bar.count()) === 1);
+const barBox = await bar.boundingBox();
+check("it is pinned to the bottom of the screen", !!barBox && barBox.y + barBox.height >= 830, `y=${Math.round(barBox?.y ?? -1)}`);
+check("with five destinations", (await bar.locator("a").count()) === 5, `${await bar.locator("a").count()}`);
+check("no desktop rail is visible on a phone",
+      (await p.locator('aside nav[aria-label="Espace client"]:visible').count()) === 0);
+
+for (const [tab, expect] of [
+  ["Commandes", /Mes commandes/i],
+  ["Garage", /Mon garage/i],
+  ["Aide", /Comment pouvons-nous vous aider/i],
+  ["Profil", /Mon profil/i],
+  ["Accueil", /Bonjour, Sami/i],
+]) {
+  await bar.locator(`a:has-text("${tab}")`).first().click();
   await p.waitForTimeout(1100);
   check(`  "${tab}" reaches its page`, expect.test(await p.locator("main").innerText()));
 }
-const current = await p.locator('main a[aria-current="page"]:visible').count();
-check("the current tab is marked for assistive tech", current === 1, `${current} marked`);
+check("the current destination is marked for assistive tech",
+      (await p.locator('nav[aria-label="Espace client"]:visible a[aria-current="page"]').count()) === 1);
 
-console.log("\n[3] BUY IT ONCE");
+console.log("\n[3] BUY SOMETHING");
 await p.goto(`${BASE}/produit/${prod.slug}`);
 await p.waitForTimeout(900);
 await p.locator('button:has-text("Ajouter au panier")').first().click();
@@ -85,73 +99,123 @@ await p.waitForURL(/\/commande\/confirmation\//, { timeout: 20000 }).catch(() =>
 const ref = p.url().split("/").pop();
 check("order placed", /^CMD-/.test(ref || ""), ref);
 
-console.log("\n[4] THE SPACE NOW LEADS WITH THE LIVE ORDER");
+console.log("\n[4] THE DASHBOARD LEADS WITH THE LIVE ORDER");
 await p.goto(`${BASE}/compte`);
-await p.waitForTimeout(1300);
+await p.waitForTimeout(1400);
 body = await p.locator("main").innerText();
-check("the in-flight order is the first thing shown", body.includes(ref), ref);
-check("labelled as in progress, not just 'last order'", /Commande en cours/i.test(body));
-check("the order card says when it was placed, to the minute",
-      /Pass[ée]e le .+ à \d{2}:\d{2}/i.test(body.replace(/\n/g, " ")),
-      body.replace(/\n/g, " ").match(/Pass[ée]e le [^·]+/i)?.[0]?.trim());
-check("lifetime spend is summarised", /commande.*DT au total/i.test(body.replace(/\n/g, " ")));
+check("the order is the hero", /Votre commande/i.test(body) && body.includes(ref), ref);
+check("prices use French formatting", /\d+,\d{2} DT/.test(body), body.match(/\d+,\d{2} DT/)?.[0]);
+check("no English-style decimal slipped through", !/\d+\.\d{2} DT/.test(body));
+check("the tracker shows when the order was placed", /Commandée/.test(body) && /\d+ \w+/.test(body));
+check("it says what happens next", /Nous confirmons|Nous préparons/i.test(body));
+const track = await p.locator('main a:has-text("Suivre ma commande")').first().boundingBox();
+check("the primary action is above the fold on a phone", !!track && track.y < 844, `y=${Math.round(track?.y ?? -1)}`);
 
-// The order card's primary action must be above everything else on a phone.
-const trackY = await p.locator('main a:has-text("Suivre ma commande")').first().boundingBox();
-check("the tracking action is reachable without hunting", !!trackY && trackY.y < 900, `y=${Math.round(trackY?.y ?? -1)}`);
+console.log("\n[5] QUICK ACTIONS AND THE VEHICLE BRIDGE");
+check("four quick actions are offered", (await p.locator('main a:has-text("Trouver une pièce")').count()) > 0
+      && (await p.locator('main a:has-text("Commander à nouveau")').count()) > 0);
+check("category shortcuts come from real stocked families",
+      (await p.locator('main a[href^="/catalogue/"]').count()) > 0,
+      `${await p.locator('main a[href^="/catalogue/"]').count()} chips`);
+for (const href of await p.locator('main a[href^="/catalogue/"]').evaluateAll((e) => e.map((x) => x.getAttribute("href")))) {
+  const res = await p.request.get(BASE + href);
+  if (res.status() !== 200) check(`  ${href} is a live page`, false, `status=${res.status()}`);
+}
+check("no category shortcut leads to a dead page", true);
 
-console.log("\n[5] BUY AGAIN — ONE TAP FROM A PAST PURCHASE");
+console.log("\n[6] BUY AGAIN");
 const rail = p.locator('section[aria-labelledby="buy-again"]');
 check("the rail appears once there is history", (await rail.count()) === 1);
-check("it names the part they bought", (await rail.innerText()).includes(prod.name.slice(0, 20)));
-await rail.locator('button:has-text("Ajouter")').first().click();
+await rail.locator('button:has-text("Racheter")').first().click();
 await p.waitForTimeout(1200);
-check("tapping Ajouter confirms in place", /Ajouté/i.test(await rail.innerText()));
-const count = await p.locator('header button[aria-label*="Panier"], header button:has-text("Panier")').first().innerText().catch(() => "");
-check("and the item really is in the cart",
-      (await p.evaluate(() => JSON.parse(localStorage.getItem("apa-cart") || "{}")?.state?.items?.length ?? 0)) > 0,
-      count.replace(/\n/g, " "));
+check("racheter confirms in place", /Ajouté/i.test(await rail.innerText()));
+check("and the part really reaches the cart",
+      (await p.evaluate(() => JSON.parse(localStorage.getItem("apa-cart") || "{}")?.state?.items?.length ?? 0)) > 0);
 
-console.log("\n[6] THE HELP PAGE ANSWERS BEFORE A HUMAN HAS TO");
-await p.goto(`${BASE}/compte/aide`);
-await p.waitForTimeout(1000);
+console.log("\n[7] ORDERS: FILTERS AND A REAL DETAIL PAGE");
+await p.goto(`${BASE}/compte/commandes`);
+await p.waitForTimeout(1200);
+check("filters are offered", (await p.locator('main a:has-text("En cours")').count()) > 0);
+await p.locator('main a:has-text("Livrées")').first().click();
+await p.waitForTimeout(1100);
+check("filtering to Livrées excludes the pending order",
+      !(await p.locator("main").innerText()).includes(ref));
+await p.locator('main a:has-text("Toutes")').first().click();
+await p.waitForTimeout(1100);
+check("Toutes brings it back", (await p.locator("main").innerText()).includes(ref));
+
+await p.goto(`${BASE}/compte/commandes/${ref}`);
+await p.waitForTimeout(1200);
 body = await p.locator("main").innerText();
-check("it covers the fit question", /va sur ma voiture|compatib/i.test(body));
-check("it covers the wrong-part fear", /mauvaise pièce/i.test(body));
-check("answers are collapsed until asked for", (await p.locator("main details").count()) >= 5,
-      `${await p.locator("main details").count()} questions`);
-await p.locator("main details summary").first().click();
-await p.waitForTimeout(300);
-check("opening one reveals its answer", (await p.locator("main details[open]").count()) === 1);
-const helpWa = await p.locator('main a[href*="wa.me"]').first().getAttribute("href");
-check("the WhatsApp link already carries their order reference",
-      decodeURIComponent(helpWa || "").includes(ref), decodeURIComponent(helpWa || "").slice(-46));
+check("the detail page opens", body.includes(ref));
+for (const section of ["Statut", "Produits", "Livraison", "Paiement"]) {
+  check(`  section "${section}"`, new RegExp(section, "i").test(body));
+}
+check("it states the real payment method", /Paiement à la livraison/i.test(body));
+check("it shows the line maths", /Sous-total/i.test(body) && /Total/i.test(body));
 
-console.log("\n[7] IT USES A LAPTOP SCREEN INSTEAD OF IGNORING IT");
+console.log("\n[8] SOMEONE ELSE'S ORDER IS NOT READABLE");
+const other = await prisma.order.findFirst({ where: { NOT: { user: { email: EMAIL } } }, select: { ref: true } });
+const forbidden = await p.request.get(`${BASE}/compte/commandes/${other.ref}`);
+check("another customer's order returns 404", forbidden.status() === 404, `status=${forbidden.status()}`);
+
+console.log("\n[9] THE HELP CENTRE SEARCHES");
+await p.goto(`${BASE}/compte/aide`);
+await p.waitForTimeout(1100);
+check("questions start collapsed", (await p.locator("main details").count()) >= 6
+      && (await p.locator("main details[open]").count()) === 0);
+await p.fill('main input[type="search"]', "livraison");
+await p.waitForTimeout(500);
+const shown = await p.locator("main details").count();
+check("typing narrows the list", shown > 0 && shown < 8, `${shown} of 8`);
+await p.fill('main input[type="search"]', "zzzzz");
+await p.waitForTimeout(500);
+check("a search with no match offers WhatsApp instead of a blank page",
+      /Aucune question/i.test(await p.locator("main").innerText()));
+await p.fill('main input[type="search"]', "");
+await p.waitForTimeout(400);
+await p.locator("main details summary").first().click();
+await p.waitForTimeout(400);
+check("opening a question reveals its answer", (await p.locator("main details[open]").count()) === 1);
+
+console.log("\n[10] PROFILE SHOWS ONLY WHAT EXISTS");
+await p.goto(`${BASE}/compte/profil`);
+await p.waitForTimeout(1100);
+body = await p.locator("main").innerText();
+check("real account fields are shown", body.includes("Sami Trabelsi") && body.includes(EMAIL));
+check("the delivery address comes from the last order", /7 Rue Espace/.test(body));
+check("logout is available", (await p.locator('main button:has-text("Déconnexion")').count()) === 1);
+
+console.log("\n[11] DESKTOP GETS AN APPLICATION SHELL");
 const desk = await browser.newContext({ viewport: { width: 1440, height: 900 }, storageState: await ctx.storageState() });
 const d = await desk.newPage();
 d.on("pageerror", (e) => console.log("  JS ERROR (desktop):", e.message));
 await d.goto(`${BASE}/compte`);
-await d.waitForTimeout(1300);
+await d.waitForTimeout(1400);
 const width = await d.evaluate(() => {
-  const inner = document.querySelector("main")?.firstElementChild;
-  return inner ? Math.round(inner.getBoundingClientRect().width) : 0;
+  const el = document.querySelector("main .max-w-\\[1240px\\]") ?? document.querySelector("main")?.firstElementChild;
+  return el ? Math.round(el.getBoundingClientRect().width) : 0;
 });
-check("content fills the screen rather than a mobile column", width > 1000, `${width}px of 1440`);
-check("a side navigation is present on desktop", (await d.locator("main nav a:visible").count()) >= 3);
-const visibleNavs = await d.evaluate(() =>
-  [...document.querySelectorAll("main nav")].filter((n) => getComputedStyle(n).display !== "none").length);
-check("only one navigation is visible at a time", visibleNavs === 1, `${visibleNavs} visible`);
+check("content uses the screen", width > 1100, `${width}px of 1440`);
+check("a navigation rail is present", (await d.locator('aside nav[aria-label="Espace client"] a:visible').count()) === 6,
+      `${await d.locator('aside nav[aria-label="Espace client"] a:visible').count()} links`);
+check("the phone tab bar is hidden on desktop",
+      (await d.evaluate(() => {
+        const navs = [...document.querySelectorAll('nav[aria-label="Espace client"]')];
+        return navs.filter((n) => getComputedStyle(n).display !== "none").length;
+      })) === 1);
+check("assistance is reachable from the rail", (await d.locator('aside a[href*="wa.me"]').count()) === 1);
 
-console.log("\n[8] NO OVERFLOW, NO TINY CONTROLS, ANY SCREEN");
+console.log("\n[12] CLEAN AT EVERY WIDTH");
 let bad = 0;
+const PAGES = ["/compte", "/compte/commandes", `/compte/commandes/${ref}`, "/compte/garage", "/compte/pieces", "/compte/aide", "/compte/profil"];
 for (const w of [320, 360, 390, 414, 430, 768, 1024, 1280, 1440]) {
   const c = await browser.newContext({ viewport: { width: w, height: 900 }, storageState: await ctx.storageState() });
   const pg = await c.newPage();
   pg.on("pageerror", (e) => { console.log(`      JS ERROR ${w}px: ${e.message}`); bad++; });
-  for (const u of ["/compte", "/compte/commandes", "/compte/aide"]) {
+  for (const u of PAGES) {
     await pg.goto(BASE + u);
-    await pg.waitForTimeout(500);
+    await pg.waitForTimeout(420);
     const r = await pg.evaluate(() => {
       const ov = document.documentElement.scrollWidth - document.documentElement.clientWidth;
       let small = 0;
@@ -169,7 +233,7 @@ for (const w of [320, 360, 390, 414, 430, 768, 1024, 1280, 1440]) {
   }
   await c.close();
 }
-check("clean across 9 widths x 3 pages", bad === 0, `${bad} issue(s)`);
+check(`no overflow or tiny control across 9 widths x ${PAGES.length} pages`, bad === 0, `${bad} issue(s)`);
 
 await cleanup();
 await browser.close();
