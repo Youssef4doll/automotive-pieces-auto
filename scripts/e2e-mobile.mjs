@@ -227,7 +227,9 @@ console.log("\n[9] CHECKOUT DOES NOT DEMAND AN ACCOUNT");
   await p.goto(BASE + "/commande");
   await p.waitForTimeout(900);
   const body = await p.locator("main").innerText();
-  check("guest checkout is stated in words", /sans créer de compte|sans compte/i.test(body));
+  // The wording lives in the guest/sign-in panel now, not a single sentence.
+  check("guest checkout is stated in words",
+        /invité/i.test(body) && /aucun compte/i.test(body));
   check("signing in is offered as a shortcut, not a gate", /Déjà client/i.test(body));
   check("the order can be submitted", (await p.locator('button[type="submit"]').count()) > 0);
 }

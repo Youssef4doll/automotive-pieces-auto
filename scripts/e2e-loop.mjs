@@ -138,6 +138,67 @@ console.log("\n[C2] THE SEARCH BOX SUGGESTS REAL THINGS");
   check("nothing is suggested when nothing matches", (await shopper.locator('[role="listbox"]').count()) === 0);
 }
 
+console.log("\n[C2b] THE CATALOGUE FILTERS TO THE SHOPPER'S OWN CAR");
+{
+  await shopper.goto(`${BASE}/catalogue/freinage`);
+  await shopper.waitForTimeout(900);
+  const noCar = await shopper.locator("main").innerText();
+  check("without a vehicle it invites you to pick one", /votre voiture/i.test(noCar));
+  const allCards = await shopper.locator('a[href^="/produit/"]').count();
+
+  // Save a vehicle the way the picker does, then reload.
+  const eng = await prisma.vehicleEngine.findFirst({
+    select: { id: true, name: true, model: { select: { name: true, make: { select: { name: true } } } } },
+  });
+  await shopper.evaluate(
+    (v) => localStorage.setItem("apa-vehicle", JSON.stringify({ state: { vehicles: [v], vehicle: v }, version: 0 })),
+    { engineId: eng.id, engineName: eng.name, modelName: eng.model.name, makeName: eng.model.make.name },
+  );
+  await shopper.reload();
+  await shopper.waitForTimeout(1200);
+
+  const filtered = await shopper.locator("main").innerText();
+  check("it says what it filtered to", /Filtré pour votre/i.test(filtered),
+        filtered.split("\n").find((l) => /Filtré pour/i.test(l))?.slice(0, 80));
+  // Data-driven rather than assuming this engine always has something that
+  // does not fit it: with a different seeded vehicle every part in the family
+  // can legitimately be compatible, and the filter is still correct.
+  const famWhere = { active: true, category: { OR: [{ slug: "freinage" }, { parent: { slug: "freinage" } }] } };
+  const inFamily = await prisma.product.count({ where: famWhere });
+  const doesNotFit = await prisma.product.count({
+    where: { ...famWhere, fitments: { some: {} }, NOT: { fitments: { some: { engineId: eng.id } } } },
+  });
+  const fitCards = await shopper.locator('a[href^="/produit/"]').count();
+  const shownProducts = fitCards / 2; // each card links twice: image and title
+  check("exactly the parts that do not fit are withheld",
+        shownProducts === inFamily - doesNotFit,
+        `${inFamily} in family, ${doesNotFit} withheld, ${shownProducts} shown`);
+
+  // Nothing left on screen may be labelled as belonging to a different car —
+  // and an unverified part must not be labelled that way either.
+  check("nothing shown is marked as fitting a different car",
+        !/ne correspond pas/i.test(filtered));
+
+  // Unverified parts are offered separately, never claimed as fitting.
+  const unverified = /compatibilité non vérifiée/i.test(filtered);
+  const dbUnverified = await prisma.product.count({
+    where: { active: true, fitments: { none: {} }, category: { OR: [{ slug: "freinage" }, { parent: { slug: "freinage" } }] } },
+  });
+  check("parts with no fitment data are shown apart, not hidden or claimed",
+        dbUnverified > 0 ? unverified : !unverified, `${dbUnverified} unverified in this family`);
+
+  // The escape hatch must restore the full list.
+  await shopper.getByRole("button", { name: /Voir toutes les références/i }).first().click();
+  await shopper.waitForTimeout(600);
+  check("the toggle brings every reference back",
+        (await shopper.locator('a[href^="/produit/"]').count()) === allCards);
+
+  // Leave the shopper without a car so the rest of the loop is unfiltered.
+  await shopper.evaluate(() => localStorage.removeItem("apa-vehicle"));
+  await shopper.reload();
+  await shopper.waitForTimeout(700);
+}
+
 console.log("\n[C3] FIND A PART AND BUY IT AS A GUEST");
 let orderRef = null;
 {
@@ -149,6 +210,26 @@ let orderRef = null;
   await shopper.waitForURL(/\/produit\//, { timeout: 15000 });
   await shopper.waitForTimeout(900);
   check("the product page opens at the top", (await shopper.evaluate(() => Math.round(window.scrollY))) === 0);
+
+  // The card title is the most useful target on a listing; it has to look
+  // clickable rather than like a heading.
+  await shopper.goto(`${BASE}/catalogue/freinage`);
+  await shopper.waitForTimeout(800);
+  const titleStyle = await shopper.evaluate(() => {
+    // The image link also carries text — the "TOP VENTE" badge sits inside
+    // it — so pick the link with the most text: that is the product name.
+    const a = [...document.querySelectorAll('a[href^="/produit/"]')]
+      .sort((x, y) => (y.textContent || "").trim().length - (x.textContent || "").trim().length)[0];
+    if (!a) return null;
+    const cs = getComputedStyle(a);
+    return { colour: cs.color, transform: cs.textTransform };
+  });
+  check("product titles read as links, not headings",
+        Boolean(titleStyle) && titleStyle.transform !== "uppercase" &&
+        titleStyle.colour !== "rgb(8, 22, 51)" && titleStyle.colour !== "rgb(15, 35, 82)",
+        titleStyle?.colour ?? "n/a");
+  await shopper.goBack();
+  await shopper.waitForTimeout(700);
 
   const addBtn = shopper.locator('button:has-text("Ajouter au panier")').first();
   const enabled = await addBtn.isEnabled();
@@ -165,8 +246,11 @@ let orderRef = null;
 
   await shopper.goto(`${BASE}/commande`);
   await shopper.waitForTimeout(1000);
-  check("checkout is reachable without an account",
-        /sans créer de compte|sans compte/i.test(await shopper.locator("main").innerText()));
+  const checkoutText = await shopper.locator("main").innerText();
+  check("checkout offers a guest path and a sign-in path",
+        /invité/i.test(checkoutText) && /déjà client/i.test(checkoutText));
+  check("and neither one gates the form",
+        (await shopper.locator('input[autocomplete="name"]').count()) > 0);
 
   await shopper.locator('input[autocomplete="name"]').first().fill("Client Boucle");
   await shopper.locator('input[autocomplete="tel"]').first().fill("20445566");

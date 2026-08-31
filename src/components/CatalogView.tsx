@@ -1,3 +1,8 @@
+"use client";
+
+// Client because the vehicle filter is driven by the shopper's saved
+// vehicle, which lives in their browser, and the "my car / everything"
+// toggle has to be instant rather than a round trip.
 import Link from "next/link";
 import ProductGrid from "./ProductGrid";
 import CatalogControls from "./CatalogControls";
@@ -5,6 +10,9 @@ import TrackEvent from "./TrackEvent";
 import type { CardProduct } from "./ProductCard";
 import { contactLink } from "@/lib/contact-link";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import { useState } from "react";
+import { useVehicle } from "@/lib/vehicle-store";
+import VehicleFilterBar, { groupByFit } from "@/components/VehicleFilterBar";
 
 type Sibling = { id: string; name: string; slug: string; productCount?: number };
 type BrandFacet = { name: string; slug: string; count: number };
@@ -32,6 +40,15 @@ export default function CatalogView({
   // are dead ends, so they are filtered out here too rather than only in the
   // header menu. They come back automatically once they hold stock.
   const stocked = siblings.filter((s) => s.productCount === undefined || s.productCount > 0);
+
+  // Filtering happens here rather than on the server because the shopper's
+  // vehicle lives in their browser, and every card already carries its
+  // fitments — so switching between "my car" and "everything" is instant and
+  // costs no request.
+  const vehicle = useVehicle((v) => v.vehicle);
+  const [showAll, setShowAll] = useState(false);
+  const groups = groupByFit(products, vehicle?.engineId ?? null);
+  const shown = !vehicle || showAll ? products : groups.fits;
   const title = subfamily ? subfamily.name : family.name;
   const basePath = subfamily ? `/catalogue/${family.slug}/${subfamily.slug}` : `/catalogue/${family.slug}`;
 
@@ -59,7 +76,10 @@ export default function CatalogView({
 
       <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mb-1 tracking-tight">{title}</h1>
       <p className="text-sm text-gray-500 mb-4">
-        {products.length} référence{products.length > 1 ? "s" : ""} · 24h Grand Tunis, 48–72h régions
+        {/* The count of what is on screen, not of the whole category — the
+            filter bar below states the total, and two different numbers on one
+            page reads as a bug. */}
+        {shown.length} référence{shown.length > 1 ? "s" : ""} · 24h Grand Tunis, 48–72h régions
       </p>
 
       {/* On phones the sidebar used to render first and fill the whole screen
@@ -164,12 +184,79 @@ export default function CatalogView({
         <div className="flex-1 min-w-0">
           <CatalogControls basePath={basePath} activeBrandSlug={activeBrandSlug} activeSort={activeSort} />
 
+          {products.length > 0 && (
+            <VehicleFilterBar
+              total={products.length}
+              fitCount={groups.fits.length}
+              unverifiedCount={groups.unverified.length}
+              showAll={showAll}
+              onToggle={setShowAll}
+            />
+          )}
+
           {products.length === 0 ? (
             <EmptyState whatsapp={whatsapp} />
+          ) : shown.length === 0 ? (
+            <NoFitState make={vehicle?.makeName ?? ""} onShowAll={() => setShowAll(true)} whatsapp={whatsapp} />
           ) : (
-            <ProductGrid products={products} />
+            <ProductGrid products={shown} />
+          )}
+
+          {/* Parts the catalogue has no fitment data for. Kept out of the
+              filtered list — they are not verified as fitting — but offered
+              rather than dropped, because "not checked yet" is not the same
+              as "does not fit". */}
+          {vehicle && !showAll && groups.unverified.length > 0 && (
+            <section className="mt-8 pt-6 border-t border-gray-200">
+              <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 text-lg">
+                Compatibilité non vérifiée
+              </h2>
+              <p className="text-sm text-gray-600 mt-1 mb-4 max-w-prose">
+                Nous n&apos;avons pas encore les données de compatibilité de ces {groups.unverified.length} référence
+                {groups.unverified.length > 1 ? "s" : ""}. Elles ne sont pas déclarées incompatibles avec votre{" "}
+                {vehicle.makeName} — simplement non vérifiées. Envoyez-nous votre référence et nous confirmons.
+              </p>
+              <ProductGrid products={groups.unverified} />
+            </section>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** No part in this category is confirmed to fit the saved vehicle. */
+function NoFitState({
+  make,
+  onShowAll,
+  whatsapp,
+}: {
+  make: string;
+  onShowAll: () => void;
+  whatsapp: string | null;
+}) {
+  return (
+    <div className="text-center py-12 px-4 border border-dashed border-gray-300 rounded-xl">
+      <p className="text-navy-950 font-semibold mb-1">Aucune pièce de cette catégorie n&apos;est vérifiée pour votre {make}</p>
+      <p className="text-sm text-gray-600 mb-5 max-w-md mx-auto">
+        Cela ne veut pas dire qu&apos;il n&apos;en existe pas — seulement que nous n&apos;avons pas encore la donnée.
+        Donnez-nous votre référence ou votre carte grise et nous vérifions.
+      </p>
+      <div className="flex flex-wrap gap-2 justify-center">
+        <button
+          type="button"
+          onClick={onShowAll}
+          className="inline-flex items-center min-h-tap px-5 rounded-lg bg-navy-950 hover:bg-navy-800 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"
+        >
+          Voir toutes les références
+        </button>
+        <a
+          href={contactLink({ whatsapp, email: null })}
+          {...(whatsapp ? { target: "_blank", rel: "noreferrer" } : {})}
+          className="inline-flex items-center min-h-tap px-5 rounded-lg border border-gray-300 text-navy-900 font-semibold text-sm hover:border-navy-700 transition-colors"
+        >
+          Nous demander
+        </a>
       </div>
     </div>
   );

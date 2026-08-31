@@ -28,7 +28,17 @@ export default function ProductCard({ product }: { product: CardProduct }) {
   const add = useCart((s) => s.add);
   const vehicle = useVehicle((s) => s.vehicle);
 
-  const compatible = vehicle ? product.fitments.some((f) => f.engineId === vehicle.engineId) : null;
+  // Three states, not two. `.some()` on an empty fitment list returns false,
+  // which previously made "we have not checked this part yet" render as the
+  // same warning as "this part is for a different car". They are different
+  // facts and a parts shop must not blur them.
+  const fit: "yes" | "no" | "unverified" | null = !vehicle
+    ? null
+    : product.fitments.length === 0
+      ? "unverified"
+      : product.fitments.some((f) => f.engineId === vehicle.engineId)
+        ? "yes"
+        : "no";
   const outOfStock = product.stockQty <= 0;
   const lowStock = !outOfStock && product.stockQty <= product.lowStockThreshold;
   const discount =
@@ -67,7 +77,11 @@ export default function ProductCard({ product }: { product: CardProduct }) {
       <div className="p-4 flex flex-col gap-1.5 flex-1">
         <Link
           href={`/produit/${product.slug}`}
-          className="font-heading font-bold uppercase text-navy-950 hover:text-red-600 leading-tight text-[15px] flex items-center min-h-tap-compact"
+          // Reads as a link, because it is one. Uppercase navy looked like a
+          // heading, so the most useful target on the card — the part's name —
+          // was the one thing that did not invite a click. Sentence case keeps
+          // long reference-heavy names readable at a glance.
+          className="font-semibold text-[15px] leading-snug text-navy-600 hover:text-red-600 hover:underline underline-offset-2 decoration-1 min-h-tap-compact flex items-center"
         >
           {product.name}
         </Link>
@@ -76,14 +90,19 @@ export default function ProductCard({ product }: { product: CardProduct }) {
             the image and title already link to, so they added three tappable
             things per card that all did the same thing. A card only has to
             answer: what is it, does it fit, is it available, how much. */}
-        {compatible === true && (
+        {fit === "yes" && (
           <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-green-700">
             ✓ {t("compat.compatible")}
           </span>
         )}
-        {compatible === false && (
+        {fit === "no" && (
+          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-gray-500">
+            {t("compat.doesntMatch")}
+          </span>
+        )}
+        {fit === "unverified" && (
           <span className="inline-flex items-center gap-1 text-[12px] font-medium text-amber-600">
-            ? {t("compat.check")}
+            ? {t("compat.unverified")}
           </span>
         )}
 

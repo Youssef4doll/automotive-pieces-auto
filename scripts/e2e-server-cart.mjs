@@ -18,6 +18,24 @@ const STAMP = Date.now().toString().slice(-6);
 const EMAIL = `cart.${STAMP}@example.com`;
 const PASSWORD = "client1234";
 
+/**
+ * The signup limiter is per-address and lives in process memory, so a long run
+ * of suites from one machine legitimately exhausts it. Report that plainly
+ * rather than failing later on a null dereference that hides the cause.
+ */
+async function assertSignedUp(page, prismaClient, email) {
+  const user = await prismaClient.user.findUnique({ where: { email }, select: { id: true } });
+  if (user) return user;
+  const shown = await page.locator("main").innerText().catch(() => "");
+  if (/Trop de tentatives/i.test(shown)) {
+    console.log("  SKIP  signup refused by the rate limiter — restart the server to clear it, then re-run");
+    process.exit(0);
+  }
+  console.log(`  FAIL  the account was not created — ${shown.split("\n").slice(0, 2).join(" | ")}`);
+  process.exit(1);
+}
+
+
 async function cleanup() {
   const u = await prisma.user.findUnique({ where: { email: EMAIL }, select: { id: true } });
   if (u) {
@@ -76,7 +94,7 @@ await phone.waitForTimeout(2500);
 await phone.goto(`${BASE}/panier`);
 await phone.waitForTimeout(2500);
 
-const account = await prisma.user.findUnique({ where: { email: EMAIL }, select: { id: true } });
+const account = await assertSignedUp(phone, prisma, EMAIL);
 const userCart = await prisma.cart.findFirst({
   where: { userId: account.id, status: "ACTIVE" },
   include: { items: true },

@@ -122,13 +122,41 @@ export default function CheckoutForm({
           way. Creating an account is offered after the order instead, when it
           costs the customer nothing. */}
       {!signedIn && (
-        <p className="text-sm text-gray-600 mb-6">
-          Commandez sans créer de compte.{" "}
-          <Link href="/compte" className="font-semibold text-navy-900 underline underline-offset-2">
-            Déjà client ? Connectez-vous
-          </Link>{" "}
-          pour remplir vos informations automatiquement.
-        </p>
+        <div className="grid sm:grid-cols-2 gap-3 mb-6">
+          {/* Both choices are shown, neither blocks. The version of this that
+              costs orders is a modal in front of the form; here the guest form
+              is already below and filled in by scrolling past this. Signing in
+              is a shortcut for people who have an account, and creating one is
+              offered after the order, when it costs the buyer nothing. */}
+          <div className="rounded-xl border-2 border-navy-900 bg-navy-50/50 p-4">
+            <p className="font-heading font-extrabold uppercase tracking-tight text-navy-950">
+              Commander en tant qu&apos;invité
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              Aucun compte nécessaire. Remplissez le formulaire ci-dessous et c&apos;est commandé —
+              paiement à la livraison.
+            </p>
+            <p className="inline-flex items-center gap-1.5 mt-2.5 text-[13px] font-semibold text-green-700">
+              ✓ C&apos;est le chemin le plus rapide
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <p className="font-heading font-extrabold uppercase tracking-tight text-navy-950">
+              Déjà client ?
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              Connectez-vous pour remplir vos informations automatiquement, suivre la commande et
+              retrouver vos achats.
+            </p>
+            <Link
+              href="/compte"
+              className="inline-flex items-center justify-center min-h-tap px-5 mt-2.5 rounded-lg border border-navy-900 text-navy-900 font-semibold text-sm hover:bg-navy-50 transition-colors"
+            >
+              Se connecter
+            </Link>
+          </div>
+        </div>
       )}
 
       <form onSubmit={submit} className="grid md:grid-cols-3 gap-8">

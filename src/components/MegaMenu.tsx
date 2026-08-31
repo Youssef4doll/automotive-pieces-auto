@@ -38,8 +38,13 @@ export default function MegaMenu({
                 i === active ? "bg-white border-red-500" : "border-transparent"
               }`}
             >
-              {family.name}
-              <span className="text-[9px] opacity-50 rtl:rotate-180">▶</span>
+              <span className="truncate">{family.name}</span>
+              <span className="shrink-0 flex items-baseline gap-1.5">
+                <span className="text-[11px] font-normal tabular-nums text-gray-400">
+                  {family.children.length}
+                </span>
+                <span className="text-[9px] opacity-50 rtl:rotate-180">▶</span>
+              </span>
             </Link>
           ))}
         </div>
@@ -62,10 +67,13 @@ export default function MegaMenu({
                     key={sub.id}
                     href={`/catalogue/${activeFamily.slug}/${sub.slug}`}
                     onClick={onNavigate}
-                    className="flex items-baseline gap-2 text-[13.5px] font-medium text-navy-900/80 hover:text-red-600"
+                    className="group flex items-baseline gap-1.5 py-1 text-[13.5px] text-navy-600 hover:text-red-600"
                   >
-                    <span className="text-gold-500 text-base leading-none shrink-0">•</span>
-                    <span className="truncate">{sub.name}</span>
+                    <span className="truncate group-hover:underline underline-offset-2">{sub.name}</span>
+                    {/* Beside the name, not pushed to the far edge: these
+                        columns are wide, and justify-between stranded the
+                        number 400px from the label it belongs to. */}
+                    <span className="shrink-0 text-[12px] tabular-nums text-gray-400">({sub.count})</span>
                   </Link>
                 ))}
               </div>
