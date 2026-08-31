@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatTNDfr } from "@/lib/money";
 import { IconArrowRight, IconShield, IconCheck, IconWhatsApp, IconPhone, IconHelp } from "./icons";
+import { contactLink } from "@/lib/contact-link";
 
 export const STATUS_LABEL: Record<string, string> = {
   PENDING: "En attente",
@@ -112,7 +113,13 @@ export function TrustPanel() {
   );
 }
 
-export type ShopContact = { whatsapp: string; phone: string; email: string; hours: string };
+/** Every field is nullable: the shop owner may not have entered it yet. */
+export type ShopContact = {
+  whatsapp: string | null;
+  phone: string | null;
+  email: string | null;
+  hours: string | null;
+};
 
 /** Support, with the order reference already written into the message. */
 export function HelpPanel({ contact, orderRef }: { contact: ShopContact; orderRef?: string }) {
@@ -129,29 +136,43 @@ export function HelpPanel({ contact, orderRef }: { contact: ShopContact; orderRe
       </p>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <a
-          href={`https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(message)}`}
-          target="_blank"
-          rel="noreferrer"
-          className="flex-1 inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"
-        >
-          <IconWhatsApp /> Écrire sur WhatsApp
-        </a>
-        <a
-          href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`}
-          className="inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-xl border border-slate-300 text-navy-900 text-sm font-semibold hover:border-navy-700 transition-colors"
-        >
-          <IconPhone className="w-4 h-4" /> Appeler
-        </a>
+        {/* The label has to match the channel. Offering "Écrire sur WhatsApp"
+            when no number is configured sends the customer somewhere the
+            button did not promise. */}
+        {(contact.whatsapp || contact.email) && (
+          <a
+            href={contactLink({ whatsapp: contact.whatsapp, email: contact.email ?? null }, message)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex-1 inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"
+          >
+            <IconWhatsApp />{" "}
+            {contact.whatsapp ? "Écrire sur WhatsApp" : "Nous écrire"}
+          </a>
+        )}
+        {/* Only offered once a number exists — a dead tel: link is worse
+            than no button at all. */}
+        {contact.phone && (
+          <a
+            href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`}
+            className="inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-xl border border-slate-300 text-navy-900 text-sm font-semibold hover:border-navy-700 transition-colors"
+          >
+            <IconPhone className="w-4 h-4" /> Appeler
+          </a>
+        )}
         <Link
           href="/compte/aide"
-          className="inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-xl border border-slate-300 text-navy-900 text-sm font-semibold hover:border-navy-700 transition-colors"
+          className={`inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-xl text-sm font-semibold transition-colors ${
+            contact.whatsapp || contact.email
+              ? "border border-slate-300 text-navy-900 hover:border-navy-700"
+              : "flex-1 bg-navy-950 hover:bg-navy-800 text-white"
+          }`}
         >
-          <IconHelp className="w-4 h-4" /> FAQ
+          <IconHelp className="w-4 h-4" /> {contact.whatsapp || contact.email ? "FAQ" : "Consulter l'aide"}
         </Link>
       </div>
 
-      <p className="text-xs text-slate-400 mt-3">{contact.hours}</p>
+      {contact.hours && <p className="text-xs text-slate-400 mt-3">{contact.hours}</p>}
     </section>
   );
 }

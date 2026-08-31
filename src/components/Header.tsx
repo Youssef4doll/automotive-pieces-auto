@@ -1,5 +1,5 @@
 import { getMegaMenu } from "@/lib/data/catalog";
-import { getSettings } from "@/lib/settings";
+import { getSettings, publicContact, contactHref } from "@/lib/settings";
 import { getCurrentUser } from "@/lib/session";
 import HeaderClient from "./HeaderClient";
 
@@ -22,12 +22,18 @@ export default async function Header() {
     })),
   }));
 
+  const contact = publicContact(settings);
+  // Resolved here rather than in the client component: settings.ts reaches for
+  // Prisma, so the browser gets the finished URL instead of the helper.
+  const contactUrl = contactHref(contact);
+
   return (
     <HeaderClient
       menu={menu}
-      whatsapp={settings.shop_whatsapp}
-      phone={settings.shop_phone}
-      storeAddress={settings.shop_address}
+      whatsapp={contact.whatsapp}
+      phone={contact.phone}
+      storeAddress={contact.address}
+      contactUrl={contactUrl}
       userName={user?.name ?? null}
       isAdmin={user?.role === "ADMIN"}
     />

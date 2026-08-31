@@ -4,9 +4,52 @@ import jwt from "jsonwebtoken";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
-const SECRET = process.env.SESSION_SECRET || "dev-only-insecure-secret";
-const COOKIE_NAME = "apa_session";
+const IS_PROD = process.env.NODE_ENV === "production";
+
+/**
+ * A missing signing secret in production is not a warning, it is a forged
+ * session for anybody who reads this file on GitHub. Development still gets a
+ * default so `npm run dev` works on a fresh clone, but production refuses to
+ * boot rather than silently signing tokens with a public string.
+ */
+function readSecret() {
+  const secret = process.env.SESSION_SECRET;
+  if (IS_PROD) {
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        "SESSION_SECRET must be set to at least 32 random characters in production. " +
+          "Generate one with: openssl rand -base64 48",
+      );
+    }
+    return secret;
+  }
+  return secret || "dev-only-insecure-secret";
+}
+
+const SECRET = readSecret();
+
+/**
+ * The `__Host-` prefix is enforced by the browser: it refuses the cookie unless
+ * it is Secure, path=/ and has no Domain attribute, which stops a compromised
+ * or attacker-controlled subdomain from writing a session cookie for the apex.
+ * The prefix requires HTTPS, so plain-http development keeps the bare name.
+ */
+const COOKIE_NAME = IS_PROD ? "__Host-apa_session" : "apa_session";
 const MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
+
+/**
+ * Never select the whole user row. `passwordHash` has no business leaving the
+ * database, and a server component that passes `user` to a client component
+ * would otherwise ship the bcrypt hash inside the RSC payload.
+ */
+const SAFE_USER_FIELDS = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  role: true,
+  createdAt: true,
+} as const;
 
 export type SessionPayload = {
   userId: string;
@@ -46,8 +89,13 @@ async function readSession(): Promise<SessionPayload | null> {
 export const getCurrentUser = cache(async () => {
   const session = await readSession();
   if (!session) return null;
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: SAFE_USER_FIELDS,
+  });
   if (!user) return null;
+  // The role is re-read from the database rather than trusted from the token:
+  // a demoted admin must lose access on their next request, not in 30 days.
   return user;
 });
 

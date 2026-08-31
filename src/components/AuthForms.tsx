@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
 import type { DictKey } from "@/i18n/dictionaries";
 import { login, signup, type AuthState } from "@/app/actions/auth";
+import FormShield from "@/components/FormShield";
 
 const PERK_KEYS: DictKey[] = ["auth.perk1", "auth.perk2", "auth.perk3", "auth.perk4"];
 
@@ -81,7 +82,8 @@ export default function AuthForms() {
                 </p>
               </form>
             ) : (
-              <form action={signupAction} className="flex flex-col gap-3">
+              <form action={signupAction} className="relative flex flex-col gap-3">
+                <FormShield />
                 <input name="name" required placeholder={t("account.name")} className="px-3 py-3 border border-gray-300 rounded-lg text-sm outline-none focus:border-gold-500" />
                 <input name="email" type="email" required placeholder={t("account.email")} className="px-3 py-3 border border-gray-300 rounded-lg text-sm outline-none focus:border-gold-500" />
                 <input name="phone" required dir="ltr" placeholder={t("account.phone")} className="px-3 py-3 border border-gray-300 rounded-lg text-sm outline-none focus:border-gold-500" />

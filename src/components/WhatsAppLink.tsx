@@ -1,6 +1,7 @@
 "use client";
 
 import { track } from "@/lib/track";
+import { contactLink } from "@/lib/contact-link";
 
 /**
  * A plain `<a>` to wa.me that fires a `whatsapp_clicked` analytics event
@@ -15,13 +16,13 @@ export default function WhatsAppLink({
   className,
   children,
 }: {
-  whatsapp: string;
+  whatsapp: string | null;
   text?: string;
   source: string;
   className?: string;
   children: React.ReactNode;
 }) {
-  const href = `https://wa.me/${whatsapp}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
+  const href = contactLink({ whatsapp, email: null }, text);
   return (
     <a
       href={href}

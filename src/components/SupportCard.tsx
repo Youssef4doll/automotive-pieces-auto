@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { contactLink } from "@/lib/contact-link";
 
 export type ShopContact = {
-  whatsapp: string;
-  phone: string;
-  email: string;
-  hours: string;
+  whatsapp: string | null;
+  phone: string | null;
+  email: string | null;
+  hours: string | null;
 };
 
 /**
@@ -25,8 +26,8 @@ export default function SupportCard({
   const message = orderRef
     ? `Bonjour, j'ai une question sur ma commande ${orderRef}.`
     : "Bonjour, j'ai besoin d'aide pour trouver une pièce.";
-  const wa = `https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(message)}`;
-  const tel = `tel:${contact.phone.replace(/[^\d+]/g, "")}`;
+  const wa = contactLink({ whatsapp: contact.whatsapp, email: contact.email ?? null }, message);
+  const tel = contact.phone ? `tel:${contact.phone.replace(/[^\d+]/g, "")}` : null;
 
   if (compact) {
     return (
@@ -57,18 +58,23 @@ export default function SupportCard({
         >
           <WhatsAppIcon /> Écrire sur WhatsApp
         </a>
-        <a
-          href={tel}
-          className="flex items-center justify-center gap-2 min-h-tap px-4 rounded-lg border border-gray-300 text-navy-900 font-display font-bold uppercase text-xs tracking-wide"
-        >
-          Appeler <span dir="ltr" className="font-mono normal-case">{contact.phone}</span>
-        </a>
-        <a
-          href={`mailto:${contact.email}`}
-          className="flex items-center justify-center min-h-tap px-4 rounded-lg border border-gray-300 text-navy-900 text-sm"
-        >
-          {contact.email}
-        </a>
+        {/* Phone and email appear once the owner has entered them. */}
+        {tel && (
+          <a
+            href={tel}
+            className="flex items-center justify-center gap-2 min-h-tap px-4 rounded-lg border border-gray-300 text-navy-900 font-display font-bold uppercase text-xs tracking-wide"
+          >
+            Appeler <span dir="ltr" className="font-mono normal-case">{contact.phone}</span>
+          </a>
+        )}
+        {contact.email && (
+          <a
+            href={`mailto:${contact.email}`}
+            className="flex items-center justify-center min-h-tap px-4 rounded-lg border border-gray-300 text-navy-900 text-sm"
+          >
+            {contact.email}
+          </a>
+        )}
         <Link href="/#magasin" className="flex items-center justify-center min-h-tap text-sm text-gray-500 underline">
           Voir l&apos;adresse du magasin
         </Link>

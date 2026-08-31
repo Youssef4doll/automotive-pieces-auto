@@ -1,5 +1,5 @@
 import { getMegaMenu } from "@/lib/data/catalog";
-import { getSettings } from "@/lib/settings";
+import { getSettings, publicContact } from "@/lib/settings";
 import SectionHeading from "./SectionHeading";
 import Eyebrow from "./Eyebrow";
 import T from "./T";
@@ -31,7 +31,7 @@ export default async function CategoryGrid() {
 
       <FamiliesTabs families={familiesForTabs} />
 
-      <FamiliesFooter whatsapp={settings.shop_whatsapp} />
+      <FamiliesFooter whatsapp={publicContact(settings).whatsapp} />
     </section>
   );
 }

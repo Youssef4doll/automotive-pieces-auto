@@ -448,7 +448,7 @@ async function main() {
   // it was — so the "Admin login: .../admin1234" line below would print a
   // credential that isn't actually true. Reset the hash (and the other
   // fields) on every run so the printed credentials are always correct.
-  const adminPasswordHash = await bcrypt.hash("admin1234", 10);
+  const adminPasswordHash = await bcrypt.hash("admin1234", 12);
   const admin = await prisma.user.upsert({
     where: { email: "admin@automotive-pieces-auto.tn" },
     update: { passwordHash: adminPasswordHash, name: "Admin", role: "ADMIN" },
@@ -460,7 +460,7 @@ async function main() {
     },
   });
 
-  const customerPasswordHash = await bcrypt.hash("client1234", 10);
+  const customerPasswordHash = await bcrypt.hash("client1234", 12);
   const customer = await prisma.user.upsert({
     where: { email: "karim.bensalah@example.com" },
     update: {

@@ -22,7 +22,7 @@ export default function ProductActions({
     stockQty: number;
     fitmentEngineIds: string[];
   };
-  whatsapp: string;
+  whatsapp: string | null;
 }) {
   const { t } = useLocale();
   const add = useCart((s) => s.add);

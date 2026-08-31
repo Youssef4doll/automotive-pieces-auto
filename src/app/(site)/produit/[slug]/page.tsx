@@ -4,11 +4,12 @@ import FitConfidence from "@/components/FitConfidence";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getProductBySlug, getRelatedProducts } from "@/lib/data/catalog";
-import { getSettings } from "@/lib/settings";
+import { getSettings, publicContact } from "@/lib/settings";
 import Price from "@/components/Price";
 import ProductActions from "@/components/ProductActions";
 import ProductGrid from "@/components/ProductGrid";
 import TrackEvent from "@/components/TrackEvent";
+import JsonLd from "@/components/JsonLd";
 
 export async function generateMetadata({
   params,
@@ -65,7 +66,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
       <TrackEvent
         name="product_viewed"
         properties={{ slug: product.slug, sku: product.sku, category: product.category.slug, price: product.priceSell }}
@@ -130,7 +131,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
 
           <FitConfidence
-            whatsapp={settings.shop_whatsapp}
+            whatsapp={publicContact(settings).whatsapp}
             product={{
               name: product.name,
               sku: product.sku,
@@ -142,7 +143,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           />
 
           <ProductActions
-            whatsapp={settings.shop_whatsapp}
+            whatsapp={publicContact(settings).whatsapp}
             product={{
               id: product.id,
               slug: product.slug,

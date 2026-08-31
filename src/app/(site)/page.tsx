@@ -14,7 +14,7 @@ import Eyebrow from "@/components/Eyebrow";
 import TrustBadges from "@/components/TrustBadges";
 import T from "@/components/T";
 import { getTopSellers, getActivePromotions } from "@/lib/data/catalog";
-import { getSettings } from "@/lib/settings";
+import { getSettings, publicContact, contactHref } from "@/lib/settings";
 import PromoGrid from "@/components/PromoGrid";
 
 export default async function HomePage() {
@@ -23,13 +23,15 @@ export default async function HomePage() {
     getSettings(),
     getActivePromotions(),
   ]);
+  const contact = publicContact(settings);
+  const contactUrl = contactHref(contact);
 
   return (
     <>
       <PromoGrid promos={promos} />
       <Hero />
       <BrandMarquee />
-      <FinderGrid whatsapp={settings.shop_whatsapp} />
+      <FinderGrid contactUrl={contactUrl} />
       <CategoryGrid />
       <PacksSection />
       <TrustBadges />
@@ -66,8 +68,8 @@ export default async function HomePage() {
       <WhyUs />
       <ReviewsSection />
       <StoreSection />
-      <NotFoundBand whatsapp={settings.shop_whatsapp} phone={settings.shop_phone} />
-      <B2BBand whatsapp={settings.shop_whatsapp} />
+      <NotFoundBand contactUrl={contactUrl} phone={contact.phone} />
+      <B2BBand contactUrl={contactUrl} />
     </>
   );
 }

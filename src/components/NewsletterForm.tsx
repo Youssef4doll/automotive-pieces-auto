@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { subscribeNewsletter, type NewsletterState } from "@/app/actions/newsletter";
+import FormShield from "@/components/FormShield";
 
 export default function NewsletterForm() {
   const { t } = useLocale();
@@ -13,7 +14,8 @@ export default function NewsletterForm() {
   }
 
   return (
-    <form action={action} className="flex flex-col gap-2">
+    <form action={action} className="relative flex flex-col gap-2">
+      <FormShield />
       <div className="flex rounded-md overflow-hidden bg-white">
         <input
           name="email"

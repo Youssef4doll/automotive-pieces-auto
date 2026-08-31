@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { getSettings } from "@/lib/settings";
+import { getSettings, publicContact } from "@/lib/settings";
 import SectionHeading from "./SectionHeading";
 import Eyebrow from "./Eyebrow";
 import T from "./T";
@@ -7,6 +7,7 @@ import WhatsAppLink from "./WhatsAppLink";
 
 export default async function StoreSection() {
   const settings = await getSettings();
+  const contact = publicContact(settings);
 
   return (
     <section id="magasin" className="mx-auto max-w-7xl px-4 py-10">
@@ -29,27 +30,28 @@ export default async function StoreSection() {
           <p className="text-sm text-gray-600 mb-4">
             <T k="store.subtitle" />
           </p>
+          {/* Only details the owner has actually entered. An empty list is
+              better than three lines of "à compléter" under a heading that
+              asks the customer to visit. */}
           <ul className="flex flex-col gap-2.5 text-sm text-gray-700">
-            <li className="flex items-start gap-2.5">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />
-              {settings.shop_address}
-            </li>
-            <li className="flex items-start gap-2.5">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />
-              {settings.shop_hours}
-            </li>
-            <li className="flex items-start gap-2.5">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />
-              <span dir="ltr">{settings.shop_phone}</span>
-            </li>
+            {[contact.address, contact.hours, contact.phone]
+              .filter((v): v is string => Boolean(v))
+              .map((line) => (
+                <li key={line} className="flex items-start gap-2.5">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />
+                  <span dir={line === contact.phone ? "ltr" : undefined}>{line}</span>
+                </li>
+              ))}
           </ul>
+          {contact.whatsapp && (
           <WhatsAppLink
-            whatsapp={settings.shop_whatsapp}
+            whatsapp={contact.whatsapp}
             source="store_section"
             className="inline-flex items-center gap-2 mt-5 px-5 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-display font-bold uppercase tracking-wide"
           >
             WhatsApp
           </WhatsAppLink>
+          )}
         </div>
       </div>
     </section>

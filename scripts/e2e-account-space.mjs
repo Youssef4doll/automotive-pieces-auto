@@ -204,7 +204,12 @@ check("the phone tab bar is hidden on desktop",
         const navs = [...document.querySelectorAll('nav[aria-label="Espace client"]')];
         return navs.filter((n) => getComputedStyle(n).display !== "none").length;
       })) === 1);
-check("assistance is reachable from the rail", (await d.locator('aside a[href*="wa.me"]').count()) === 1);
+// The rail always carries a support card; the channel it points at depends on
+// what the shop has configured.
+// Located by its label rather than its href: the rail's own "Aide" nav item
+// can share the destination, so an href match counts two things.
+check("assistance is reachable from the rail",
+      (await d.locator('aside a:has-text("Assistance")').count()) === 1);
 
 console.log("\n[12] CLEAN AT EVERY WIDTH");
 let bad = 0;

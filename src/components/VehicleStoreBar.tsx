@@ -17,7 +17,7 @@ import VehiclePicker from "./VehiclePicker";
  * way to set it. Keeping it here also means the answer to "does this fit?"
  * is always one tap away, wherever the shopper is.
  */
-export default function VehicleStoreBar({ storeAddress }: { storeAddress: string }) {
+export default function VehicleStoreBar({ storeAddress }: { storeAddress: string | null }) {
   const { t } = useLocale();
   const vehicle = useVehicle((s) => s.vehicle);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -60,7 +60,9 @@ export default function VehicleStoreBar({ storeAddress }: { storeAddress: string
                 {t("nav.myStore")}
               </span>
               <span className="block text-[13px] font-bold text-navy-950 leading-tight truncate">
-                {storeAddress}
+                {/* Falls back to a contact prompt rather than an address the
+                    owner has not entered yet. */}
+                {storeAddress ?? t("nav.contact")}
               </span>
             </span>
           </Link>

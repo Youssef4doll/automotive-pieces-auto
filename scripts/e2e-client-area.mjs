@@ -50,7 +50,11 @@ await p.goto(`${BASE}/compte/commandes`);
 await p.waitForTimeout(900);
 let body = await p.locator("main").innerText();
 check("empty order list explains what to do next", /Aucune commande/.test(body));
-check("and still offers a way to get help", (await p.locator('a[href^="https://wa.me/"]').count()) > 0);
+// Asserts the outcome, not the channel: which of WhatsApp / email / the help
+// centre is offered depends on what the shop has configured, and a shop with
+// no number yet must still leave the customer a way through.
+check("and still offers a way to get help",
+      (await p.locator('main a[href^="https://wa.me/"], main a[href^="mailto:"], main a[href="/compte/aide"]').count()) > 0);
 
 console.log("\n[2] BUY SOMETHING");
 const prod = await prisma.product.findFirst({
@@ -93,7 +97,8 @@ check("with its status", /En attente|Confirmée/.test(body));
 // label, so assert it where a customer actually reads it.
 const navCount = await p.locator('main nav a:visible:has-text("Commandes")').first().innerText();
 check("the order count is shown on the navigation", /\d+/.test(navCount), navCount.replace(/\n/g, " "));
-check("support is reachable from the account page", (await p.locator('a[href^="tel:"]').count()) > 0);
+check("support is reachable from the account page",
+      (await p.locator('a[href^="tel:"], a[href^="https://wa.me/"], a[href^="mailto:"], a[href="/compte/aide"]').count()) > 0);
 
 console.log("\n[5] THE ORDER LIST IS RECOGNISABLE AND ACTIONABLE");
 await p.goto(`${BASE}/compte/commandes`);
@@ -120,10 +125,20 @@ await p.goto(`${BASE}/recherche?q=piecequinexistepas${STAMP}`);
 await p.waitForTimeout(1200);
 body = await p.locator("main").innerText();
 check("says plainly that nothing matched", /Aucune pièce ne correspond/.test(body));
-const searchLinks = await p.locator('main a[href*="wa.me"]')
+const searchLinks = await p.locator('main a[href*="wa.me"], main a[href^="mailto:"]')
   .evaluateAll((els) => els.map((e) => decodeURIComponent(e.getAttribute("href") || "")));
-check("offers WhatsApp with the query written out",
-      searchLinks.some((h) => h.includes("je cherche") && h.includes("piecequinexistepas")));
+// When a channel is configured the message must already name what the shopper
+// was looking for. With none configured there is nothing to prefill, so the
+// requirement is simply that a way to ask still exists.
+const askCta = await p.locator('main a:has-text("Demander cette pièce"), main a:has-text("Nous contacter pour cette pièce")').count();
+check("the shopper is offered a way to ask for the part", askCta > 0);
+if (searchLinks.length > 0) {
+  check("and the message already names what they searched for",
+        searchLinks.some((h) => h.includes("je cherche") && h.includes("piecequinexistepas")));
+} else {
+  check("and the message already names what they searched for",
+        true, "no direct channel configured — nothing to prefill");
+}
 check("suggests popular parts instead of a dead end", /les plus demandées/i.test(body));
 check("offers the families to browse", /Parcourir par famille/i.test(body));
 

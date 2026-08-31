@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { IconSearch, IconWhatsApp } from "./icons";
+import { contactLink } from "@/lib/contact-link";
 
 export type Faq = { q: string; a: string; cat: string };
 
@@ -10,7 +11,7 @@ export type Faq = { q: string; a: string; cat: string };
  * and the categories narrow the same set. Answers stay collapsed until asked
  * for, so the page opens as six choices instead of a wall of text.
  */
-export default function HelpCenter({ faqs, whatsapp, orderRef }: { faqs: Faq[]; whatsapp: string; orderRef?: string }) {
+export default function HelpCenter({ faqs, whatsapp, orderRef }: { faqs: Faq[]; whatsapp: string | null; orderRef?: string }) {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>("");
 
@@ -109,7 +110,7 @@ export default function HelpCenter({ faqs, whatsapp, orderRef }: { faqs: Faq[]; 
         </h2>
         <p className="text-sm text-slate-500 mt-1 mb-4">Une vraie personne vous répond.</p>
         <a
-          href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`}
+          href={contactLink({ whatsapp, email: null }, message)}
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-2 min-h-tap px-6 rounded-xl bg-green-600 hover:bg-green-500 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { searchProducts, getMegaMenu, getTopSellers } from "@/lib/data/catalog";
-import { getSettings } from "@/lib/settings";
+import { getSettings, publicContact } from "@/lib/settings";
+import { contactLink, contactLinkProps } from "@/lib/contact-link";
 import ProductGrid from "@/components/ProductGrid";
 import TrackEvent from "@/components/TrackEvent";
 
@@ -22,6 +23,8 @@ export default async function SearchPage({
   // Only fetched when we have nothing to show, so an empty-handed shopper
   // still leaves with something to look at.
   const suggestions = products.length === 0 ? await getTopSellers(4) : [];
+  const contact = publicContact(settings);
+  const askHref = contactLink(contact, `Bonjour, je cherche : ${query}. Pouvez-vous m'aider à la trouver ?`);
 
   if (!query) {
     return (
@@ -57,15 +60,18 @@ export default async function SearchPage({
               Vérifiez l&apos;orthographe, essayez la référence inscrite sur la pièce, ou envoyez-nous une photo —
               on la retrouve pour vous.
             </p>
+            {/* The label names whichever channel the shop has configured, so
+                the button never promises WhatsApp and open a mail client. */}
             <a
-              href={`https://wa.me/${settings.shop_whatsapp}?text=${encodeURIComponent(
-                `Bonjour, je cherche : ${query}. Pouvez-vous m'aider à la trouver ?`,
-              )}`}
-              target="_blank"
-              rel="noreferrer"
+              href={askHref}
+              {...contactLinkProps(askHref)}
               className="inline-flex items-center justify-center gap-2 min-h-tap px-5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-semibold"
             >
-              Demander cette pièce sur WhatsApp
+              {contact.whatsapp
+                ? "Demander cette pièce sur WhatsApp"
+                : contact.email
+                  ? "Demander cette pièce par email"
+                  : "Nous contacter pour cette pièce"}
             </a>
           </div>
 

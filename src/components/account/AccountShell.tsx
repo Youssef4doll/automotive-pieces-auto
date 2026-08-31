@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { contactLink } from "@/lib/contact-link";
 import {
   IconHome, IconOrders, IconCar, IconHelp, IconUser, IconPackage, IconWhatsApp,
 } from "./icons";
@@ -50,7 +51,7 @@ export default function AccountShell({
   orderCount?: number;
   /** Orders still in flight. The only count worth badging. */
   activeOrders?: number;
-  whatsapp?: string;
+  whatsapp?: string | null;
   /** Optional page-level control rendered beside the title on wide screens. */
   action?: React.ReactNode;
   children: React.ReactNode;
@@ -91,20 +92,22 @@ export default function AccountShell({
               })}
             </nav>
 
-            {whatsapp && (
-              <a
-                href={`https://wa.me/${whatsapp}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-6 flex items-center gap-3 px-3.5 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-600 hover:border-green-300 hover:text-green-700 transition-colors"
-              >
-                <IconWhatsApp className="text-green-600" />
-                <span className="leading-tight">
-                  <span className="block font-semibold text-navy-950">Assistance</span>
-                  <span className="block text-xs">Une personne répond</span>
+            {/* Always a way to get help. WhatsApp when the shop has a number,
+                the help centre when it does not — a customer with a problem
+                should never find the support card simply missing. */}
+            <a
+              href={whatsapp ? contactLink({ whatsapp, email: null }) : "/compte/aide"}
+              {...(whatsapp ? { target: "_blank", rel: "noreferrer" } : {})}
+              className="mt-6 flex items-center gap-3 px-3.5 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-600 hover:border-green-300 hover:text-green-700 transition-colors"
+            >
+              {whatsapp ? <IconWhatsApp className="text-green-600" /> : <IconHelp className="text-slate-400" />}
+              <span className="leading-tight">
+                <span className="block font-semibold text-navy-950">Assistance</span>
+                <span className="block text-xs">
+                  {whatsapp ? "Une personne répond" : "Questions fréquentes"}
                 </span>
-              </a>
-            )}
+              </span>
+            </a>
           </aside>
 
           {/* ---------- content ---------- */}

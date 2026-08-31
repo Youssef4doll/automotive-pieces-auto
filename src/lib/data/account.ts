@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/money";
+import { publicContact, type SettingsMap } from "@/lib/settings";
 import type { BuyAgainItem } from "@/components/account/BuyAgain";
 import type { CategoryChip } from "@/components/account/ShopForCar";
 
@@ -97,15 +98,11 @@ export async function getShoppableFamilies(take = 8): Promise<CategoryChip[]> {
 }
 
 /** The customer's contact block, read from shop settings. */
-export function contactFrom(settings: {
-  shop_whatsapp: string; shop_phone: string; shop_email: string; shop_hours: string;
-}) {
-  return {
-    whatsapp: settings.shop_whatsapp,
-    phone: settings.shop_phone,
-    email: settings.shop_email,
-    hours: settings.shop_hours,
-  };
+export function contactFrom(settings: SettingsMap) {
+  // Resolved, not raw: an unset detail comes back null so the account area can
+  // hide the row instead of showing "⚠ à compléter" to a paying customer.
+  const c = publicContact(settings);
+  return { whatsapp: c.whatsapp, phone: c.phone, email: c.email, hours: c.hours };
 }
 
 /** Statuses that mean the order has stopped moving. */

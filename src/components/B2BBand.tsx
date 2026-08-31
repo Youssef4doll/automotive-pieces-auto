@@ -2,7 +2,7 @@ import Eyebrow from "./Eyebrow";
 import T from "./T";
 import B2BCta from "./B2BCta";
 
-export default function B2BBand({ whatsapp }: { whatsapp: string }) {
+export default function B2BBand({ contactUrl }: { contactUrl: string }) {
   return (
     <section className="bg-navy-950 border-t border-white/10">
       <div className="mx-auto max-w-7xl px-4 py-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
@@ -15,7 +15,7 @@ export default function B2BBand({ whatsapp }: { whatsapp: string }) {
             <T k="b2b.subtitle" />
           </p>
         </div>
-        <B2BCta whatsapp={whatsapp} />
+        <B2BCta contactUrl={contactUrl} />
       </div>
     </section>
   );

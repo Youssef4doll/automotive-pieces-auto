@@ -3,6 +3,7 @@ import ProductGrid from "./ProductGrid";
 import CatalogControls from "./CatalogControls";
 import TrackEvent from "./TrackEvent";
 import type { CardProduct } from "./ProductCard";
+import { contactLink } from "@/lib/contact-link";
 
 type Sibling = { id: string; name: string; slug: string; productCount?: number };
 type BrandFacet = { name: string; slug: string; count: number };
@@ -24,7 +25,7 @@ export default function CatalogView({
   brands: BrandFacet[];
   activeBrandSlug?: string;
   activeSort?: string;
-  whatsapp: string;
+  whatsapp: string | null;
 }) {
   // The sidebar and chips list sibling categories; ones with nothing in them
   // are dead ends, so they are filtered out here too rather than only in the
@@ -173,13 +174,13 @@ export default function CatalogView({
   );
 }
 
-function EmptyState({ whatsapp }: { whatsapp: string }) {
+function EmptyState({ whatsapp }: { whatsapp: string | null }) {
   return (
     <div className="text-center py-16 px-4 border border-dashed border-gray-300 rounded-xl">
       <p className="text-3xl mb-3">🔧</p>
       <p className="text-gray-600 font-medium mb-4">Aucune référence en ligne pour cette catégorie</p>
       <a
-        href={`https://wa.me/${whatsapp}`}
+        href={contactLink({ whatsapp, email: null })}
         target="_blank"
         rel="noreferrer"
         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold"

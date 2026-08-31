@@ -15,7 +15,7 @@ const METHODS = [
 ] as const;
 type Method = (typeof METHODS)[number]["id"];
 
-export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
+export default function FinderGrid({ contactUrl }: { contactUrl: string }) {
   const { t } = useLocale();
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -148,7 +148,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
               </label>
             )}
             <a
-              href={`https://wa.me/${whatsapp}`}
+              href={contactUrl}
               target="_blank"
               rel="noreferrer"
               onClick={() => track("whatsapp_clicked", { source: "finder_plate" })}
@@ -210,7 +210,7 @@ export default function FinderGrid({ whatsapp }: { whatsapp: string }) {
               />
               {refMsg && (
                 <a
-                  href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Référence: ${ref}`)}`}
+                  href={contactUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="text-[11px] text-green-700 font-semibold underline"

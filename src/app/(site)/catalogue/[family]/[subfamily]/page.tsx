@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCategoryBySlug, getProductsForCategory, getBrandsForCategory } from "@/lib/data/catalog";
-import { getSettings } from "@/lib/settings";
+import { getSettings, publicContact } from "@/lib/settings";
 import CatalogView from "@/components/CatalogView";
 
 type Sort = "popularity" | "price-asc" | "price-desc";
@@ -47,7 +47,7 @@ export default async function SubfamilyPage({
       brands={brands}
       activeBrandSlug={brand}
       activeSort={sort}
-      whatsapp={settings.shop_whatsapp}
+      whatsapp={publicContact(settings).whatsapp}
     />
   );
 }

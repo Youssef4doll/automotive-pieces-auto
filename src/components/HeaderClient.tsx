@@ -17,13 +17,16 @@ export default function HeaderClient({
   whatsapp,
   phone,
   storeAddress,
+  contactUrl,
   userName,
   isAdmin,
 }: {
   menu: MegaMenuFamily[];
-  whatsapp: string;
-  phone: string;
-  storeAddress: string;
+  /** null until the owner fills it in — the control is hidden, not faked. */
+  whatsapp: string | null;
+  phone: string | null;
+  storeAddress: string | null;
+  contactUrl: string;
   userName: string | null;
   isAdmin: boolean;
 }) {
@@ -152,7 +155,11 @@ export default function HeaderClient({
             <Link href="/#magasin" className="text-white hover:text-gold-500">
               {t("nav.about")}
             </Link>
-            <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className="text-white hover:text-gold-500">
+            <a
+              href={contactUrl}
+              {...(contactUrl.startsWith("/") ? {} : { target: "_blank", rel: "noreferrer" })}
+              className="text-white hover:text-gold-500"
+            >
               {t("nav.contact")}
             </a>
           </nav>
@@ -185,15 +192,15 @@ export default function HeaderClient({
           </form>
 
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            <a
-              href={`https://wa.me/${whatsapp}`}
-              target="_blank"
-              rel="noreferrer"
-              className="hidden xl:flex flex-col gap-px items-end leading-tight"
-            >
-              <span className="text-[11.5px] uppercase text-white/60 tracking-[.1em]">{t("nav.callToOrder")}</span>
-              <span dir="ltr" className="font-heading text-base font-bold tracking-[.01em] text-white">{phone}</span>
-            </a>
+            {phone && (
+              <a
+                href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+                className="hidden xl:flex flex-col gap-px items-end leading-tight"
+              >
+                <span className="text-[11.5px] uppercase text-white/60 tracking-[.1em]">{t("nav.callToOrder")}</span>
+                <span dir="ltr" className="font-heading text-base font-bold tracking-[.01em] text-white">{phone}</span>
+              </a>
+            )}
             <Link
               href="/compte"
               className="hidden sm:flex items-center gap-1.5 min-h-11 px-3 rounded-md border border-white/22 hover:border-gold-500 hover:text-gold-500 text-xs font-bold uppercase tracking-[.04em]"
@@ -378,14 +385,16 @@ export default function HeaderClient({
               <div className="px-3 py-2 normal-case">
                 <LanguageSwitcher />
               </div>
-              <a
-                href={`https://wa.me/${whatsapp}`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-3 rounded-lg bg-green-600 text-white text-sm font-bold text-center mt-2"
-              >
-                WhatsApp · <span dir="ltr">{phone}</span>
-              </a>
+              {whatsapp && (
+                <a
+                  href={contactUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-3 rounded-lg bg-green-600 text-white text-sm font-bold text-center mt-2"
+                >
+                  WhatsApp{phone && <> · <span dir="ltr">{phone}</span></>}
+                </a>
+              )}
             </div>
           </div>
         </div>

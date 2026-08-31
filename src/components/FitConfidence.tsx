@@ -1,6 +1,7 @@
 "use client";
 
 import { useVehicle } from "@/lib/vehicle-store";
+import { contactLink } from "@/lib/contact-link";
 
 export type FitInput = {
   name: string;
@@ -18,7 +19,7 @@ export type FitInput = {
  * coverage silence is what most visitors saw. Three honest states replace it,
  * and the two uncertain ones both carry a way forward instead of a dead end.
  */
-export default function FitConfidence({ product, whatsapp }: { product: FitInput; whatsapp: string }) {
+export default function FitConfidence({ product, whatsapp }: { product: FitInput; whatsapp: string | null }) {
   const vehicle = useVehicle((s) => s.vehicle);
 
   const position = [
@@ -27,7 +28,7 @@ export default function FitConfidence({ product, whatsapp }: { product: FitInput
   ].filter(Boolean);
 
   const ask = (text: string) =>
-    `https://wa.me/${whatsapp}?text=${encodeURIComponent(text)}`;
+    contactLink({ whatsapp, email: null }, text);
 
   let state: "verified" | "mismatch" | "unknown" | "no-vehicle";
   if (!vehicle) state = "no-vehicle";

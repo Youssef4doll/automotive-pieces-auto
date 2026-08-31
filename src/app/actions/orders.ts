@@ -7,29 +7,41 @@ import { getCurrentUser } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { toNumber } from "@/lib/money";
 import { computeSegment } from "@/lib/segment";
+import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
+import { rememberOrder } from "@/lib/order-access";
 
 const itemSchema = z.object({
-  productId: z.string(),
-  qty: z.number().int().positive(),
+  // Prisma ids are cuids; bounding the string keeps a megabyte of junk out of
+  // the `IN (...)` clause.
+  productId: z.string().min(1).max(64),
+  // The atomic stock claim below is what actually prevents overselling, but a
+  // bounded quantity keeps an absurd order from being built in the first place.
+  qty: z.number().int().positive().max(999),
 });
 
+/** Free-text fields a customer types. Bounded so a form post cannot be a payload. */
+const shortText = z.string().trim().max(200);
+const longText = z.string().trim().max(2000);
+
 const placeOrderSchema = z.object({
-  customerName: z.string().min(2),
-  phone: z.string().min(6),
-  email: z.email().optional().or(z.literal("")),
-  governorate: z.string().min(2),
-  address: z.string().optional(),
+  customerName: shortText.min(2),
+  phone: shortText.min(6),
+  email: z.email().max(200).optional().or(z.literal("")),
+  governorate: shortText.min(2),
+  address: longText.optional(),
   deliveryMethod: z.enum(["DELIVERY", "PICKUP"]),
   paymentMethod: z.enum(["COD", "CARD"]),
-  notes: z.string().optional(),
-  items: z.array(itemSchema).min(1),
+  notes: longText.optional(),
+  // An order with hundreds of distinct lines is a script, not a shopper.
+  items: z.array(itemSchema).min(1).max(50),
   // First-touch marketing attribution, read client-side from localStorage
   // at submit time — see lib/attribution.ts. Never trusted for anything
   // but reporting (it doesn't affect price, stock, or order validity), so
-  // it's fine that a client could send anything here.
-  source: z.string().optional(),
-  medium: z.string().optional(),
-  campaign: z.string().optional(),
+  // it's fine that a client could send anything here — bounded all the same,
+  // because "only used for reporting" still means "written to the database".
+  source: shortText.optional(),
+  medium: shortText.optional(),
+  campaign: shortText.optional(),
 });
 
 export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
@@ -42,6 +54,16 @@ export type PlaceOrderResult = { ok: true; ref: string } | { ok: false; error: s
 class OrderError extends Error {}
 
 export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
+  // Cash on delivery means a fake order costs the shop a real delivery run, so
+  // the ceiling is on volume per address rather than on the customer.
+  const gate = hit(await callerKey("checkout"), LIMITS.checkout.limit, LIMITS.checkout.windowMs);
+  if (!gate.ok) {
+    return {
+      ok: false,
+      error: `Trop de commandes envoyées coup sur coup. Réessayez dans ${Math.ceil(gate.retryAfter / 60)} minute(s).`,
+    };
+  }
+
   const parsed = placeOrderSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Formulaire invalide" };
@@ -67,8 +89,12 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       // only ever sends productId + qty, never a price, so there's nothing
       // for a tampered request to override here.
       const productIds = data.items.map((i) => i.productId);
+      // `active: true` matters as much as the price does. Deactivating a part
+      // in the admin is how the shop withdraws it from sale; without this
+      // filter a stale tab — or a posted id — could still buy it, and the
+      // order would look perfectly legitimate afterwards.
       const products = await tx.product.findMany({
-        where: { id: { in: productIds } },
+        where: { id: { in: productIds }, active: true },
         include: { images: { orderBy: { order: "asc" }, take: 1, select: { id: true } } },
       });
       const productMap = new Map(products.map((p) => [p.id, p]));
@@ -183,6 +209,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     // this is bookkeeping for recovery reporting, and it must never be able to
     // roll back an order that has already claimed stock.
     await markCartConverted(result.id, data.phone);
+    // Lets this browser — and only this browser — reopen the confirmation
+    // page for a guest order whose reference is otherwise guessable.
+    await rememberOrder(result.id);
 
     return { ok: true, ref: result.ref };
   } catch (e) {

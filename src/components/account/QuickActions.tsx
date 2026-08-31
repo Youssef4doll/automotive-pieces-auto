@@ -9,7 +9,7 @@ import { IconSearch, IconCar, IconRepeat, IconChat } from "./icons";
  * in, one of these is the useful thing to do next — which is the difference
  * between a dashboard that reports and one that helps.
  */
-export default function QuickActions({ whatsapp }: { whatsapp: string }) {
+export default function QuickActions({ whatsapp }: { whatsapp: string | null }) {
   const vehicle = useVehicle((s) => s.vehicle);
 
   // White cards throughout; the accent is carried by the icon, not by filling
