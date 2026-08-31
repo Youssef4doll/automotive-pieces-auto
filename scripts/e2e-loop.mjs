@@ -359,7 +359,7 @@ console.log("\n[A4] EVERY ADMIN SCREEN LOADS AND SHOWS REAL DATA");
     ["/admin/clients", /Clients/i],
     ["/admin/catalogue", /Catégories|Familles|Catalogue/i],
     ["/admin/catalogue/marques", /Marques/i],
-    ["/admin/promotions", /Promotions/i],
+    ["/admin/promotions", /Bannières/i],
     ["/admin/import", /Import/i],
     ["/admin/qualite", /Qualité|Compatibilité|photo/i],
     ["/admin/analytics", /Analytics|Entonnoir|Visites|Recherches/i],

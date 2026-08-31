@@ -550,32 +550,25 @@ async function main() {
     }
   }
 
-  console.log("Seeding reviews…");
-  const existingReviews = await prisma.review.count();
-  if (existingReviews === 0) {
-    await prisma.review.createMany({
-      data: [
-        { productId: brakePad, authorName: "Mehdi B. — Sfax", rating: 5, comment: "Commandé un kit de freinage le matin, livré en 48h à Sfax. Les références correspondaient exactement.", verified: true },
-        { productId: airFilter, authorName: "Salma T. — Tunis", rating: 5, comment: "J'ai envoyé ma carte grise sur WhatsApp, ils m'ont trouvé la pièce en 10 minutes. Service impeccable.", verified: true },
-        { productId: oil, authorName: "Garage Ennasr — Ariana", rating: 5, comment: "Nous équipons notre garage chez eux depuis deux ans. Prix corrects et disponibilité réelle.", verified: true },
-      ],
-    });
-  }
+  // No reviews are seeded. Nothing in the shop can produce one yet — there is
+  // no way for a customer to leave a review — so any row here would be a
+  // testimonial nobody wrote, shown with stars and fed into the product page's
+  // aggregateRating structured data. The review sections are already
+  // data-driven and stay hidden until real reviews exist.
 
   console.log("Done.");
-  // Homepage deals carousel. Seeded from the images the project actually
-  // ships so the strip renders real content out of the box; the shop edits
-  // these from /admin/promotions without a redeploy.
-  // Only the storefront photo ships as a default banner: it is a real
-  // photograph and fills a wide strip properly. The product-cutout images
+  // Home page banners. Only the storefront photo ships as a default: it is a
+  // real photograph and fills a wide strip properly. The product-cutout images
   // are transparent PNGs that look broken when cropped to a banner, so the
   // shop adds its own artwork from /admin/promotions instead of us shipping
-  // something half-right.
+  // something half-right — and no campaign banner is seeded at all, because a
+  // campaign the shop never ran is not ours to invent.
   const promos = [
     {
       title: "Notre magasin — retrait gratuit en 2h",
       imageUrl: "/images/storefront.png",
       href: "/#magasin",
+      placement: "HERO" as const,
       order: 0,
     },
   ];

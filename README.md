@@ -18,7 +18,9 @@ it shows up immediately for customers. No mock data pretending to be a backend.
 **Storefront** (French default, with Arabic — full RTL — and English): hero + 4-way part finder (by
 vehicle/carte-grise photo/VIN prefix/reference number), vehicle picker (make → model → engine) that drives a live
 "✓ Compatible" / "? Vérifier" chip on every product, mega-menu catalog across the shop's real 16-family taxonomy,
-brand marquee, best-sellers, trust badges, customer reviews, store info block — all reading from Postgres.
+brand marquee, best-sellers, trust badges, a campaign banner carousel the shop fills from the admin, store info
+block — all reading from Postgres. Nothing on the page is invented: there are no seeded reviews and no claimed
+rating, because nothing in the shop can produce one yet.
 Cart (drawer + full page + sticky mobile bar), guest or logged-in checkout (COD live, card payment marked
 "bientôt disponible" per the agreed scope), order confirmation, and a customer account with real order tracking
 (4-step status timeline) that reflects whatever status the admin sets.
@@ -39,9 +41,9 @@ Per the agreed scope for this pass:
 - **Shop address, phone, WhatsApp number, email** are seeded as clearly-flagged placeholders
   (`⚠ à compléter`) everywhere they appear (footer, checkout, JSON-LD-ready settings) — edit them for real in
   `/admin/parametres` before launch. They must never be guessed.
-- **Product photography** — there's no real product photography yet, so every item shares the supplied
-  `parts-lineup.png` render. Swap `imageUrl` per product once real photos exist (the field is already there;
-  `/admin/stock` doesn't yet have an image upload widget — add one, or set `imageUrl` directly via Prisma Studio).
+- **Product photography** — there's no real product photography yet, so every item without an uploaded photo
+  falls back to the supplied `parts-lineup.png` render. Photos are uploaded per product from `/admin/stock`,
+  stored as bytes in Postgres and served from `/api/images/[id]`; the same route serves banner artwork.
 - **Social login / phone-OTP** are not implemented — email + password only. The transcripts' original login mockup
   showed Google/Facebook/SMS, which need real provider credentials.
 - **VIN decoding** is prefix-based (WMI → make) for the makes this shop stocks, not a real VIN database lookup.
@@ -55,9 +57,21 @@ Per the agreed scope for this pass:
 cp .env.example .env          # then fill in DATABASE_URL / DATABASE_URL_UNPOOLED / SESSION_SECRET
 npm install
 npx prisma migrate deploy     # applies the schema (uses DATABASE_URL_UNPOOLED)
-npm run db:seed               # taxonomy, brands, vehicles, ~50 products, demo orders/reviews
+npm run db:seed               # taxonomy, brands, vehicles, ~50 products, demo orders
 npm run dev
 ```
+
+### Deploying
+
+`npm run build` runs `prisma migrate deploy` before `next build`, so a deploy carries its own schema
+changes. That means **both** `DATABASE_URL` and `DATABASE_URL_UNPOOLED` must exist in the deploy
+platform's *build* environment, not only at runtime — on Vercel, tick every environment the project
+builds for when adding them. Without them the build fails loudly, which is deliberate: a deploy that
+skipped its migration would come up serving 500s from every page that touches a new column.
+
+If the live site is not showing the latest work, check the deployment log first — a platform that
+cannot build simply keeps serving the last build that succeeded, so the symptom is a page that is
+missing or out of date rather than an error.
 
 ### Database: Supabase Postgres
 

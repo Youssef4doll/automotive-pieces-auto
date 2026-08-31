@@ -67,9 +67,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       ? Math.round((1 - product.priceSell / product.compareAtPrice) * 100)
       : null;
 
-  // `specs` is a free-form JSON bag; `packContents` is a structured field used
-  // only by PackCard to render bundle line items, not a human-readable spec —
-  // exclude it here so we don't print raw JSON into the specs grid.
+  // `specs` is a free-form JSON bag; `packContents` is a structured field —
+  // a list of SKUs rendered as its own "Dans le pack" section below, not a
+  // human-readable spec — so exclude it rather than print raw JSON here.
   const specEntries = Object.entries((product.specs as Record<string, unknown>) ?? {}).filter(
     ([key]) => key !== "packContents"
   );
@@ -205,6 +205,26 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {product.packContents.length > 0 && (
+          <section>
+            <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Dans le pack</h2>
+            <ul className="flex flex-col gap-1.5">
+              {product.packContents.map((item) => (
+                <li key={item.slug} className="flex justify-between items-center gap-3 text-sm">
+                  <Link
+                    href={`/produit/${item.slug}`}
+                    className="flex items-center gap-2 min-w-0 text-navy-600 hover:text-red-600 hover:underline underline-offset-2"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />
+                    <span className="truncate">{item.name}</span>
+                  </Link>
+                  <Price value={item.price} className="shrink-0 text-gray-400" />
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

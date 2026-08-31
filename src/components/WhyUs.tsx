@@ -9,7 +9,9 @@ export default function WhyUs() {
   const stats = [
     { value: t("why.valueRefs"), label: t("why.statRefs") },
     { value: t("why.valueDelay"), label: t("why.statDelay") },
-    { value: t("why.valueRating"), label: t("why.statRating") },
+    // Not an average customer rating: the site has no review system, so any
+    // score printed here would be a number nobody measured.
+    { value: t("why.valueWarranty"), label: t("why.statWarranty") },
     { value: t("why.valueYears"), label: t("why.statYears") },
   ];
 

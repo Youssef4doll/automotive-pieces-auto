@@ -1,9 +1,25 @@
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import PromotionForm from "@/components/admin/PromotionForm";
-import PromotionRow from "@/components/admin/PromotionRow";
+import PromotionCard from "@/components/admin/PromotionCard";
 
-export const metadata = { title: "Promotions" };
+export const metadata = { title: "Bannières" };
+
+const SURFACES = [
+  {
+    placement: "CAMPAIGN" as const,
+    title: "Carrousel de campagnes",
+    blurb:
+      "La bande large au milieu de la page d'accueil : campagnes de saison, nouveautés, bons plans. " +
+      "Les bannières défilent dans l'ordre ci-dessous. Sans bannière active, la bande n'apparaît pas du tout.",
+  },
+  {
+    placement: "HERO" as const,
+    title: "Bandeau du haut",
+    blurb:
+      "La grille tout en haut de la page d'accueil. La première bannière occupe toute la largeur, " +
+      "les suivantes se rangent sur deux colonnes.",
+  },
+];
 
 export default async function AdminPromotionsPage() {
   const promotions = await prisma.promotion.findMany({
@@ -11,14 +27,15 @@ export default async function AdminPromotionsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className="flex flex-col gap-8 max-w-4xl">
       <div>
         <h1 className="text-2xl font-heading font-extrabold uppercase tracking-tight text-navy-950">
-          Promotions
+          Bannières
         </h1>
         <p className="text-sm text-navy-900/50 mt-1">
-          Les bannières affichées en haut de la page d&rsquo;accueil. Le carrousel suit l&rsquo;ordre
-          ci-dessous ; désactivez une bannière pour la retirer sans la supprimer.
+          Les images promotionnelles de la page d&rsquo;accueil. Tout se change ici, sans mise en
+          ligne : téléversez une image, choisissez l&rsquo;emplacement, désactivez une bannière pour
+          la retirer sans la supprimer.
         </p>
       </div>
 
@@ -29,28 +46,46 @@ export default async function AdminPromotionsPage() {
         <PromotionForm />
       </div>
 
-      <div className="flex flex-col gap-3">
-        {promotions.length === 0 && (
-          <p className="text-sm text-navy-900/40">Aucune bannière pour le moment.</p>
-        )}
-        {promotions.map((p) => (
-          <div
-            key={p.id}
-            className="rounded-xl border border-navy-900/10 bg-white shadow-sm p-3 flex items-center gap-4"
-          >
-            <div className="relative w-32 h-16 shrink-0 rounded-lg overflow-hidden bg-gray-100">
-              <Image src={p.imageUrl} alt="" fill sizes="128px" className="object-cover" />
+      {SURFACES.map((surface) => {
+        const rows = promotions.filter((p) => p.placement === surface.placement);
+        return (
+          <section key={surface.placement} className="flex flex-col gap-3">
+            <div>
+              <h2 className="font-display font-bold uppercase tracking-wide text-sm text-navy-950">
+                {surface.title}
+                <span className="ms-2 font-sans font-semibold text-navy-900/35 normal-case tracking-normal">
+                  {rows.length}
+                </span>
+              </h2>
+              <p className="text-xs text-navy-900/45 mt-1 max-w-2xl">{surface.blurb}</p>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-navy-950 truncate">{p.title}</p>
-              <p className="text-xs text-navy-900/45 truncate">
-                #{p.order} · {p.href || "sans lien"}
+
+            {rows.length === 0 ? (
+              <p className="text-sm text-navy-900/40 rounded-xl border border-dashed border-navy-900/15 px-4 py-6 text-center">
+                Aucune bannière ici pour le moment.
               </p>
-            </div>
-            <PromotionRow id={p.id} active={p.active} />
-          </div>
-        ))}
-      </div>
+            ) : (
+              rows.map((p, i) => (
+                <PromotionCard
+                  key={p.id}
+                  promo={{
+                    id: p.id,
+                    title: p.title,
+                    imageUrl: p.imageUrl,
+                    href: p.href,
+                    placement: p.placement,
+                    kind: p.kind,
+                    order: p.order,
+                    active: p.active,
+                  }}
+                  isFirst={i === 0}
+                  isLast={i === rows.length - 1}
+                />
+              ))
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

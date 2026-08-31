@@ -2,10 +2,8 @@ import Hero from "@/components/Hero";
 import FinderGrid from "@/components/FinderGrid";
 import BrandMarquee from "@/components/BrandMarquee";
 import CategoryGrid from "@/components/CategoryGrid";
-import PacksSection from "@/components/PacksSection";
 import ProductGrid from "@/components/ProductGrid";
 import WhyUs from "@/components/WhyUs";
-import ReviewsSection from "@/components/ReviewsSection";
 import StoreSection from "@/components/StoreSection";
 import NotFoundBand from "@/components/NotFoundBand";
 import B2BBand from "@/components/B2BBand";
@@ -15,7 +13,9 @@ import TrustBadges from "@/components/TrustBadges";
 import T from "@/components/T";
 import { getTopSellers, getActivePromotions } from "@/lib/data/catalog";
 import { getSettings, publicContact, contactHref } from "@/lib/settings";
+import { requireAdmin } from "@/lib/session";
 import PromoGrid from "@/components/PromoGrid";
+import PromoCarousel from "@/components/PromoCarousel";
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/seo";
 
@@ -28,10 +28,12 @@ export const metadata: Metadata = pageMeta({
 });
 
 export default async function HomePage() {
-  const [topSellers, settings, promos] = await Promise.all([
+  const [topSellers, settings, promos, campaigns, admin] = await Promise.all([
     getTopSellers(6),
     getSettings(),
-    getActivePromotions(),
+    getActivePromotions("HERO"),
+    getActivePromotions("CAMPAIGN"),
+    requireAdmin(),
   ]);
   const contact = publicContact(settings);
   const contactUrl = contactHref(contact);
@@ -43,7 +45,11 @@ export default async function HomePage() {
       <BrandMarquee />
       <FinderGrid contactUrl={contactUrl} />
       <CategoryGrid />
-      <PacksSection />
+      {/* Campaign band. Empty by default and invisible to shoppers until the
+          shop uploads artwork in /admin/promotions — an admin sees a prompt
+          there instead, so an empty band is discoverable without inventing a
+          campaign that was never run. */}
+      <PromoCarousel promos={campaigns} manageHref={admin ? "/admin/promotions" : null} />
       <TrustBadges />
       {topSellers.length > 0 && (
         <section id="produits" className="mx-auto max-w-7xl px-4 py-7 sm:py-10">
@@ -76,7 +82,6 @@ export default async function HomePage() {
         </section>
       )}
       <WhyUs />
-      <ReviewsSection />
       <StoreSection />
       <NotFoundBand contactUrl={contactUrl} phone={contact.phone} />
       <B2BBand contactUrl={contactUrl} />

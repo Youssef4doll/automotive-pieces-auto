@@ -426,17 +426,48 @@ model NewsletterSubscriber {
 // Admin-managed promotional banners shown as the homepage deals carousel.
 // Kept as its own table rather than hardcoded JSX so the shop can rotate
 // deals without a redeploy — which is the whole point of a deals strip.
+// Where a banner appears. Two surfaces, deliberately separate: the strip at
+// the very top of the home page is a static grid the shopper scans on
+// arrival, while the campaign carousel sits mid-page and rotates. Artwork
+// sized for one looks wrong in the other, so the admin picks per banner.
+enum PromotionPlacement {
+  HERO
+  CAMPAIGN
+}
+
+// The three things this shop actually runs campaigns for. Shown as a small
+// label on the slide, so a shopper can tell a seasonal push from a price cut
+// before reading the artwork.
+enum CampaignKind {
+  SEASONAL
+  NEW_ARRIVALS
+  DEAL
+}
+
 model Promotion {
-  id        String   @id @default(cuid())
+  id        String             @id @default(cuid())
   title     String // used as the image alt text — required, for accessibility
   imageUrl  String
   href      String? // where the banner links, e.g. /catalogue/freinage
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  placement PromotionPlacement @default(HERO)
+  kind      CampaignKind? // campaign slides only; null on hero banners
+  order     Int                @default(0)
+  active    Boolean            @default(true)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
-  @@index([active, order])
+  @@index([active, placement, order])
+}
+
+// An image uploaded by the admin that belongs to no product — today, banner
+// artwork. Kept in Postgres like ProductImage so a deploy carries no file
+// system state, and served by the same /api/images/[id] route: one URL space
+// for every uploaded picture on the site.
+model MediaAsset {
+  id        String   @id @default(cuid())
+  data      Bytes
+  mimeType  String
+  createdAt DateTime @default(now())
 }
 
 // First-party product analytics — no external service, no keys required.

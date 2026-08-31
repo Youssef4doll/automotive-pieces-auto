@@ -37,6 +37,19 @@ const nextConfig: NextConfig = {
   // Drops the `X-Powered-By: Next.js` version banner.
   poweredByHeader: false,
 
+  experimental: {
+    serverActions: {
+      // Admin uploads — product photos and banner artwork — travel through
+      // Server Actions, and the default cap is 1MB: a single phone photo of a
+      // brake disc blows past that, and the failure surfaces as an opaque
+      // error rather than the action's own message. 12MB covers a banner or a
+      // small batch of photos at the 4MB-per-file limit the actions enforce,
+      // with room for multipart overhead. The forms check the total before
+      // sending so the shop never uploads into a rejection.
+      bodySizeLimit: "12mb",
+    },
+  },
+
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

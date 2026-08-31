@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/session";
 import { updateSettings, type SettingsMap } from "@/lib/settings";
 import { OrderStatus } from "@prisma/client";
 import { normalizeReference, parseReferenceList } from "@/lib/reference";
+import { readImageFile, mediaAssetIdFromUrl } from "@/lib/image-upload";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -218,27 +219,46 @@ export async function updateSettingsAction(
   return { ok: true };
 }
 
-// --- Promotions (homepage deals carousel) -----------------------------------
+// --- Promotions (home page banners) -----------------------------------------
 
 const promotionSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(2),
-  imageUrl: z.string().min(1),
+  // Left empty when the admin uploads a file instead of typing a path; the
+  // action below requires one of the two.
+  imageUrl: z.string().optional(),
   href: z.string().optional(),
+  placement: z.enum(["HERO", "CAMPAIGN"]).default("CAMPAIGN"),
+  kind: z.enum(["SEASONAL", "NEW_ARRIVALS", "DEAL"]).optional(),
   order: z.coerce.number().int().min(0),
   active: z.coerce.boolean().optional(),
 });
 
 export type PromotionFormState = { error?: string; ok?: boolean } | undefined;
 
+/** Drop banner artwork that nothing points at any more. */
+async function deleteAssetIfUnused(imageUrl: string | null | undefined, keepPromotionId?: string) {
+  const assetId = mediaAssetIdFromUrl(imageUrl);
+  if (!assetId) return; // a static /images/… path — not ours to delete
+  const stillUsed = await prisma.promotion.count({
+    where: { imageUrl: `/api/images/${assetId}`, ...(keepPromotionId ? { id: { not: keepPromotionId } } : {}) },
+  });
+  if (stillUsed === 0) await prisma.mediaAsset.deleteMany({ where: { id: assetId } });
+}
+
 export async function upsertPromotion(
   _prev: PromotionFormState,
   formData: FormData
 ): Promise<PromotionFormState> {
   await assertAdmin();
+  const file = formData.get("file");
   const raw = Object.fromEntries(formData.entries());
   const parsed = promotionSchema.safeParse({
     ...raw,
+    // A file input always submits, empty or not, so it must not reach zod as
+    // a stray string field.
+    file: undefined,
+    kind: raw.kind || undefined,
     active: raw.active === "on" || raw.active === "true",
   });
   if (!parsed.success) {
@@ -250,16 +270,48 @@ export async function upsertPromotion(
   if (d.href && !d.href.startsWith("/")) {
     return { error: "Le lien doit être un chemin interne commençant par /" };
   }
+  if (d.placement === "CAMPAIGN" && !d.kind) {
+    return { error: "Choisissez le type de campagne." };
+  }
+
+  // An uploaded picture wins over the typed path — uploading is the whole
+  // point of the field, so a stale path left in the text box can't override it.
+  let imageUrl = d.imageUrl?.trim() || "";
+  if (file instanceof File && file.size > 0) {
+    const read = await readImageFile(file);
+    if (!read.ok) return { error: read.error };
+    const asset = await prisma.mediaAsset.create({
+      data: { data: read.bytes, mimeType: read.mimeType },
+      select: { id: true },
+    });
+    imageUrl = `/api/images/${asset.id}`;
+  }
+  if (!imageUrl || imageUrl === "/images/") {
+    return { error: "Choisissez une image (fichier ou chemin)." };
+  }
+
   const data = {
     title: d.title,
-    imageUrl: d.imageUrl,
+    imageUrl,
     href: d.href || null,
+    placement: d.placement,
+    kind: d.placement === "CAMPAIGN" ? d.kind : null,
     order: d.order,
     active: d.active ?? true,
   };
   try {
-    if (d.id) await prisma.promotion.update({ where: { id: d.id }, data });
-    else await prisma.promotion.create({ data });
+    if (d.id) {
+      const before = await prisma.promotion.findUnique({
+        where: { id: d.id },
+        select: { imageUrl: true },
+      });
+      await prisma.promotion.update({ where: { id: d.id }, data });
+      // Replacing the picture orphans the old bytes; a banner's artwork can be
+      // several megabytes, so they don't get to pile up in the database.
+      if (before && before.imageUrl !== imageUrl) await deleteAssetIfUnused(before.imageUrl, d.id);
+    } else {
+      await prisma.promotion.create({ data });
+    }
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erreur lors de l'enregistrement" };
   }
@@ -275,9 +327,40 @@ export async function togglePromotion(id: string, active: boolean) {
   revalidatePath("/");
 }
 
+export async function movePromotion(id: string, direction: "up" | "down") {
+  await assertAdmin();
+  const promo = await prisma.promotion.findUnique({
+    where: { id },
+    select: { placement: true, order: true },
+  });
+  if (!promo) return;
+
+  // Swap with the neighbour in the same placement rather than rewriting every
+  // row: the admin sees one pair of banners trade places, which is what the
+  // arrow promised.
+  const neighbour = await prisma.promotion.findFirst({
+    where: {
+      placement: promo.placement,
+      order: direction === "up" ? { lt: promo.order } : { gt: promo.order },
+    },
+    orderBy: { order: direction === "up" ? "desc" : "asc" },
+    select: { id: true, order: true },
+  });
+  if (!neighbour) return;
+
+  await prisma.$transaction([
+    prisma.promotion.update({ where: { id }, data: { order: neighbour.order } }),
+    prisma.promotion.update({ where: { id: neighbour.id }, data: { order: promo.order } }),
+  ]);
+  revalidatePath("/admin/promotions");
+  revalidatePath("/");
+}
+
 export async function deletePromotion(id: string) {
   await assertAdmin();
+  const promo = await prisma.promotion.findUnique({ where: { id }, select: { imageUrl: true } });
   await prisma.promotion.delete({ where: { id } });
+  await deleteAssetIfUnused(promo?.imageUrl);
   revalidatePath("/admin/promotions");
   revalidatePath("/");
 }

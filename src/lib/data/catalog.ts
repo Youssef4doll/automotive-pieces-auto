@@ -157,7 +157,28 @@ export async function getProductBySlug(slug: string) {
   });
   if (!product) return null;
   const gallery = product.images.map((i) => ({ src: `/api/images/${i.id}`, alt: i.alt }));
-  return { ...serializeProduct(product), gallery };
+  return { ...serializeProduct(product), gallery, packContents: await resolvePackContents(product.specs) };
+}
+
+/**
+ * A pack sells several parts as one line. `specs.packContents` holds their
+ * SKUs, so the buyer can only see what they are getting if we look them up —
+ * without this the page sells "Pack révision 15 000 km" and never says which
+ * three parts are in the box.
+ */
+async function resolvePackContents(specs: unknown) {
+  const skus = (specs as { packContents?: string[] } | null)?.packContents;
+  if (!Array.isArray(skus) || skus.length === 0) return [];
+  const parts = await prisma.product.findMany({
+    where: { sku: { in: skus }, active: true },
+    select: { sku: true, name: true, slug: true, priceSell: true },
+  });
+  const bySku = new Map(parts.map((p) => [p.sku, p]));
+  // Listed in the order the pack declares, not the order Postgres returns.
+  return skus
+    .map((sku) => bySku.get(sku))
+    .filter((p): p is (typeof parts)[number] => !!p)
+    .map((p) => ({ name: p.name, slug: p.slug, price: toNumber(p.priceSell) }));
 }
 
 export async function getRelatedProducts(categoryId: string, excludeId: string, take = 4) {
@@ -236,40 +257,6 @@ export async function findProductByReference(query: string) {
   return product;
 }
 
-export async function getPacks() {
-  const packs = await prisma.product.findMany({
-    where: { sku: { startsWith: "PACK-" }, active: true },
-    orderBy: { priceSell: "asc" },
-    include: { ...primaryImageSelect },
-  });
-
-  const allContentSkus = packs.flatMap((p) => {
-    const specs = p.specs as { packContents?: string[] } | null;
-    return specs?.packContents ?? [];
-  });
-  const components = allContentSkus.length
-    ? await prisma.product.findMany({ where: { sku: { in: allContentSkus } } })
-    : [];
-  const componentBySku = new Map(components.map((c) => [c.sku, c]));
-
-  return packs.map((p) => {
-    const specs = p.specs as { packContents?: string[] } | null;
-    const contents = (specs?.packContents ?? [])
-      .map((sku) => componentBySku.get(sku))
-      .filter((c): c is (typeof components)[number] => !!c)
-      .map((c) => ({ name: c.name, price: toNumber(c.priceSell) }));
-    return { ...serializeProduct(p), contents };
-  });
-}
-
-export async function getRecentReviews(take = 6) {
-  return prisma.review.findMany({
-    orderBy: { createdAt: "desc" },
-    take,
-    include: { product: { select: { name: true, slug: true } } },
-  });
-}
-
 export async function getPartsBrands() {
   return prisma.brand.findMany({ where: { isPartsBrand: true }, orderBy: { name: "asc" } });
 }
@@ -281,10 +268,17 @@ export async function getVehicleMakes() {
   });
 }
 
-export async function getActivePromotions() {
+/**
+ * Banners for one surface of the home page.
+ *
+ * HERO is the strip at the very top; CAMPAIGN is the rotating band mid-page.
+ * Both are edited from /admin/promotions and neither is faked: an empty
+ * placement renders nothing at all rather than a placeholder.
+ */
+export async function getActivePromotions(placement: "HERO" | "CAMPAIGN" = "HERO") {
   return prisma.promotion.findMany({
-    where: { active: true },
+    where: { active: true, placement },
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-    select: { id: true, title: true, imageUrl: true, href: true },
+    select: { id: true, title: true, imageUrl: true, href: true, kind: true },
   });
 }

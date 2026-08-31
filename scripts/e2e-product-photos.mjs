@@ -83,6 +83,15 @@ console.log("\n[4] SHOPPERS SEE THE UPLOADED PHOTO EVERYWHERE");
   const main = await shop.locator("main img").first().getAttribute("src");
   check("product page shows the uploaded photo", decodeURIComponent(main || "").includes(`/api/images/${stored[0].id}`), main?.slice(0, 70));
 
+  // The src being right is not the same as the photo appearing: next/image
+  // routes it through the optimiser, which once rejected /api/images and left
+  // a broken-image icon behind a perfectly correct src.
+  const hero = shop.locator("main img").first();
+  await hero.scrollIntoViewIfNeeded();
+  await shop.waitForTimeout(1500);
+  const painted = await hero.evaluate((el) => el.naturalWidth);
+  check("and the browser actually paints it", painted > 0, `naturalWidth ${painted}`);
+
   const thumbs = await shop.locator('button[aria-label^="Photo"]').count();
   check("a gallery strip appears for the second photo", thumbs === 2, `${thumbs} thumbnails`);
 

@@ -73,10 +73,17 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      // Static assets and the image optimiser serve no HTML, so they need no
-      // nonce; prefetches are skipped so a prefetched document does not carry
-      // a nonce that will be stale by the time it is used.
-      source: "/((?!_next/static|_next/image|favicon.ico|icon.png|images/).*)",
+      // Static assets, the image optimiser and the uploaded-image route serve
+      // no HTML, so they need no nonce; prefetches are skipped so a prefetched
+      // document does not carry a nonce that will be stale by the time it is
+      // used.
+      //
+      // api/images is excluded for a second reason: next/image optimises it by
+      // replaying the request through this pipeline with a mocked, header-less
+      // request. Anything this file did with `host` or `x-forwarded-proto` on
+      // that request produced a non-image response, and the optimiser answered
+      // 400 — every uploaded photo rendered as a broken image.
+      source: "/((?!_next/static|_next/image|api/images/|favicon.ico|icon.png|images/).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

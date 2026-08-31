@@ -3,6 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { siteUrl } from "@/lib/site";
 
 /**
+ * Rendered per request, not at build time.
+ *
+ * The catalogue changes from the admin without a deploy, so a sitemap frozen
+ * at build time starts going stale the first time a part is added and never
+ * recovers. Prerendering it also made `next build` open a database connection,
+ * which turns a missing DATABASE_URL in the build environment into a failed
+ * deployment rather than a page that simply renders on demand.
+ */
+export const dynamic = "force-dynamic";
+
+/**
  * Only pages that deserve to be indexed. An empty category is a thin page that
  * costs crawl budget and teaches Google the site is hollow, so categories
  * appear here once they hold a product — the same rule the navigation uses.
