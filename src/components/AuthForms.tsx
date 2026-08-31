@@ -22,7 +22,7 @@ export default function AuthForms() {
         <Image src="/images/logo-white.png" alt="Automotive Pièces Auto" width={160} height={53} className="h-11 w-auto" />
 
         <div>
-          <h1 className="font-heading font-extrabold uppercase text-3xl xl:text-4xl leading-[1.05] tracking-tight max-w-[9ch]">
+          <h1 className="font-heading font-extrabold uppercase text-2xl sm:text-3xl xl:text-4xl leading-[1.1] sm:leading-[1.05] tracking-tight max-w-[9ch]">
             {t("auth.headline")}
           </h1>
           <div className="flex flex-col gap-3.5 mt-8">

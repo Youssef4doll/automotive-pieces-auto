@@ -28,6 +28,7 @@ export default async function CheckoutPage() {
 
   return (
     <CheckoutForm
+      signedIn={Boolean(user)}
       freeShippingThreshold={Number(settings.free_shipping_threshold) || 150}
       deliveryGrandTunis={settings.delivery_grand_tunis}
       deliveryRegions={settings.delivery_regions}

@@ -114,7 +114,7 @@ export default function HeaderClient({
         className="relative bg-navy-900 text-white px-[clamp(12px,3.5vw,28px)]"
         onMouseLeave={() => setMenuOpen(false)}
       >
-        <div className="flex items-center flex-wrap gap-x-[clamp(6px,2vw,18px)] gap-y-2 py-2.5">
+        <div className="flex items-center flex-nowrap lg:flex-wrap gap-x-[clamp(6px,2vw,18px)] gap-y-2 py-2 sm:py-2.5">
           <button
             className="lg:hidden w-tap h-tap -ms-2 rounded hover:bg-white/10 shrink-0 flex items-center justify-center"
             aria-label="Ouvrir le menu"
@@ -191,7 +191,7 @@ export default function HeaderClient({
             </div>
           </form>
 
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2.5 shrink-0 ms-auto">
             {phone && (
               <a
                 href={`tel:${phone.replace(/[^\d+]/g, "")}`}

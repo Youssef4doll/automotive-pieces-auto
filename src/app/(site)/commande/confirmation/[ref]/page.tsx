@@ -54,6 +54,27 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
         </div>
       </div>
 
+      {/* Offered after the order, never before it. A guest has just proved
+          they wanted to buy; this is the moment an account is worth something
+          to them rather than an obstacle in front of the checkout. */}
+      {!order.userId && (
+        <section className="text-start p-4 rounded-xl border border-gray-200 bg-white mb-6">
+          <h2 className="font-heading font-extrabold uppercase text-navy-950 tracking-tight">
+            Créer votre compte ?
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Avec un compte vous pouvez suivre cette commande, enregistrer votre véhicule pour ne voir
+            que les pièces compatibles, retrouver vos achats et commander plus vite la prochaine fois.
+          </p>
+          <Link
+            href="/compte"
+            className="inline-flex items-center justify-center min-h-tap px-5 mt-3 rounded-lg border border-navy-900 text-navy-900 font-semibold text-sm hover:bg-navy-50 transition-colors"
+          >
+            Créer mon compte
+          </Link>
+        </section>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Link href="/compte/commandes" className="px-5 py-3 rounded-lg bg-navy-900 text-white font-semibold">
           Suivre ma commande

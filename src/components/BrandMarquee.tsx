@@ -8,7 +8,7 @@ export default async function BrandMarquee() {
   return (
     <section id="marques" className="bg-navy-950 py-6 overflow-hidden border-t border-white/10">
       <div className="mx-auto max-w-7xl px-4 flex items-center gap-3.5 mb-4">
-        <span className="font-display font-bold uppercase text-[11px] tracking-[0.16em] text-gold-500 whitespace-nowrap">
+        <span className="font-display font-bold uppercase text-[12px] tracking-[0.16em] text-gold-500 whitespace-nowrap">
           <T k="home.brands" />
         </span>
         <span className="flex-1 h-px bg-white/15" />

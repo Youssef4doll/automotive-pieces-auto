@@ -74,7 +74,7 @@ export default function FinderGrid({ contactUrl }: { contactUrl: string }) {
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-10">
+    <section className="mx-auto max-w-7xl px-4 py-7 sm:py-10">
       <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-4 sm:mb-6">
           <h2 className="font-heading font-extrabold uppercase text-lg sm:text-2xl text-navy-950 tracking-tight">
@@ -95,7 +95,7 @@ export default function FinderGrid({ contactUrl }: { contactUrl: string }) {
                 aria-selected={active}
                 aria-controls={`finder-panel-${m.id}`}
                 onClick={() => setMethod(m.id)}
-                className={`flex-1 min-h-tap px-1 rounded-lg text-[11px] font-display font-bold uppercase tracking-wide transition ${
+                className={`flex-1 min-h-tap px-1 rounded-lg text-[12px] font-display font-bold uppercase tracking-wide transition ${
                   active ? "bg-white text-navy-950 shadow-sm" : "text-navy-900/55"
                 }`}
               >
@@ -177,10 +177,10 @@ export default function FinderGrid({ contactUrl }: { contactUrl: string }) {
                     vin.length === 17 ? "border-green-500" : vin.length > 0 ? "border-amber-400" : "border-gray-300"
                   }`}
                 />
-                <div className="flex items-center justify-between text-[11px] text-gray-400 mt-1">
+                <div className="flex items-center justify-between text-[12px] text-gray-400 mt-1">
                   <span>{vin.length}/17</span>
                 </div>
-                {vinMsg && <p className="text-[11px] text-amber-600 mt-1">{vinMsg}</p>}
+                {vinMsg && <p className="text-[12px] text-amber-600 mt-1">{vinMsg}</p>}
               </div>
               <button
                 type="submit"
@@ -213,7 +213,7 @@ export default function FinderGrid({ contactUrl }: { contactUrl: string }) {
                   href={contactUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[11px] text-green-700 font-semibold underline"
+                  className="text-[12px] text-green-700 font-semibold underline"
                 >
                   {refMsg}
                 </a>

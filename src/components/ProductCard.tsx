@@ -48,17 +48,17 @@ export default function ProductCard({ product }: { product: CardProduct }) {
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
         {badge === "discount" && (
-          <span className="absolute top-2 start-2 bg-red-600 text-white text-[11px] font-display font-bold uppercase px-2 py-1 rounded">
+          <span className="absolute top-2 start-2 bg-red-600 text-white text-[12px] font-display font-bold uppercase px-2 py-1 rounded">
             -{discount}%
           </span>
         )}
         {badge === "topSeller" && (
-          <span className="absolute top-2 start-2 bg-navy-900 text-white text-[11px] font-display font-bold uppercase px-2 py-1 rounded">
+          <span className="absolute top-2 start-2 bg-navy-900 text-white text-[12px] font-display font-bold uppercase px-2 py-1 rounded">
             {t("product.topSeller")}
           </span>
         )}
         {badge === "lowStock" && (
-          <span className="absolute top-2 start-2 bg-red-600 text-white text-[11px] font-display font-bold uppercase px-2 py-1 rounded">
+          <span className="absolute top-2 start-2 bg-red-600 text-white text-[12px] font-display font-bold uppercase px-2 py-1 rounded">
             {t("product.lowStock")}
           </span>
         )}
@@ -77,12 +77,12 @@ export default function ProductCard({ product }: { product: CardProduct }) {
             things per card that all did the same thing. A card only has to
             answer: what is it, does it fit, is it available, how much. */}
         {compatible === true && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700">
+          <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-green-700">
             ✓ {t("compat.compatible")}
           </span>
         )}
         {compatible === false && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600">
+          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-amber-600">
             ? {t("compat.check")}
           </span>
         )}

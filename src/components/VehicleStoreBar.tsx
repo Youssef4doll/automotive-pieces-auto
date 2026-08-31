@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCollapseOnScroll } from "@/lib/use-collapse-on-scroll";
 import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
@@ -23,9 +24,23 @@ export default function VehicleStoreBar({ storeAddress }: { storeAddress: string
   const [pickerOpen, setPickerOpen] = useState(false);
   const label = vehicleLabel(vehicle);
 
+  // On a phone this strip and the header together took 110px of a 844px screen
+  // before any product was visible. It collapses out of the way once the
+  // shopper is reading, and comes back on a deliberate scroll up. Desktop has
+  // the room, so it stays put there (`lg:` overrides below).
+  const shown = useCollapseOnScroll();
+
   return (
     <>
-      <div className="bg-white border-b border-gray-200">
+      <div
+        className={`bg-white border-b border-gray-200 overflow-hidden transition-[max-height,opacity] duration-200 ease-out motion-reduce:transition-none lg:max-h-none lg:opacity-100 ${
+          shown ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
+        }`}
+        // Hidden from assistive tech only while it is collapsed, so a screen
+        // reader never lands on a control it cannot see.
+        aria-hidden={shown ? undefined : true}
+        inert={!shown}
+      >
         <div className="mx-auto max-w-7xl grid grid-cols-2 divide-x divide-gray-200">
           <button
             onClick={() => setPickerOpen(true)}

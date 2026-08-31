@@ -73,8 +73,19 @@
   --spacing-gutter: var(--gutter);
 }
 
+/* Deliberately NOT `scroll-behavior: smooth` on the root.
+ *
+ * Smooth scrolling applies to every programmatic scroll, including the one the
+ * router performs on navigation. Tapping a part from halfway down a category
+ * therefore animated the page back up from ~1200px instead of arriving at the
+ * top, which reads as "the new page loaded at the old scroll position" — the
+ * single thing that made navigation feel broken on a phone.
+ *
+ * In-page anchor jumps (#magasin, #symptomes) are now instant, which is also
+ * what a fast site should do. */
 html {
-  scroll-behavior: smooth;
+  /* Anchor targets clear the sticky header instead of hiding behind it. */
+  scroll-padding-top: 96px;
 }
 
 /* Keyboard focus. The codebase uses `outline-none` on ~20 inputs to get the
@@ -93,6 +104,27 @@ html {
 .bg-navy-900 :where(a, button, input):focus-visible,
 .bg-navy-950 :where(a, button, input):focus-visible {
   outline-color: #ffffff;
+}
+
+/* iOS Safari zooms the whole viewport when you focus a text control whose
+   font-size is under 16px, and it does not zoom back out. That is what made
+   tapping any field feel like the page broke.
+
+   The fix is the font size, not `maximum-scale=1` or `user-scalable=no` —
+   those stop the zoom by taking pinch-zoom away from everyone, which is an
+   accessibility regression, and iOS ignores them in newer versions anyway.
+
+   Scoped to coarse pointers so it is the condition that actually causes the
+   behaviour (a touch screen) rather than a width guess: phones and tablets get
+   a 16px floor, mouse-driven desktop keeps the designed sizes. Visual density
+   is unaffected because these controls are sized by padding, not by font size.
+   Checkboxes, radios and ranges are excluded — they have no text to zoom to. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* Respect the OS "reduce motion" setting for every transition/animation the
@@ -246,6 +278,16 @@ body {
     100% {
       opacity: 1;
       transform: scale(1);
+    }
+  }
+  /* The indeterminate sweep used by NavProgress. Short and linear — this is
+     a "still working" signal, not decoration. */
+  @keyframes nav-progress {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(350%);
     }
   }
 }

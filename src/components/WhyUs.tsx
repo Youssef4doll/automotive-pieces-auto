@@ -20,7 +20,7 @@ export default function WhyUs() {
           <p className="text-xs font-display font-bold uppercase tracking-wide text-gold-500 mb-1.5">
             {t("why.eyebrow")}
           </p>
-          <h2 className="font-heading font-extrabold uppercase text-3xl sm:text-4xl tracking-tight mb-4">
+          <h2 className="font-heading font-extrabold uppercase text-2xl sm:text-4xl tracking-tight mb-3 sm:mb-4">
             {t("why.headline")}
           </h2>
           <p className="text-white/70 mb-6">{t("why.body")}</p>
@@ -41,7 +41,7 @@ export default function WhyUs() {
         <div className="grid grid-cols-2 gap-4">
           {stats.map((s) => (
             <div key={s.label} className="rounded-xl bg-white/5 p-6">
-              <p dir="ltr" className="text-3xl sm:text-4xl font-heading font-extrabold text-gold-500">{s.value}</p>
+              <p dir="ltr" className="text-2xl sm:text-4xl font-heading font-extrabold text-gold-500">{s.value}</p>
               <p className="text-sm text-white/60 mt-1">{s.label}</p>
             </div>
           ))}

@@ -24,11 +24,14 @@ export default function CheckoutForm({
   deliveryGrandTunis,
   deliveryRegions,
   defaults,
+  signedIn = false,
 }: {
   freeShippingThreshold: number;
   deliveryGrandTunis: string;
   deliveryRegions: string;
   defaults?: CheckoutDefaults;
+  /** Only changes the wording — checkout never requires an account. */
+  signedIn?: boolean;
 }) {
   const { t } = useLocale();
   const router = useRouter();
@@ -111,7 +114,22 @@ export default function CheckoutForm({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-xl sm:text-2xl font-extrabold text-navy-950 mb-6">{t("checkout.title")}</h1>
+      <h1 className="text-xl sm:text-2xl font-extrabold text-navy-950 mb-2">{t("checkout.title")}</h1>
+
+      {/* Said out loud, because "do I have to make an account?" is the question
+          that loses the order. Signing in is offered as a shortcut for people
+          who already have one, never as a gate — the form below submits either
+          way. Creating an account is offered after the order instead, when it
+          costs the customer nothing. */}
+      {!signedIn && (
+        <p className="text-sm text-gray-600 mb-6">
+          Commandez sans créer de compte.{" "}
+          <Link href="/compte" className="font-semibold text-navy-900 underline underline-offset-2">
+            Déjà client ? Connectez-vous
+          </Link>{" "}
+          pour remplir vos informations automatiquement.
+        </p>
+      )}
 
       <form onSubmit={submit} className="grid md:grid-cols-3 gap-8">
         {/* min-w-0 on BOTH grid children is required, not optional: a grid

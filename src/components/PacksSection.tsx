@@ -11,13 +11,13 @@ export default async function PacksSection() {
   if (packs.length === 0) return null;
 
   return (
-    <section id="packs" className="mx-auto max-w-7xl px-4 py-10">
+    <section id="packs" className="mx-auto max-w-7xl px-4 py-7 sm:py-10">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-6">
         <div>
           <Eyebrow k="packs.eyebrow" />
           <SectionHeading
             k="packs.title"
-            className="text-2xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight"
+            className="text-xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight"
           />
         </div>
         <p className="text-sm text-gray-500 max-w-md">

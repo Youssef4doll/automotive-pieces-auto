@@ -6,10 +6,10 @@ export default async function ReviewsSection() {
   if (reviews.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-10">
+    <section className="mx-auto max-w-7xl px-4 py-7 sm:py-10">
       <SectionHeading
         k="reviews.title"
-        className="text-2xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight mb-6"
+        className="text-xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight mb-6"
       />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {reviews.map((r) => (

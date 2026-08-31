@@ -26,9 +26,9 @@ export default function Hero() {
 
   return (
     <section className="bg-navy-900 text-white overflow-hidden">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:py-16 grid lg:grid-cols-2 gap-10 items-center">
+      <div className="mx-auto max-w-7xl px-4 py-7 sm:py-16 grid lg:grid-cols-2 gap-6 sm:gap-10 items-center">
         <div className="text-center lg:text-start">
-          <h1 className="font-display font-bold uppercase text-4xl sm:text-6xl leading-[0.95] tracking-tight">
+          <h1 className="font-display font-bold uppercase text-[28px] sm:text-6xl leading-[1.02] sm:leading-[0.95] tracking-tight">
             <span className="block text-white">{t("hero.titleLine1")}</span>
             <span className="block text-gold-500">{t("hero.titleLine2")}</span>
           </h1>
@@ -62,7 +62,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="relative h-56 sm:h-72 lg:h-96">
+        <div className="relative h-32 sm:h-72 lg:h-96">
           <Image
             src="/images/parts-lineup.png"
             alt="Pièces automobiles Automotive"

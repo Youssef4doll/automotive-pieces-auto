@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import NavProgress from "@/components/NavProgress";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import CartSync from "@/components/CartSync";
@@ -12,6 +13,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
 
   return (
     <>
+      <NavProgress />
       <Header />
       <main className="flex-1 flex flex-col">{children}</main>
       <Footer />
