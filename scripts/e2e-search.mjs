@@ -15,6 +15,26 @@ const check = (label, ok, detail = "") => {
   console.log(`  ${ok ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`);
 };
 
+/**
+ * The demand log is a business record, so QA traffic must not reach it: these
+ * suites search for deliberately unfindable things, and every one of those
+ * became a line on the shop's buying list.
+ */
+async function sweepTestDemand() {
+  await prisma.searchMiss.deleteMany({
+    where: {
+      OR: [
+        { normalized: { contains: "zorglub" } },
+        { normalized: { contains: "piecequinexistepas" } },
+        { normalized: { contains: "zzz" } },
+        { normalized: { contains: "inexistant" } },
+        { query: { startsWith: "AZ-" } },
+        { query: { startsWith: "IMP-" } },
+      ],
+    },
+  });
+}
+
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 const page = await ctx.newPage();
@@ -232,5 +252,6 @@ console.log("\n[10] SEARCH DOES NOT SHIP ITS INDEX TO THE BROWSER");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await browser.close();
+await sweepTestDemand();
 await prisma.$disconnect();
 process.exit(fail > 0 ? 1 : 0);

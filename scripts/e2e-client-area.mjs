@@ -13,6 +13,26 @@ const check = (label, ok, detail = "") => {
   console.log(`  ${ok ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`);
 };
 
+/**
+ * The demand log is a business record, so QA traffic must not reach it: these
+ * suites search for deliberately unfindable things, and every one of those
+ * became a line on the shop's buying list.
+ */
+async function sweepTestDemand() {
+  await prisma.searchMiss.deleteMany({
+    where: {
+      OR: [
+        { normalized: { contains: "zorglub" } },
+        { normalized: { contains: "piecequinexistepas" } },
+        { normalized: { contains: "zzz" } },
+        { normalized: { contains: "inexistant" } },
+        { query: { startsWith: "AZ-" } },
+        { query: { startsWith: "IMP-" } },
+      ],
+    },
+  });
+}
+
 const STAMP = Date.now().toString().slice(-6);
 const EMAIL = `client.ux.${STAMP}@example.com`;
 
@@ -169,6 +189,7 @@ check("it prompts instead of saying 'results for «  »'", !/Résultats pour/i.t
 
 await cleanup();
 await browser.close();
+await sweepTestDemand();
 await prisma.$disconnect();
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

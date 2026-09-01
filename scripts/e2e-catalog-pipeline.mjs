@@ -21,8 +21,12 @@ const CAT = `Zone Import ${STAMP}`;
 const SKUS = [`IMP-${STAMP}-1`, `IMP-${STAMP}-2`, `IMP-${STAMP}-3`];
 const OEM = `77 01 ${STAMP}`;
 
+/**
+ * Prefix-scoped, not stamp-scoped: see the note in e2e-a-to-z. A crashed run
+ * used to orphan its import category on the storefront permanently.
+ */
 async function cleanup() {
-  const prods = await prisma.product.findMany({ where: { sku: { startsWith: `IMP-${STAMP}` } }, select: { id: true } });
+  const prods = await prisma.product.findMany({ where: { sku: { startsWith: "IMP-" } }, select: { id: true } });
   const ids = prods.map((p) => p.id);
   if (ids.length) {
     await prisma.partReference.deleteMany({ where: { productId: { in: ids } } });
@@ -30,9 +34,10 @@ async function cleanup() {
     await prisma.orderItem.deleteMany({ where: { productId: { in: ids } } });
     await prisma.product.deleteMany({ where: { id: { in: ids } } });
   }
+  await prisma.importBatch.deleteMany({ where: { filename: { contains: "zone-import" } } });
   await prisma.importBatch.deleteMany({ where: { filename: { contains: STAMP } } });
-  await prisma.category.deleteMany({ where: { slug: { contains: `zone-import-${STAMP}` } } });
-  await prisma.brand.deleteMany({ where: { name: `MarqueImp${STAMP}` } });
+  await prisma.category.deleteMany({ where: { slug: { startsWith: "zone-import-" } } });
+  await prisma.brand.deleteMany({ where: { name: { startsWith: "MarqueImp" } } });
 }
 await cleanup();
 

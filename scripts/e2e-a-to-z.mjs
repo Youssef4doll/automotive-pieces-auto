@@ -15,6 +15,26 @@ const check = (label, ok, detail = "") => {
   console.log(`  ${ok ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`);
 };
 
+/**
+ * The demand log is a business record, so QA traffic must not reach it: these
+ * suites search for deliberately unfindable things, and every one of those
+ * became a line on the shop's buying list.
+ */
+async function sweepTestDemand() {
+  await prisma.searchMiss.deleteMany({
+    where: {
+      OR: [
+        { normalized: { contains: "zorglub" } },
+        { normalized: { contains: "piecequinexistepas" } },
+        { normalized: { contains: "zzz" } },
+        { normalized: { contains: "inexistant" } },
+        { query: { startsWith: "AZ-" } },
+        { query: { startsWith: "IMP-" } },
+      ],
+    },
+  });
+}
+
 const STAMP = Date.now().toString().slice(-6);
 const FAM = `Zone AZ ${STAMP}`;
 const FAM_SLUG = `zone-az-${STAMP}`;
@@ -26,12 +46,28 @@ const PRODUCT = `Amortisseur avant AZ ${STAMP}`;
 const EMAIL = `client.az.${STAMP}@example.com`;
 const PASSWORD = "client1234";
 
+/**
+ * Sweeps every run's fixtures, not just this one's.
+ *
+ * Scoping cleanup to this run's stamp meant a run that crashed mid-way left
+ * its category and its products in the database for good — and they showed up
+ * on the live storefront as a family called "Zone AZ 338804". Matching the
+ * prefix instead means the next run clears up after the last one's crash.
+ */
 async function cleanup() {
-  const prod = await prisma.product.findUnique({ where: { sku: SKU }, select: { id: true } });
-  if (prod) {
-    await prisma.productImage.deleteMany({ where: { productId: prod.id } });
-    await prisma.orderItem.deleteMany({ where: { productId: prod.id } });
-    await prisma.product.delete({ where: { id: prod.id } });
+  const prods = await prisma.product.findMany({
+    where: { OR: [{ sku: { startsWith: "AZ-" } }, { name: { startsWith: "Amortisseur avant AZ " } }] },
+    select: { id: true },
+  });
+  const prodIds = prods.map((x) => x.id);
+  if (prodIds.length) {
+    await prisma.productImage.deleteMany({ where: { productId: { in: prodIds } } });
+    await prisma.partReference.deleteMany({ where: { productId: { in: prodIds } } });
+    await prisma.productFitment.deleteMany({ where: { productId: { in: prodIds } } });
+    await prisma.stockMovement.deleteMany({ where: { productId: { in: prodIds } } });
+    await prisma.cartItem.deleteMany({ where: { productId: { in: prodIds } } });
+    await prisma.orderItem.deleteMany({ where: { productId: { in: prodIds } } });
+    await prisma.product.deleteMany({ where: { id: { in: prodIds } } });
   }
   const user = await prisma.user.findUnique({ where: { email: EMAIL }, select: { id: true } });
   if (user) {
@@ -44,8 +80,10 @@ async function cleanup() {
     }
     await prisma.user.delete({ where: { id: user.id } });
   }
-  await prisma.category.deleteMany({ where: { slug: { in: [SUB_SLUG, FAM_SLUG] } } });
-  await prisma.brand.deleteMany({ where: { name: BRAND } });
+  await prisma.category.deleteMany({ where: { slug: { startsWith: "sous-az-" } } });
+  await prisma.category.deleteMany({ where: { slug: { startsWith: "zone-az-" } } });
+  await prisma.brand.deleteMany({ where: { name: { startsWith: "MarqueAZ" } } });
+  await prisma.user.deleteMany({ where: { email: { startsWith: "client.az." } } });
 }
 await cleanup();
 
@@ -212,6 +250,7 @@ check("an inactive product leaves the catalogue", (await shop.locator(`text=${PR
 
 await cleanup();
 await browser.close();
+await sweepTestDemand();
 await prisma.$disconnect();
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

@@ -132,8 +132,10 @@ export default async function VehiclePage({ params }: { params: Params }) {
       )}
 
       <section className="mt-8">
+        {/* Not "the most requested": the order comes from what the shop
+            stocks and flags, not from measured demand. */}
         <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 text-lg mb-3">
-          Les plus demandées pour cette {vehicle.make.name}
+          En stock pour cette {vehicle.make.name}
         </h2>
         <ProductGrid products={products} />
       </section>
