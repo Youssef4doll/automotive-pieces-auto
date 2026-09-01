@@ -8,13 +8,9 @@ import { track } from "@/lib/track";
 import { useRef } from "react";
 import SearchSuggest from "@/components/SearchSuggest";
 
-const POPULAR = [
-  { label: "Plaquettes de frein", href: "/catalogue/freinage/freinage-kit-de-plaquettes-de-frein" },
-  { label: "Huile 5W-30", href: "/catalogue/lubrifiant/lubrifiant-huile-moteur" },
-  { label: "Filtre à air", href: "/catalogue/filtres/filtres-filtre-a-air" },
-];
+export type Shortcut = { label: string; href: string };
 
-export default function Hero() {
+export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
   const { t } = useLocale();
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -56,18 +52,24 @@ export default function Hero() {
             <SearchSuggest query={q} inputRef={heroInputRef} />
           </form>
 
-          <div className="mt-4 flex flex-wrap gap-2 justify-center lg:justify-start">
-            <span className="text-xs text-white/50 self-center me-1">{t("hero.popular")}</span>
-            {POPULAR.map((p) => (
-              <a
-                key={p.href}
-                href={p.href}
-                className="px-4 min-h-tap flex items-center rounded-full border border-white/25 text-xs sm:text-sm text-white/85 hover:bg-white/10"
-              >
-                {p.label}
-              </a>
-            ))}
-          </div>
+          {/* Real subcategories, biggest first, passed in from the server —
+              not a hand-written list. Three hard-coded paths broke silently
+              whenever the taxonomy moved, and calling them "popular" claimed
+              a demand figure nobody had measured. */}
+          {shortcuts.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2 justify-center lg:justify-start">
+              <span className="text-xs text-white/50 self-center me-1">{t("hero.popular")}</span>
+              {shortcuts.map((p) => (
+                <a
+                  key={p.href}
+                  href={p.href}
+                  className="px-4 min-h-tap flex items-center rounded-full border border-white/25 text-xs sm:text-sm text-white/85 hover:bg-white/10"
+                >
+                  {p.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="relative h-32 sm:h-72 lg:h-96">

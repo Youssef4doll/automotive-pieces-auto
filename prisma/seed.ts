@@ -556,6 +556,33 @@ async function main() {
   // aggregateRating structured data. The review sections are already
   // data-driven and stay hidden until real reviews exist.
 
+  // The search index is derived data: rebuilt from the rows above rather than
+  // written alongside them, so it cannot drift out of step with what the seed
+  // actually created.
+  console.log("Building the search index…");
+  const indexed = await prisma.$executeRawUnsafe(`
+    UPDATE "Product" p SET
+      "searchText" = lower(unaccent(concat_ws(' ',
+        p.name, p.sku, p.description,
+        (SELECT b.name FROM "Brand" b WHERE b.id = p."brandId"),
+        (SELECT c.name FROM "Category" c WHERE c.id = p."categoryId"),
+        (SELECT pc.name FROM "Category" pc JOIN "Category" c2 ON c2."parentId" = pc.id WHERE c2.id = p."categoryId"),
+        array_to_string(p."oemRefs", ' '),
+        (SELECT string_agg(r.raw || ' ' || r.normalized, ' ') FROM "PartReference" r WHERE r."productId" = p.id)
+      ))),
+      "skuNormalized" = regexp_replace(upper(unaccent(p.sku)), '[^A-Z0-9]', '', 'g'),
+      "refsNormalized" = COALESCE((
+        SELECT array_agg(DISTINCT regexp_replace(upper(unaccent(v)), '[^A-Z0-9]', '', 'g'))
+        FROM (
+          SELECT unnest(p."oemRefs") AS v
+          UNION ALL
+          SELECT r.raw FROM "PartReference" r WHERE r."productId" = p.id
+        ) AS refs
+        WHERE length(regexp_replace(upper(unaccent(v)), '[^A-Z0-9]', '', 'g')) >= 3
+      ), '{}')
+  `);
+  console.log(`Indexed ${indexed} products for search`);
+
   console.log("Done.");
   // Home page banners. Only the storefront photo ships as a default: it is a
   // real photograph and fills a wide strip properly. The product-cutout images

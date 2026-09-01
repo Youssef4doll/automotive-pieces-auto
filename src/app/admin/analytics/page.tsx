@@ -1,4 +1,6 @@
 import { getAnalyticsData } from "@/lib/data/admin";
+import { topSearchMisses } from "@/lib/search";
+import UnmetDemand from "@/components/admin/UnmetDemand";
 
 export const metadata = { title: "Analytics" };
 
@@ -8,7 +10,14 @@ const EVENT_LABELS: Record<string, string> = {
   category_viewed: "Catégories consultées",
   add_to_cart: "Ajouts au panier",
   vehicle_selected: "Véhicules identifiés",
-  search_started: "Recherches",
+  search_started: "Recherches lancées",
+  search_completed: "Recherches abouties",
+  search_failed: "Recherches sans résultat",
+  autocomplete_selected: "Suggestions suivies",
+  vehicle_page_viewed: "Pages véhicule",
+  vehicle_category_viewed: "Pièces par véhicule",
+  reference_page_viewed: "Pages référence",
+  promo_clicked: "Clics bannière",
   checkout_started: "Commandes démarrées",
   checkout_completed: "Commandes confirmées",
   checkout_failed: "Échecs de commande",
@@ -16,7 +25,7 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 export default async function AnalyticsPage() {
-  const data = await getAnalyticsData();
+  const [data, misses] = await Promise.all([getAnalyticsData(), topSearchMisses(12)]);
 
   const kpis = [
     { label: "Événements (30j)", value: data.totalEvents.toLocaleString("fr-TN") },
@@ -42,6 +51,12 @@ export default async function AnalyticsPage() {
           Données de première partie — aucun service tiers, aucune clé requise. 30 derniers jours.
         </p>
       </div>
+
+      {/* Above the charts on purpose: a chart describes what happened, this
+          says what to do about it. It renders even with no analytics at all,
+          because a shop can be losing sales before it has any traffic worth
+          charting. */}
+      <UnmetDemand misses={misses} />
 
       {data.totalEvents === 0 ? (
         <div className="p-8 rounded-xl bg-white border border-navy-900/10 text-center">

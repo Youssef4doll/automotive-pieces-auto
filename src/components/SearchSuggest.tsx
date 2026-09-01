@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { track } from "@/lib/track";
 
 export type Suggestion = {
   label: string;
@@ -97,6 +98,9 @@ export default function SearchSuggest({
     const go = (s: Suggestion) => {
       setOpen(false);
       onPick?.();
+      // Whether shoppers take the suggestions is the only honest measure of
+      // whether the suggestions are any good.
+      track("autocomplete_selected", { kind: s.kind, label: s.label, query });
       router.push(s.href);
     };
 
@@ -120,7 +124,7 @@ export default function SearchSuggest({
 
     input.addEventListener("keydown", onKey);
     return () => input.removeEventListener("keydown", onKey);
-  }, [open, items, active, inputRef, router, onPick]);
+  }, [open, items, active, inputRef, router, onPick, query]);
 
   // Wire the input into the combobox so assistive tech follows along.
   useEffect(() => {
@@ -154,6 +158,7 @@ export default function SearchSuggest({
                 e.preventDefault();
                 setOpen(false);
                 onPick?.();
+                track("autocomplete_selected", { kind: s.kind, label: s.label, query });
                 router.push(s.href);
               }}
               onMouseEnter={() => setActive(i)}

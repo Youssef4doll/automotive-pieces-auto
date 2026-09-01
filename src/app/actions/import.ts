@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
 import { normalizeReference } from "@/lib/reference";
 import { parseDelimited, autoMap, normalizeRow, flagDuplicates, type ParsedRow, type ImportField } from "@/lib/import/parse";
+import { reindexProducts } from "@/lib/search";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -183,6 +184,21 @@ export async function applyImport(batchId: string): Promise<ImportState> {
       skippedCount: failed,
     },
   });
+
+  // One statement for the whole batch rather than one per row: an import of
+  // ten thousand parts is exactly when a per-row reindex would hurt, and
+  // exactly when unsearchable products would hurt most.
+  //
+  // Deliberately after the batch is marked applied, and deliberately not fatal:
+  // the rows are already written, so a failure here means "imported but not yet
+  // searchable", which the quality screen reports and a re-run repairs. Letting
+  // it abort the function left the batch stuck mid-flight with its products in
+  // the catalogue and no way to roll them back.
+  try {
+    await reindexProducts();
+  } catch (e) {
+    console.error("[import] search reindex failed; products are live but unsearchable", e);
+  }
 
   revalidatePath("/admin/import");
   revalidatePath("/admin/stock");

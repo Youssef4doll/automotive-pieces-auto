@@ -99,11 +99,16 @@ model VehicleModel {
   makeId    String
   make      VehicleMake    @relation(fields: [makeId], references: [id], onDelete: Cascade)
   name      String
+  /// URL form of the name, unique within the make. Someone searching for
+  /// "plaquettes clio 4" should land on a page about that car, and a page
+  /// needs an address — /pieces/renault/clio-iv.
+  slug      String         @default("")
   yearFrom  Int?
   yearTo    Int?
   engines   VehicleEngine[]
 
   @@unique([makeId, name])
+  @@unique([makeId, slug])
   @@index([makeId])
 }
 
@@ -153,6 +158,20 @@ model Product {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  /// Everything a shopper might type to reach this part, in one accent-free
+  /// lower-case blob: name, brand, category, family, SKU and every reference.
+  /// Rebuilt in SQL by reindexProducts(), never written by hand — see
+  /// src/lib/search. A trigram index on it is what makes a misspelled query
+  /// still find the part, and what keeps that possible at 50 000 rows.
+  searchText    String   @default("")
+  /// The SKU with every separator stripped: "BR-4820" → "BR4820". Part
+  /// numbers are written down differently by everyone, so they are matched in
+  /// this space and never literally. Derived, like searchText.
+  skuNormalized String   @default("")
+  /// Every OEM number in the same stripped form, so "77 01 234 567" finds the
+  /// part someone typed as "7701234567".
+  refsNormalized String[] @default([])
+
   // Position is the difference between the right part and an expensive
   // return. Held as structured fields, never parsed back out of the name.
   axle          Axle?
@@ -172,6 +191,7 @@ model Product {
   @@index([categoryId])
   @@index([brandId])
   @@index([importBatchId])
+  @@index([skuNormalized])
 }
 
 enum Axle {
@@ -468,6 +488,30 @@ model MediaAsset {
   data      Bytes
   mimeType  String
   createdAt DateTime @default(now())
+}
+
+/// A search that found nothing.
+///
+/// This is the most direct demand signal the shop ever receives: a customer
+/// saying, in their own words, what they came to buy and could not. Kept as
+/// one row per distinct query with a counter rather than one row per search,
+/// so the buying list reads as "nineteen people wanted a Clio IV timing kit",
+/// not as a log to be waded through.
+model SearchMiss {
+  id         String    @id @default(cuid())
+  /// Folded, de-accented, synonym-expanded — so "plaquete" and "Plaquettes"
+  /// are one line on the buying list, not two.
+  normalized String    @unique
+  /// The last raw spelling seen, for reading back what was actually typed.
+  query      String
+  count      Int       @default(1)
+  /// Set when the shop has acted on it (ordered the part, or decided not to).
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+
+  @@index([resolvedAt, count])
+  @@index([lastSeenAt])
 }
 
 // First-party product analytics — no external service, no keys required.

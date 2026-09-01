@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { searchProducts, getMegaMenu, getTopSellers } from "@/lib/data/catalog";
+import { searchProducts, getMegaMenu } from "@/lib/data/catalog";
 import { getSettings, publicContact } from "@/lib/settings";
-import { contactLink, contactLinkProps } from "@/lib/contact-link";
-import ProductGrid from "@/components/ProductGrid";
-import TrackEvent from "@/components/TrackEvent";
+import { contactLink } from "@/lib/contact-link";
+import SearchResults from "@/components/SearchResults";
+import { didYouMean, parseQuery } from "@/lib/search";
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/seo";
 
@@ -25,17 +25,27 @@ export default async function SearchPage({
 }) {
   const { q = "" } = await searchParams;
   const query = q.trim();
+  const parsed = parseQuery(query);
 
   const [products, settings, families] = await Promise.all([
     searchProducts(query),
     getSettings(),
     getMegaMenu(),
   ]);
-  // Only fetched when we have nothing to show, so an empty-handed shopper
-  // still leaves with something to look at.
-  const suggestions = products.length === 0 ? await getTopSellers(4) : [];
+  // Only computed when it can change the outcome: a correction shown above a
+  // page full of good results is noise. "Every result was a guess" counts as
+  // an outcome worth correcting, even when the page is not empty.
+  const worthCorrecting =
+    products.length === 0 || products.every((p) => (p.matchTier ?? 1) > 1);
+  const suggestion = worthCorrecting ? await didYouMean(parsed) : null;
+
   const contact = publicContact(settings);
   const askHref = contactLink(contact, `Bonjour, je cherche : ${query}. Pouvez-vous m'aider à la trouver ?`);
+  const askLabel = contact.whatsapp
+    ? "Demander cette pièce sur WhatsApp"
+    : contact.email
+      ? "Demander cette pièce par email"
+      : "Nous contacter pour cette pièce";
 
   if (!query) {
     return (
@@ -44,83 +54,44 @@ export default async function SearchPage({
         <p className="text-sm text-gray-500 mb-6">
           Tapez un nom de pièce, une référence constructeur ou une référence OEM.
         </p>
-        <FamilyLinks families={families} />
+        <div className="flex flex-wrap gap-2">
+          {families.map((f) => (
+            <Link
+              key={f.id}
+              href={`/catalogue/${f.slug}`}
+              className="inline-flex items-center min-h-tap-compact px-3 rounded-full border border-gray-300 bg-white text-sm text-gray-700 hover:border-navy-300"
+            >
+              {f.name}
+            </Link>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      {/* A search that returns nothing is the clearest demand signal the shop
-          gets: it is a customer telling us what we should be stocking. It is
-          recorded with its result count so the zero-result list can be read
-          back in analytics. */}
-      <TrackEvent name="search_performed" properties={{ query, resultCount: products.length }} />
-
+    <div className="w-full min-w-0 mx-auto max-w-7xl px-4 py-8">
       <h1 className="text-xl font-heading font-extrabold uppercase text-navy-950 mb-1 tracking-tight">
         Résultats pour « {query} »
       </h1>
-      <p className="text-sm text-gray-500 mb-6">{products.length} résultat(s)</p>
+      <p className="text-sm text-gray-500 mb-5">
+        {products.length} résultat{products.length > 1 ? "s" : ""}
+        {/* What the search understood, so a customer who typed "kit distri"
+            can see it was read as a timing kit rather than wonder why belts
+            came back. */}
+        {parsed.canonical.length > 0 && (
+          <span className="text-gray-400"> · compris comme : {parsed.canonical.join(", ")}</span>
+        )}
+      </p>
 
-      {products.length === 0 ? (
-        <div className="flex flex-col gap-8">
-          <div className="text-center py-10 px-4 border border-dashed border-gray-300 rounded-xl">
-            <p className="text-3xl mb-3">🔍</p>
-            <p className="text-gray-700 font-medium mb-1">Aucune pièce ne correspond à « {query} »</p>
-            <p className="text-sm text-gray-500 mb-5 max-w-md mx-auto">
-              Vérifiez l&apos;orthographe, essayez la référence inscrite sur la pièce, ou envoyez-nous une photo —
-              on la retrouve pour vous.
-            </p>
-            {/* The label names whichever channel the shop has configured, so
-                the button never promises WhatsApp and open a mail client. */}
-            <a
-              href={askHref}
-              {...contactLinkProps(askHref)}
-              className="inline-flex items-center justify-center gap-2 min-h-tap px-5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-semibold"
-            >
-              {contact.whatsapp
-                ? "Demander cette pièce sur WhatsApp"
-                : contact.email
-                  ? "Demander cette pièce par email"
-                  : "Nous contacter pour cette pièce"}
-            </a>
-          </div>
-
-          {suggestions.length > 0 && (
-            <section>
-              <h2 className="font-heading font-extrabold uppercase text-navy-950 mb-3 tracking-tight">
-                Nos pièces les plus demandées
-              </h2>
-              <ProductGrid products={suggestions} />
-            </section>
-          )}
-
-          <section>
-            <h2 className="font-heading font-extrabold uppercase text-navy-950 mb-3 tracking-tight">
-              Parcourir par famille
-            </h2>
-            <FamilyLinks families={families} />
-          </section>
-        </div>
-      ) : (
-        <ProductGrid products={products} />
-      )}
-    </div>
-  );
-}
-
-function FamilyLinks({ families }: { families: { id: string; name: string; slug: string }[] }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {families.map((f) => (
-        <Link
-          key={f.id}
-          href={`/catalogue/${f.slug}`}
-          className="inline-flex items-center min-h-tap-compact px-3 rounded-full border border-gray-300 bg-white text-sm text-gray-700 hover:border-navy-300"
-        >
-          {f.name}
-        </Link>
-      ))}
+      <SearchResults
+        query={query}
+        products={products}
+        suggestion={suggestion?.term ?? null}
+        contactHref={askHref}
+        contactLabel={askLabel}
+        fallbacks={families.map((f) => ({ id: f.id, name: f.name, slug: f.slug }))}
+      />
     </div>
   );
 }

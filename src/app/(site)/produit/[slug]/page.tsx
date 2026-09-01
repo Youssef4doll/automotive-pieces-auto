@@ -41,8 +41,18 @@ export async function generateMetadata({
     ? [{ url: product.gallery[0].src, alt: product.gallery[0].alt || product.name }]
     : undefined;
 
+  // Vehicle context in the title, but only when it is true without
+  // qualification. A part verified against one model can honestly say so and
+  // wins the "plaquettes clio 4" search; the same title on a part that fits
+  // eleven cars would be a claim the fitment data does not support, and would
+  // send the wrong shoppers to the page.
+  const models = new Set(
+    product.fitments.map((f) => `${f.engine.model.make.name} ${f.engine.model.name}`),
+  );
+  const forOneCar = models.size === 1 ? ` pour ${[...models][0]}` : "";
+
   return pageMeta({
-    title: `${brand}${product.name} — ${product.sku}`,
+    title: `${brand}${product.name}${forOneCar} — ${product.sku}`,
     description,
     path: `/produit/${product.slug}`,
     images: photo,
@@ -259,7 +269,17 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 {product.fitments.map((f, i) => (
                   <tr key={f.id} className={i % 2 ? "bg-white" : "bg-gray-50/60"}>
                     <td className="px-4 py-2.5 font-semibold text-navy-900">{f.engine.model.make.name}</td>
-                    <td className="px-4 py-2.5">{f.engine.model.name}</td>
+                    <td className="px-4 py-2.5">
+                      {/* Each row is a way into that car's own page: someone
+                          checking whether this fits their Clio is one tap from
+                          everything else the shop has for it. */}
+                      <Link
+                        href={`/pieces/${f.engine.model.make.slug}/${f.engine.model.slug}`}
+                        className="text-navy-600 hover:text-red-600 hover:underline underline-offset-2"
+                      >
+                        {f.engine.model.name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-2.5 text-gray-600">{f.engine.name}</td>
                   </tr>
                 ))}

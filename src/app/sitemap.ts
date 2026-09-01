@@ -1,6 +1,9 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { siteUrl } from "@/lib/site";
+import { listVehiclePages, listVehicleFamilyPages } from "@/lib/data/vehicles";
+import { listIndexableReferences } from "@/lib/data/references";
+import { listGuides } from "@/lib/data/guides";
 
 /**
  * Rendered per request, not at build time.
@@ -38,8 +41,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   ]);
 
+  const guides = await listGuides();
   const staticPages: MetadataRoute.Sitemap = [
     { url: base, changeFrequency: "daily", priority: 1 },
+    { url: `${base}/guides`, changeFrequency: "monthly", priority: 0.6 },
+    ...guides.map((g) => ({
+      url: `${base}/guides/${g.slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     { url: `${base}/sources`, changeFrequency: "monthly", priority: 0.5 },
   ];
 
@@ -58,5 +68,61 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.9,
   }));
 
-  return [...staticPages, ...categoryPages, ...productPages];
+  // Vehicle and reference pages are generated from fitment and reference data,
+  // so the set grows with the catalogue and never contains a page with nothing
+  // on it — listVehiclePages and listIndexableReferences both require at least
+  // one live product before a URL exists at all.
+  const [vehicles, vehicleFamilies, references] = await Promise.all([
+    listVehiclePages(),
+    listVehicleFamilyPages(),
+    listIndexableReferences(),
+  ]);
+
+  const makePages: MetadataRoute.Sitemap = [...new Set(vehicles.map((v) => v.makeSlug))].map((slug) => ({
+    url: `${base}/pieces/${slug}`,
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+  }));
+
+  const vehiclePages: MetadataRoute.Sitemap = vehicles.map((v) => ({
+    url: `${base}/pieces/${v.makeSlug}/${v.modelSlug}`,
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }));
+
+  const vehicleFamilyPages: MetadataRoute.Sitemap = vehicleFamilies.map((v) => ({
+    url: `${base}/pieces/${v.makeSlug}/${v.modelSlug}/${v.familySlug}`,
+    changeFrequency: "weekly" as const,
+    // The highest-intent page the site has: a named part for a named car.
+    priority: 0.85,
+  }));
+
+  const referencePages: MetadataRoute.Sitemap = references.map((r) => ({
+    url: `${base}/reference/${r}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
+
+  // Listed most valuable first, because of the cap below: if the catalogue
+  // ever outgrows one file, the URLs that survive should be the ones that earn
+  // the most — a part for a named car, then the part, then the number.
+  const all = [
+    ...staticPages,
+    ...categoryPages,
+    ...vehicleFamilyPages,
+    ...productPages,
+    ...vehiclePages,
+    ...makePages,
+    ...referencePages,
+  ];
+
+  // A sitemap over 50 000 URLs is rejected outright, so an invalid file is a
+  // worse outcome than a truncated one. At the shop's present size this never
+  // trims anything; when it starts to, the fix is to shard with Next's
+  // generateSitemaps() rather than to raise this number.
+  const MAX_URLS = 50_000;
+  if (all.length > MAX_URLS) {
+    console.warn(`[sitemap] ${all.length} URLs exceeds the 50 000 limit — truncating. Time to shard.`);
+  }
+  return all.slice(0, MAX_URLS);
 }

@@ -124,7 +124,7 @@ console.log("\n[7] A SEARCH THAT FINDS NOTHING STILL HELPS");
 await p.goto(`${BASE}/recherche?q=piecequinexistepas${STAMP}`);
 await p.waitForTimeout(1200);
 body = await p.locator("main").innerText();
-check("says plainly that nothing matched", /Aucune pièce ne correspond/.test(body));
+check("says plainly that nothing matched", /pas trouvé de correspondance exacte/i.test(body));
 const searchLinks = await p.locator('main a[href*="wa.me"], main a[href^="mailto:"]')
   .evaluateAll((els) => els.map((e) => decodeURIComponent(e.getAttribute("href") || "")));
 // When a channel is configured the message must already name what the shopper
@@ -139,17 +139,27 @@ if (searchLinks.length > 0) {
   check("and the message already names what they searched for",
         true, "no direct channel configured — nothing to prefill");
 }
-check("suggests popular parts instead of a dead end", /les plus demandées/i.test(body));
+check("offers a way to change vehicle instead of a dead end", /changer de véhicule/i.test(body));
+check("offers the reference box", /Chercher par référence/i.test(body));
+check("offers sending a photo", /Envoyer une photo/i.test(body));
 check("offers the families to browse", /Parcourir par famille/i.test(body));
 
 const ev = await prisma.analyticsEvent.findFirst({
-  where: { name: "search_performed" },
+  where: { name: "search_failed" },
   orderBy: { createdAt: "desc" },
   select: { properties: true },
 });
-check("the failed search is recorded as demand data",
+check("the failed search is recorded as an event",
       !!ev && String(ev.properties?.query || "").includes("piecequinexistepas"),
       JSON.stringify(ev?.properties));
+
+// …and, more usefully, as a line on the buying list rather than a log entry.
+const miss = await prisma.searchMiss.findFirst({
+  where: { query: { contains: "piecequinexistepas" } },
+  select: { count: true, normalized: true },
+});
+check("and filed as unmet demand for the shop to act on", !!miss,
+      miss ? `${miss.normalized} ×${miss.count}` : "not recorded");
 
 console.log("\n[8] AN EMPTY SEARCH DOES NOT SHOW AN EMPTY HEADING");
 await p.goto(`${BASE}/recherche?q=`);

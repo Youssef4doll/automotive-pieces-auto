@@ -8,6 +8,7 @@ import { updateSettings, type SettingsMap } from "@/lib/settings";
 import { OrderStatus } from "@prisma/client";
 import { normalizeReference, parseReferenceList } from "@/lib/reference";
 import { readImageFile, mediaAssetIdFromUrl } from "@/lib/image-upload";
+import { reindexProducts, topSearchMisses } from "@/lib/search";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -126,6 +127,9 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
 
     await syncReferences(productId, "OEM", data.oemRefsText ?? "");
     await syncReferences(productId, "AFTERMARKET", data.aftermarketRefsText ?? "");
+    // Last, because it reads back the references that were just written. A
+    // part that is saved but not indexed is a part nobody can search for.
+    await reindexProducts([productId]);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erreur lors de l'enregistrement" };
   }
@@ -363,4 +367,37 @@ export async function deletePromotion(id: string) {
   await deleteAssetIfUnused(promo?.imageUrl);
   revalidatePath("/admin/promotions");
   revalidatePath("/");
+}
+
+// --- Unmet demand -----------------------------------------------------------
+
+/**
+ * Mark a failed search as dealt with — the part was ordered, or a decision was
+ * made not to carry it. Kept rather than deleted: if the same thing is asked
+ * for again it comes back to the top of the list with its history intact.
+ */
+export async function resolveSearchMiss(id: string) {
+  await assertAdmin();
+  await prisma.searchMiss.update({ where: { id }, data: { resolvedAt: new Date() } });
+  revalidatePath("/admin/analytics");
+}
+
+export async function reopenSearchMiss(id: string) {
+  await assertAdmin();
+  await prisma.searchMiss.update({ where: { id }, data: { resolvedAt: null } });
+  revalidatePath("/admin/analytics");
+}
+
+/** Rebuild the whole search index — for after a bulk edit outside the app. */
+export async function rebuildSearchIndex() {
+  await assertAdmin();
+  const count = await reindexProducts();
+  revalidatePath("/admin/analytics");
+  return { ok: `${count} produits réindexés` };
+}
+
+/** The buying list: what customers asked for and the shop could not answer. */
+export async function unmetDemand() {
+  await assertAdmin();
+  return topSearchMisses(20);
 }

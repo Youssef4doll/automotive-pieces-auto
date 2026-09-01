@@ -1,7 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/money";
-import { looksLikeReference, normalizeReference } from "@/lib/reference";
+import { normalizeReference } from "@/lib/reference";
+import { parseQuery, rankProducts } from "@/lib/search";
 
 /**
  * Navigation shows only what a shopper can actually buy.
@@ -70,13 +71,17 @@ export function serializeProduct<
     compareAtPrice: unknown;
     imageUrl?: string;
     images?: { id: string }[];
+    searchText?: string;
   },
 >(p: T) {
   // Uploaded photos win over the seeded static path, so a product that has
   // been given a real picture shows it everywhere — cards, cart, search,
   // packs — without each of those components knowing about ProductImage.
   const uploaded = p.images?.[0]?.id;
-  const { images: _images, ...rest } = p;
+  // searchText is an index, not content: several hundred bytes per card that
+  // no component reads. Dropped here rather than in every query's select, so
+  // a new caller cannot forget and quietly double its page weight.
+  const { images: _images, searchText: _searchText, ...rest } = p;
   return {
     ...rest,
     ...(p.imageUrl !== undefined ? { imageUrl: uploaded ? `/api/images/${uploaded}` : p.imageUrl } : {}),
@@ -199,46 +204,32 @@ export async function getTopSellers(take = 8) {
   return products.map(serializeProduct);
 }
 
-export async function searchProducts(query: string, take = 20) {
-  const q = query.trim();
-  if (!q) return [];
+/**
+ * The shop's search.
+ *
+ * Ranking lives in src/lib/search — this only hydrates the ids it returns and
+ * puts them back in rank order, which Postgres cannot do for us once the rows
+ * come back through Prisma's `in` filter.
+ */
+export async function searchProducts(query: string, take = 40) {
+  const parsed = parseQuery(query);
+  if (!parsed.folded) return [];
 
-  // A mechanic holding the broken part types the number stamped on it. That is
-  // the highest-intent query in the business, so it is answered first and
-  // exactly: an exact reference match outranks any fuzzy name match. If the
-  // query only looked like a reference, this finds nothing and we fall through
-  // to ordinary text search, which makes a false positive here harmless.
-  if (looksLikeReference(q)) {
-    const normalized = normalizeReference(q);
-    const hits = await prisma.product.findMany({
-      where: {
-        active: true,
-        OR: [
-          { references: { some: { normalized } } },
-          { sku: { equals: q, mode: "insensitive" } },
-          { oemRefs: { has: q } },
-        ],
-      },
-      include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
-      take,
-    });
-    if (hits.length > 0) return hits.map(serializeProduct);
-  }
+  const hits = await rankProducts(parsed, take);
+  if (hits.length === 0) return [];
 
   const products = await prisma.product.findMany({
-    where: {
-      active: true,
-      OR: [
-        { name: { contains: q, mode: "insensitive" } },
-        { sku: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { references: { some: { normalized: { contains: normalizeReference(q) } } } },
-      ],
-    },
+    where: { id: { in: hits.map((h) => h.id) } },
     include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
-    take,
   });
-  return products.map(serializeProduct);
+
+  const byId = new Map(products.map((p) => [p.id, p]));
+  return hits
+    .map((h) => {
+      const p = byId.get(h.id);
+      return p ? { ...serializeProduct(p), matchTier: h.tier } : null;
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null);
 }
 
 export async function findProductByReference(query: string) {
@@ -281,4 +272,31 @@ export async function getActivePromotions(placement: "HERO" | "CAMPAIGN" = "HERO
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     select: { id: true, title: true, imageUrl: true, href: true, kind: true },
   });
+}
+
+/**
+ * The subcategories the shop stocks most deeply.
+ *
+ * Used for the hero's shortcut chips. Ordered by how many live references
+ * each holds — a fact the catalogue knows — rather than by a popularity
+ * figure nobody has measured, and derived rather than hand-listed so the
+ * chips cannot rot when the taxonomy moves.
+ */
+export async function getTopSubcategories(take = 3) {
+  const rows = await prisma.category.findMany({
+    where: { parentId: { not: null }, products: { some: { active: true } } },
+    select: {
+      name: true,
+      slug: true,
+      parent: { select: { slug: true } },
+      _count: { select: { products: true } },
+    },
+  });
+  return rows
+    .sort((a, b) => b._count.products - a._count.products)
+    .slice(0, take)
+    .map((c) => ({
+      label: c.name,
+      href: c.parent ? `/catalogue/${c.parent.slug}/${c.slug}` : `/catalogue/${c.slug}`,
+    }));
 }

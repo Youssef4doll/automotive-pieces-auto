@@ -10,6 +10,7 @@ export default function ProductForm({
   product,
   categories,
   brands,
+  suggestedName,
 }: {
   product?: {
     id: string;
@@ -33,6 +34,13 @@ export default function ProductForm({
   };
   categories: Category[];
   brands: Brand[];
+  /**
+   * Prefill for a brand-new product, carried over from whatever prompted it —
+   * today, a customer's failed search. It saves retyping a part name that the
+   * admin is looking at on another screen, which is the difference between
+   * acting on the buying list and meaning to.
+   */
+  suggestedName?: string;
 }) {
   const [state, action, pending] = useActionState<ProductFormState, FormData>(upsertProduct, undefined);
 
@@ -45,7 +53,7 @@ export default function ProductForm({
           <input name="sku" required defaultValue={product?.sku} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
         </Field>
         <Field label="Nom du produit">
-          <input name="name" required defaultValue={product?.name} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
+          <input name="name" required defaultValue={product?.name ?? suggestedName} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors" />
         </Field>
       </div>
 

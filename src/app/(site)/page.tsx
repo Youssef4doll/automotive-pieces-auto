@@ -11,11 +11,12 @@ import SectionHeading from "@/components/SectionHeading";
 import Eyebrow from "@/components/Eyebrow";
 import TrustBadges from "@/components/TrustBadges";
 import T from "@/components/T";
-import { getTopSellers, getActivePromotions } from "@/lib/data/catalog";
+import { getTopSellers, getActivePromotions, getTopSubcategories } from "@/lib/data/catalog";
 import { getSettings, publicContact, contactHref } from "@/lib/settings";
 import { requireAdmin } from "@/lib/session";
 import PromoGrid from "@/components/PromoGrid";
 import PromoCarousel from "@/components/PromoCarousel";
+import VehicleShortcuts from "@/components/VehicleShortcuts";
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/seo";
 
@@ -28,12 +29,13 @@ export const metadata: Metadata = pageMeta({
 });
 
 export default async function HomePage() {
-  const [topSellers, settings, promos, campaigns, admin] = await Promise.all([
+  const [topSellers, settings, promos, campaigns, admin, shortcuts] = await Promise.all([
     getTopSellers(6),
     getSettings(),
     getActivePromotions("HERO"),
     getActivePromotions("CAMPAIGN"),
     requireAdmin(),
+    getTopSubcategories(3),
   ]);
   const contact = publicContact(settings);
   const contactUrl = contactHref(contact);
@@ -41,9 +43,12 @@ export default async function HomePage() {
   return (
     <>
       <PromoGrid promos={promos} />
-      <Hero />
+      <Hero shortcuts={shortcuts} />
       <BrandMarquee />
       <FinderGrid contactUrl={contactUrl} />
+      {/* Two ways to shop, side by side and equally valid: by the car you
+          drive, or by the kind of part you need. Neither is forced. */}
+      <VehicleShortcuts />
       <CategoryGrid />
       {/* Campaign band. Empty by default and invisible to shoppers until the
           shop uploads artwork in /admin/promotions — an admin sees a prompt
