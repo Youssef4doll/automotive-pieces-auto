@@ -95,7 +95,7 @@ export default function PromotionCard({
               }
             }}
             aria-label="Supprimer"
-            className="w-tap h-tap flex items-center justify-center rounded-lg border border-navy-900/10 text-gray-400 hover:text-red-600 hover:border-red-200 disabled:opacity-50"
+            className="w-tap h-tap flex items-center justify-center rounded-lg border border-navy-900/10 text-gray-600 hover:text-red-600 hover:border-red-200 disabled:opacity-50"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />

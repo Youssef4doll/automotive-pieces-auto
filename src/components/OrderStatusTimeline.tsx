@@ -57,17 +57,17 @@ export default function OrderStatusTimeline({
               <div
                 aria-hidden="true"
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                  done ? "bg-green-600 text-white" : "bg-gray-200 text-gray-400"
+                  done ? "bg-green-700 text-white" : "bg-gray-200 text-gray-600"
                 }`}
               >
                 {done ? "✓" : i + 1}
               </div>
-              <span className={`text-[11px] whitespace-nowrap ${done ? "text-green-700 font-semibold" : "text-gray-400"}`}>
+              <span className={`text-[11px] whitespace-nowrap ${done ? "text-green-700 font-semibold" : "text-gray-600"}`}>
                 {step.label}
               </span>
               {/* Reserve the line whether or not there is a date, so the four
                   steps stay on one baseline instead of jumping about. */}
-              <span className="text-[10px] leading-tight text-center text-gray-400 whitespace-nowrap min-h-[2.1em]">
+              <span className="text-[10px] leading-tight text-center text-gray-600 whitespace-nowrap min-h-[2.1em]">
                 {moment ? (
                   <>
                     {moment.day}

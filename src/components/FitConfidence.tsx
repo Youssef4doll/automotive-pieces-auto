@@ -69,7 +69,7 @@ export default function FitConfidence({ product, whatsapp }: { product: FitInput
             href={ask(`Bonjour, est-ce que « ${product.name} » (réf. ${product.sku}) convient à ma ${vehicleLabel} ?`)}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center min-h-tap-compact px-3 rounded-lg bg-green-600 text-white text-xs font-semibold"
+            className="inline-flex items-center min-h-tap-compact px-3 rounded-lg bg-green-700 text-white text-xs font-semibold"
           >
             Vérifier sur WhatsApp
           </a>
@@ -87,7 +87,7 @@ export default function FitConfidence({ product, whatsapp }: { product: FitInput
             href={ask(`Bonjour, est-ce que « ${product.name} » (réf. ${product.sku}) convient à ma voiture ?`)}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center min-h-tap-compact px-3 rounded-lg bg-green-600 text-white text-xs font-semibold"
+            className="inline-flex items-center min-h-tap-compact px-3 rounded-lg bg-green-700 text-white text-xs font-semibold"
           >
             Faire vérifier
           </a>

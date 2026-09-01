@@ -129,7 +129,7 @@ export default function BuyAgain({
                       out
                         ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                         : justAdded
-                          ? "bg-green-600 text-white"
+                          ? "bg-green-700 text-white"
                           : "bg-gold-500 hover:bg-gold-400 text-navy-950"
                     }`}
                   >

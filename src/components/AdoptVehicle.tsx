@@ -109,7 +109,7 @@ function EngineList({ engines, onPick }: { engines: Engine[]; onPick: (e: Engine
           className="inline-flex items-center gap-2 min-h-tap-compact px-3.5 rounded-full border border-navy-900/20 bg-white text-sm font-semibold text-navy-900 hover:border-navy-900 transition-colors"
         >
           {e.name}
-          {e.powerHp && <span className="font-normal text-gray-400">{e.powerHp} ch</span>}
+          {e.powerHp && <span className="font-normal text-gray-600">{e.powerHp} ch</span>}
         </button>
       ))}
     </div>

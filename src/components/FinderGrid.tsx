@@ -152,7 +152,7 @@ export default function FinderGrid({ contactUrl }: { contactUrl: string }) {
               target="_blank"
               rel="noreferrer"
               onClick={() => track("whatsapp_clicked", { source: "finder_plate" })}
-              className="w-full min-h-tap rounded-lg bg-green-600 hover:bg-green-700 text-white font-display font-bold uppercase text-xs tracking-wide text-center flex items-center justify-center gap-2"
+              className="w-full min-h-tap rounded-lg bg-green-700 hover:bg-green-800 text-white font-display font-bold uppercase text-xs tracking-wide text-center flex items-center justify-center gap-2"
             >
               WhatsApp
             </a>
@@ -177,7 +177,7 @@ export default function FinderGrid({ contactUrl }: { contactUrl: string }) {
                     vin.length === 17 ? "border-green-500" : vin.length > 0 ? "border-amber-400" : "border-gray-300"
                   }`}
                 />
-                <div className="flex items-center justify-between text-[12px] text-gray-400 mt-1">
+                <div className="flex items-center justify-between text-[12px] text-gray-600 mt-1">
                   <span>{vin.length}/17</span>
                 </div>
                 {vinMsg && <p className="text-[12px] text-amber-600 mt-1">{vinMsg}</p>}
@@ -185,7 +185,7 @@ export default function FinderGrid({ contactUrl }: { contactUrl: string }) {
               <button
                 type="submit"
                 disabled={vin.length !== 17}
-                className="mt-auto w-full min-h-tap rounded-lg bg-gray-200 enabled:bg-navy-900 disabled:text-gray-400 enabled:text-white enabled:hover:bg-navy-800 font-display font-bold uppercase text-xs tracking-wide"
+                className="mt-auto w-full min-h-tap rounded-lg bg-gray-200 enabled:bg-navy-900 disabled:text-gray-600 enabled:text-white enabled:hover:bg-navy-800 font-display font-bold uppercase text-xs tracking-wide"
               >
                 {t("finder.identify")}
               </button>

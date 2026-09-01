@@ -94,7 +94,7 @@ export default async function ReferencePage({ params }: { params: Params }) {
           ? "Une référence correspond exactement à ce numéro."
           : `${products.length} références correspondent à ce numéro.`}{" "}
         {raw.toUpperCase() !== normalized && (
-          <span className="text-gray-400">Recherché : « {raw} ».</span>
+          <span className="text-gray-600">Recherché : « {raw} ».</span>
         )}
       </p>
 
@@ -116,7 +116,7 @@ export default async function ReferencePage({ params }: { params: Params }) {
                 className="inline-flex items-center gap-2 min-h-tap-compact px-3 rounded-full border border-gray-300 bg-white text-sm text-gray-700 hover:border-navy-300"
               >
                 {m.makeName} {m.modelName}
-                <span className="text-xs text-gray-400">{m.engines.slice(0, 2).join(", ")}</span>
+                <span className="text-xs text-gray-600">{m.engines.slice(0, 2).join(", ")}</span>
               </Link>
             ))}
           </div>

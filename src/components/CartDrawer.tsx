@@ -107,7 +107,7 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
           </h2>
           <button
             onClick={close}
-            className="w-tap h-tap -me-2 flex items-center justify-center text-gray-400 sm:text-white/80"
+            className="w-tap h-tap -me-2 flex items-center justify-center text-gray-600 sm:text-white/80"
             aria-label={t("cart.dismiss")}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

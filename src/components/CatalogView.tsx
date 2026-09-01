@@ -127,7 +127,7 @@ export default function CatalogView({
                     }`}
                   >
                     {b.name}
-                    <span className={active ? "text-navy-900/70" : "text-gray-400"}>{b.count}</span>
+                    <span className={active ? "text-navy-900/70" : "text-gray-600"}>{b.count}</span>
                   </Link>
                 );
               })}
@@ -140,7 +140,7 @@ export default function CatalogView({
         <aside className="hidden lg:flex lg:w-56 shrink-0 flex-col gap-6">
           {stocked.length > 0 && (
             <div>
-              <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">Type de pièce</h3>
+              <h3 className="text-xs font-bold text-gray-600 uppercase mb-2">Type de pièce</h3>
               <ul className="space-y-1">
                 {stocked.map((s) => (
                   <li key={s.id}>
@@ -161,7 +161,7 @@ export default function CatalogView({
           )}
           {brands.length > 0 && (
             <div>
-              <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">Marque</h3>
+              <h3 className="text-xs font-bold text-gray-600 uppercase mb-2">Marque</h3>
               <ul className="space-y-1">
                 {brands.map((b) => (
                   <li key={b.slug}>
@@ -172,7 +172,7 @@ export default function CatalogView({
                       }`}
                     >
                       <span>{b.name}</span>
-                      <span className="text-xs text-gray-400">{b.count}</span>
+                      <span className="text-xs text-gray-600">{b.count}</span>
                     </Link>
                   </li>
                 ))}
@@ -271,7 +271,7 @@ function EmptyState({ whatsapp }: { whatsapp: string | null }) {
         href={contactLink({ whatsapp, email: null })}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold"
+        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-700 text-white text-sm font-semibold"
       >
         Envoyez-la sur WhatsApp, on la retrouve
       </a>

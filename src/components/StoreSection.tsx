@@ -47,7 +47,7 @@ export default async function StoreSection() {
           <WhatsAppLink
             whatsapp={contact.whatsapp}
             source="store_section"
-            className="inline-flex items-center gap-2 mt-5 px-5 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-display font-bold uppercase tracking-wide"
+            className="inline-flex items-center gap-2 mt-5 px-5 py-3 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-display font-bold uppercase tracking-wide"
           >
             WhatsApp
           </WhatsAppLink>

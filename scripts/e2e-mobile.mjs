@@ -284,6 +284,83 @@ console.log("\n[11] NO HORIZONTAL SCROLL AT ANY PHONE WIDTH");
   check("nothing scrolls sideways on any iPhone width", issues === 0, `${issues} issue(s)`);
 }
 
+console.log("\n[12] TEXT MEETS THE CONTRAST FLOOR");
+{
+  // Measured, not eyeballed. Tailwind v4 emits colours as rgb() *and* lab(),
+  // and a probe that understands only one of them invents failures — the first
+  // version of this check reported white-on-green as 1:1 because it could not
+  // read lab(). Anything translucent is skipped rather than guessed at, and
+  // reported, so the coverage of this check is never overstated.
+  const page = await ctx.newPage();
+  await page.setViewportSize({ width: 390, height: 844 });
+  let measured = 0, skipped = 0;
+  const failures = [];
+
+  for (const path of ["/", "/catalogue/freinage", "/recherche?q=plaquettes", "/panier"]) {
+    await page.goto(BASE + path, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(600);
+    const r = await page.evaluate(() => {
+      const srgbLum = (c) => {
+        const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      // CIE L* → relative luminance. Same Y the sRGB formula produces, so the
+      // two can be compared directly.
+      const labLum = (L) => (L > 8 ? ((L + 16) / 116) ** 3 : L / 903.3);
+      const lumOf = (css) => {
+        const rgb = /^rgb\((\d+), (\d+), (\d+)\)$/.exec(css);
+        if (rgb) return srgbLum([+rgb[1], +rgb[2], +rgb[3]]);
+        const lab = /^lab\(([\d.]+)/.exec(css);
+        if (lab) return labLum(parseFloat(lab[1]));
+        return null; // rgba()/oklch with alpha — composited, not measurable here
+      };
+      const bgLum = (el) => {
+        let n = el;
+        while (n) {
+          const bg = getComputedStyle(n).backgroundColor;
+          if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) {
+            const l = lumOf(bg);
+            return l === null ? null : l;
+          }
+          n = n.parentElement;
+        }
+        return srgbLum([255, 255, 255]);
+      };
+      const out = { fails: [], measured: 0, skipped: 0 };
+      for (const el of document.querySelectorAll("body *")) {
+        const txt = [...el.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim())
+          .map((n) => n.textContent.trim()).join(" ");
+        if (!txt || txt.length < 2) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility === "hidden" || cs.display === "none") continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) continue;
+        const fg = lumOf(cs.color), bg = bgLum(el);
+        if (fg === null || bg === null) { out.skipped++; continue; }
+        out.measured++;
+        const ratio = (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+        const size = parseFloat(cs.fontSize), bold = Number(cs.fontWeight) >= 700;
+        const need = size >= 24 || (size >= 18.66 && bold) ? 3 : 4.5;
+        if (ratio < need) {
+          out.fails.push(`${ratio.toFixed(2)}:1 (need ${need}) ${Math.round(size)}px "${txt.slice(0, 24)}"`);
+        }
+      }
+      return out;
+    });
+    measured += r.measured;
+    skipped += r.skipped;
+    failures.push(...r.fails);
+  }
+
+  const distinct = [...new Set(failures)];
+  check("every measurable text colour clears WCAG AA", distinct.length === 0,
+        distinct.slice(0, 3).join(" | ") || `${measured} nodes measured`);
+  check("the check covers a real share of the page", measured > 200,
+        `${measured} measured, ${skipped} translucent and unmeasured`);
+  await page.close();
+}
+
 await browser.close();
+
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

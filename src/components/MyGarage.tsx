@@ -22,7 +22,7 @@ export default function MyGarage() {
 
   return (
     <div className="p-5 rounded-xl border border-gray-200 bg-white mb-4">
-      <p className="text-xs text-gray-400 uppercase font-bold mb-3">{t("garage.title")}</p>
+      <p className="text-xs text-gray-600 uppercase font-bold mb-3">{t("garage.title")}</p>
 
       {vehicles.length === 0 ? (
         <p className="text-sm text-gray-500 mb-3">{t("garage.empty")}</p>
@@ -65,7 +65,7 @@ export default function MyGarage() {
                   <button
                     onClick={() => removeVehicle(v.engineId)}
                     aria-label={t("garage.remove")}
-                    className="shrink-0 w-10 h-10 rounded-lg border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 flex items-center justify-center"
+                    className="shrink-0 w-10 h-10 rounded-lg border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-200 flex items-center justify-center"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />

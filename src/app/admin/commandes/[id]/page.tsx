@@ -107,7 +107,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           href={`https://wa.me/${order.phone.replace(/[^0-9]/g, "")}`}
           target="_blank"
           rel="noreferrer"
-          className="self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-display font-bold uppercase tracking-wide"
+          className="self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-display font-bold uppercase tracking-wide"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5 14c-.4 1-2 1.7-3 1.4-1.6-.4-4-1.6-5.7-4.3-1-1.6-1.1-3-.6-3.8.3-.5 1-.9 1.5-.8.3 0 .6.7.9 1.4.2.5 0 .8-.3 1.1-.3.4-.3.5-.1.9.5.9 1.6 2 2.7 2.4.4.2.6.1.9-.2.3-.4.6-1 1-.9.7.3 1.5.8 1.6 1.1.1.3 0 1-.9 1.7Z" />

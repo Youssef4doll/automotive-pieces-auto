@@ -76,7 +76,7 @@ export default async function QualityPage({
               }`}
             >
               {f.label}
-              <span className={active ? "text-white/60" : "text-gray-400"}>{count}</span>
+              <span className={active ? "text-white/60" : "text-gray-600"}>{count}</span>
             </Link>
           );
         })}

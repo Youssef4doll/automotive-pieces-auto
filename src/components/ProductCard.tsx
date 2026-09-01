@@ -121,7 +121,7 @@ export default function ProductCard({ product }: { product: CardProduct }) {
             as a broken layout. They wrap as whole units instead. */}
         <div className="mt-auto pt-2 flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
           {product.compareAtPrice && product.compareAtPrice > product.priceSell && (
-            <Price value={product.compareAtPrice} className="text-xs text-gray-400 line-through whitespace-nowrap" />
+            <Price value={product.compareAtPrice} className="text-xs text-gray-600 line-through whitespace-nowrap" />
           )}
           <Price value={product.priceSell} className="text-xl font-heading font-extrabold text-navy-950 whitespace-nowrap" />
         </div>

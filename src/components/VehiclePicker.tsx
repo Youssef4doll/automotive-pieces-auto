@@ -68,7 +68,7 @@ export default function VehiclePicker({
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2 text-sm">
             <button
-              className={`py-2.5 px-1.5 -my-2.5 -ms-1.5 ${step === "make" ? "font-bold text-navy-900" : "text-gray-400"}`}
+              className={`py-2.5 px-1.5 -my-2.5 -ms-1.5 ${step === "make" ? "font-bold text-navy-900" : "text-gray-600"}`}
               onClick={() => {
                 setStep("make");
                 setFilter("");
@@ -80,7 +80,7 @@ export default function VehiclePicker({
               <>
                 <span className="text-gray-300">›</span>
                 <button
-                  className={`py-2.5 px-1.5 -my-2.5 ${step === "model" ? "font-bold text-navy-900" : "text-gray-400"}`}
+                  className={`py-2.5 px-1.5 -my-2.5 ${step === "model" ? "font-bold text-navy-900" : "text-gray-600"}`}
                   onClick={() => {
                     setStep("model");
                     setFilter("");
@@ -117,11 +117,11 @@ export default function VehiclePicker({
         )}
 
         <div className="flex-1 overflow-y-auto p-2">
-          {loading && <p className="text-center text-gray-400 py-8 text-sm">Chargement…</p>}
+          {loading && <p className="text-center text-gray-600 py-8 text-sm">Chargement…</p>}
 
           {!loading && step === "make" && savedVehicles.length > 0 && !filter && (
             <div className="p-1 mb-3">
-              <p className="text-xs font-bold text-gray-400 uppercase mb-2">{t("garage.title")}</p>
+              <p className="text-xs font-bold text-gray-600 uppercase mb-2">{t("garage.title")}</p>
               <ul className="flex flex-col gap-2">
                 {savedVehicles.map((v) => {
                   const active = activeVehicle?.engineId === v.engineId;
@@ -146,7 +146,7 @@ export default function VehiclePicker({
                       <button
                         onClick={() => removeVehicle(v.engineId)}
                         aria-label={t("garage.remove")}
-                        className="shrink-0 w-11 rounded-lg border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 flex items-center justify-center"
+                        className="shrink-0 w-11 rounded-lg border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-200 flex items-center justify-center"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
@@ -156,7 +156,7 @@ export default function VehiclePicker({
                   );
                 })}
               </ul>
-              <p className="text-xs font-bold text-gray-400 uppercase mt-4 mb-2">{t("garage.addAnother")}</p>
+              <p className="text-xs font-bold text-gray-600 uppercase mt-4 mb-2">{t("garage.addAnother")}</p>
             </div>
           )}
 
@@ -191,7 +191,7 @@ export default function VehiclePicker({
                     className="w-full text-start px-3 py-3 rounded-lg border border-gray-200 hover:border-navy-700 flex items-center justify-between text-sm"
                   >
                     <span className="font-medium">{m.name}</span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-600">
                       {m.yearFrom}–{m.yearTo}
                     </span>
                   </button>
@@ -209,7 +209,7 @@ export default function VehiclePicker({
                     className="w-full text-start px-3 py-3 rounded-lg border border-gray-200 hover:border-navy-700 flex items-center justify-between text-sm"
                   >
                     <span className="font-medium">{e.name}</span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-600">
                       {e.fuel} {e.powerHp ? `· ${e.powerHp}ch` : ""}
                     </span>
                   </button>

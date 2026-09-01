@@ -54,7 +54,7 @@ export default function SupportCard({
           href={wa}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center justify-center gap-2 min-h-tap px-4 rounded-lg bg-green-600 hover:bg-green-500 text-white font-display font-bold uppercase text-xs tracking-wide"
+          className="flex items-center justify-center gap-2 min-h-tap px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white font-display font-bold uppercase text-xs tracking-wide"
         >
           <WhatsAppIcon /> Écrire sur WhatsApp
         </a>

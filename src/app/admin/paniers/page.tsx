@@ -101,12 +101,12 @@ export default async function AbandonedCartsPage() {
                           href={`https://wa.me/${phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(message)}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center min-h-tap-compact px-3 rounded-lg bg-green-600 text-white text-xs font-semibold"
+                          className="inline-flex items-center min-h-tap-compact px-3 rounded-lg bg-green-700 text-white text-xs font-semibold"
                         >
                           WhatsApp
                         </a>
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        <span className="text-xs text-gray-600">—</span>
                       )}
                     </td>
                   </tr>
@@ -117,7 +117,7 @@ export default async function AbandonedCartsPage() {
         </div>
       )}
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-gray-600">
         Un panier est considéré abandonné après {STALE_MINUTES} minutes sans modification. Le numéro WhatsApp de la
         boutique est {settings.shop_whatsapp}.{" "}
         <Link href="/admin/analytics" className="underline inline-flex items-center min-h-tap-compact">

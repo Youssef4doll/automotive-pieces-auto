@@ -61,7 +61,7 @@ export default function ReorderButton({ items }: { items: ReorderItem[] }) {
       <button
         onClick={reorder}
         disabled={available.length === 0}
-        className="inline-flex items-center gap-1.5 min-h-tap px-4 rounded-lg bg-navy-900 hover:bg-navy-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-display font-bold uppercase text-xs tracking-wide"
+        className="inline-flex items-center gap-1.5 min-h-tap px-4 rounded-lg bg-navy-900 hover:bg-navy-800 disabled:bg-gray-200 disabled:text-gray-600 text-white font-display font-bold uppercase text-xs tracking-wide"
       >
         Commander à nouveau
       </button>

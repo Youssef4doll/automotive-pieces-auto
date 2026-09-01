@@ -170,7 +170,7 @@ export default function SearchSuggest({
                 <span className="block text-[14px] text-navy-950 leading-tight truncate">{s.label}</span>
                 {s.hint && <span className="block text-[12px] text-gray-500 truncate">{s.hint}</span>}
               </span>
-              <span className="shrink-0 text-[11px] uppercase tracking-wide text-gray-400">
+              <span className="shrink-0 text-[11px] uppercase tracking-wide text-gray-600">
                 {KIND_LABEL[s.kind]}
               </span>
             </button>

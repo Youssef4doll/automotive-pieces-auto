@@ -120,7 +120,7 @@ export default async function VehicleFamilyPage({ params }: { params: Params }) 
                 className="inline-flex items-center gap-2 min-h-tap-compact px-3 rounded-full border border-gray-300 bg-white text-sm text-gray-700 hover:border-navy-300"
               >
                 {f.name}
-                <span className="text-xs text-gray-400">{f.productCount}</span>
+                <span className="text-xs text-gray-600">{f.productCount}</span>
               </Link>
             ))}
           </div>

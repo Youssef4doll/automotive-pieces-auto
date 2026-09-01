@@ -188,7 +188,7 @@ function Dot({
     <span
       className={`${size} rounded-full grid place-items-center text-[11px] font-bold shrink-0 transition-colors ${
         state === "done"
-          ? "bg-green-600 text-white"
+          ? "bg-green-700 text-white"
           : state === "current"
             ? "bg-gold-500 text-navy-950 ring-4 ring-gold-500/25"
             : "bg-white text-slate-300 border-2 border-slate-200"

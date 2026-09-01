@@ -55,7 +55,7 @@ export default function ProductActions({
     <div className="flex flex-col gap-4">
       {compatible === true && (
         <div className="rounded-xl bg-green-50 border border-green-200 p-3.5 sm:p-4 flex items-center gap-3">
-          <span className="shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center motion-safe:animate-[check-pop_450ms_ease-out]">
+          <span className="shrink-0 w-8 h-8 rounded-full bg-green-700 text-white flex items-center justify-center motion-safe:animate-[check-pop_450ms_ease-out]">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
               <path d="M5 13l4 4L19 7" />
             </svg>
@@ -120,7 +120,7 @@ export default function ProductActions({
             target="_blank"
             rel="noreferrer"
             onClick={() => track("whatsapp_clicked", { source: "product_out_of_stock", sku: product.sku })}
-            className="flex items-center justify-center gap-2 min-h-tap-primary rounded-lg bg-green-600 hover:bg-green-700 text-white font-display font-bold uppercase tracking-wide text-sm"
+            className="flex items-center justify-center gap-2 min-h-tap-primary rounded-lg bg-green-700 hover:bg-green-800 text-white font-display font-bold uppercase tracking-wide text-sm"
           >
             {t("product.checkAvailability")}
           </a>

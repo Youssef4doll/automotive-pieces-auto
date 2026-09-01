@@ -40,7 +40,7 @@ export default function MegaMenu({
             >
               <span className="truncate">{family.name}</span>
               <span className="shrink-0 flex items-baseline gap-1.5">
-                <span className="text-[11px] font-normal tabular-nums text-gray-400">
+                <span className="text-[11px] font-normal tabular-nums text-gray-600">
                   {family.children.length}
                 </span>
                 <span className="text-[9px] opacity-50 rtl:rotate-180">▶</span>
@@ -73,7 +73,7 @@ export default function MegaMenu({
                     {/* Beside the name, not pushed to the far edge: these
                         columns are wide, and justify-between stranded the
                         number 400px from the label it belongs to. */}
-                    <span className="shrink-0 text-[12px] tabular-nums text-gray-400">({sub.count})</span>
+                    <span className="shrink-0 text-[12px] tabular-nums text-gray-600">({sub.count})</span>
                   </Link>
                 ))}
               </div>

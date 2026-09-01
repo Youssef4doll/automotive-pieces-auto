@@ -14,7 +14,7 @@ export function FamiliesFooter({ whatsapp }: { whatsapp: string | null }) {
         target="_blank"
         rel="noreferrer"
         onClick={() => track("whatsapp_clicked", { source: "families_footer" })}
-        className="inline-flex items-center gap-2 px-4 min-h-tap rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-display font-bold uppercase tracking-wide shrink-0"
+        className="inline-flex items-center gap-2 px-4 min-h-tap rounded-lg bg-green-700 hover:bg-green-800 text-white text-sm font-display font-bold uppercase tracking-wide shrink-0"
       >
         {t("families.describe")}
       </a>

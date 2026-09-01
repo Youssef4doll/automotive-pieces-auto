@@ -174,7 +174,7 @@ function NoResults({
           <a
             href={contactHref}
             {...contactLinkProps(contactHref)}
-            className="flex items-center gap-3 min-h-tap px-4 rounded-lg bg-green-600 hover:bg-green-500 text-white font-semibold text-sm"
+            className="flex items-center gap-3 min-h-tap px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white font-semibold text-sm"
           >
             <span aria-hidden="true">💬</span>
             {contactLabel}

@@ -55,7 +55,7 @@ export default function BrandManager({ brands }: { brands: AdminBrand[] }) {
             <div className="flex items-center gap-2 px-3 py-2 flex-wrap">
               <span className="flex-1 min-w-0">
                 <span className="font-heading font-bold uppercase text-navy-950">{b.name}</span>
-                <span className="text-xs text-gray-400"> /{b.slug} · {b.productCount} prod.</span>
+                <span className="text-xs text-gray-600"> /{b.slug} · {b.productCount} prod.</span>
                 {!b.isPartsBrand && <span className="ms-2 text-[11px] text-gray-500">(marque véhicule)</span>}
               </span>
               <div className="flex items-center gap-1 shrink-0">

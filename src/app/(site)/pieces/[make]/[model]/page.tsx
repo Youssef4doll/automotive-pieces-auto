@@ -124,7 +124,7 @@ export default async function VehiclePage({ params }: { params: Params }) {
                 className="flex items-center justify-between gap-2 min-h-tap px-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-navy-900/35 transition-colors"
               >
                 <span className="text-sm font-semibold text-navy-950 truncate">{f.name}</span>
-                <span className="text-xs text-gray-400 shrink-0">{f.productCount}</span>
+                <span className="text-xs text-gray-600 shrink-0">{f.productCount}</span>
               </Link>
             ))}
           </div>
@@ -152,8 +152,8 @@ export default async function VehiclePage({ params }: { params: Params }) {
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 bg-white text-sm text-gray-700"
               >
                 {e.name}
-                {e.powerHp && <span className="text-gray-400">{e.powerHp} ch</span>}
-                {e.engineCode && <span className="font-mono text-xs text-gray-400">{e.engineCode}</span>}
+                {e.powerHp && <span className="text-gray-600">{e.powerHp} ch</span>}
+                {e.engineCode && <span className="font-mono text-xs text-gray-600">{e.engineCode}</span>}
               </li>
             ))}
           </ul>

@@ -82,7 +82,7 @@ export default async function MakePage({ params }: { params: Params }) {
             className="flex items-center justify-between gap-2 min-h-tap px-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-navy-900/35 transition-colors"
           >
             <span className="text-sm font-semibold text-navy-950 truncate">{m.modelName}</span>
-            <span className="text-xs text-gray-400 shrink-0">{m.productCount}</span>
+            <span className="text-xs text-gray-600 shrink-0">{m.productCount}</span>
           </Link>
         ))}
       </div>

@@ -79,7 +79,7 @@ export default async function SourcesPage() {
               { label: "Avec photo réelle", value: withPhotos, sub: `${pct(withPhotos)} %` },
             ].map((s) => (
               <div key={s.label} className="rounded-xl border border-gray-200 bg-white p-4">
-                <dt className="text-[11px] font-display font-bold uppercase tracking-wide text-gray-400">
+                <dt className="text-[11px] font-display font-bold uppercase tracking-wide text-gray-600">
                   {s.label}
                 </dt>
                 <dd className="mt-1 text-2xl font-heading font-extrabold text-navy-950 tabular-nums">

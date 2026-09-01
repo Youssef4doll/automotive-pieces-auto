@@ -113,7 +113,7 @@ export default function HelpCenter({ faqs, whatsapp, orderRef }: { faqs: Faq[]; 
           href={contactLink({ whatsapp, email: null }, message)}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-2 min-h-tap px-6 rounded-xl bg-green-600 hover:bg-green-500 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"
+          className="inline-flex items-center gap-2 min-h-tap px-6 rounded-xl bg-green-700 hover:bg-green-800 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"
         >
           <IconWhatsApp /> Écrire sur WhatsApp
         </a>

@@ -76,9 +76,9 @@ export default function CategoryManager({ families }: { families: AdminCategory[
                   className="flex items-center gap-2 min-h-tap flex-1 min-w-0 text-start"
                   aria-expanded={open}
                 >
-                  <span className={`text-gray-400 transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+                  <span className={`text-gray-600 transition-transform ${open ? "rotate-90" : ""}`}>›</span>
                   <span className="font-heading font-bold uppercase text-navy-950 truncate">{f.name}</span>
-                  <span className="text-xs text-gray-400 shrink-0">
+                  <span className="text-xs text-gray-600 shrink-0">
                     /{f.slug} · {f.children.length} sous-cat. · {f.productCount} prod.
                   </span>
                 </button>
@@ -103,7 +103,7 @@ export default function CategoryManager({ families }: { families: AdminCategory[
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="flex-1 min-w-0 text-sm text-gray-700 truncate">
                           {c.name}
-                          <span className="text-xs text-gray-400"> /{c.slug} · {c.productCount} prod.</span>
+                          <span className="text-xs text-gray-600"> /{c.slug} · {c.productCount} prod.</span>
                         </span>
                         <div className="flex items-center gap-1 shrink-0">
                           <IconBtn label="Monter" disabled={ci === 0 || pending} onClick={() => run(() => moveCategory(c.id, "up"))}>↑</IconBtn>

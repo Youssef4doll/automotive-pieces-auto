@@ -212,7 +212,7 @@ function PreviewTable({
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm table-fixed min-w-[640px]">
-          <thead className="text-[11px] uppercase text-gray-400">
+          <thead className="text-[11px] uppercase text-gray-600">
             <tr>
               <th className="text-start px-4 py-2 w-14">Ligne</th>
               <th className="text-start px-2 py-2 w-28">Réf.</th>
@@ -225,7 +225,7 @@ function PreviewTable({
           <tbody className="divide-y divide-gray-100">
             {rows.map((r) => (
               <tr key={r.line}>
-                <td className="px-4 py-2 text-gray-400 tabular-nums">{r.line}</td>
+                <td className="px-4 py-2 text-gray-600 tabular-nums">{r.line}</td>
                 <td className="px-2 py-2 font-mono text-xs truncate">{r.sku || "—"}</td>
                 <td className="px-2 py-2 truncate">{r.name || "—"}</td>
                 <td className="px-2 py-2 text-end tabular-nums">{r.priceSell ?? "—"}</td>
@@ -238,7 +238,7 @@ function PreviewTable({
                     <span key={w} className="block text-amber-600">{w}</span>
                   ))}
                   {r.errors.length === 0 && r.warnings.length === 0 && (
-                    <span className="text-gray-400">{r.refCount} référence(s)</span>
+                    <span className="text-gray-600">{r.refCount} référence(s)</span>
                   )}
                 </td>
               </tr>

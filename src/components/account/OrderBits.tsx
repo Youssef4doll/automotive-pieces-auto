@@ -144,7 +144,7 @@ export function HelpPanel({ contact, orderRef }: { contact: ShopContact; orderRe
             href={contactLink({ whatsapp: contact.whatsapp, email: contact.email ?? null }, message)}
             target="_blank"
             rel="noreferrer"
-            className="flex-1 inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"
+            className="flex-1 inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-xl bg-green-700 hover:bg-green-800 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"
           >
             <IconWhatsApp />{" "}
             {contact.whatsapp ? "Écrire sur WhatsApp" : "Nous écrire"}

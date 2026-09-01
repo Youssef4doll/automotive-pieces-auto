@@ -270,7 +270,7 @@ export default function CheckoutForm({
               </button>
               <button type="button" disabled className="p-3 rounded-lg border-2 border-gray-100 text-start opacity-50 cursor-not-allowed">
                 <p className="font-semibold text-sm">{t("checkout.card")}</p>
-                <p className="text-xs text-gray-400">{t("checkout.cardSoon")}</p>
+                <p className="text-xs text-gray-600">{t("checkout.cardSoon")}</p>
               </button>
             </div>
           </fieldset>

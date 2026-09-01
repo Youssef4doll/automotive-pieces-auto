@@ -350,7 +350,7 @@ export default function HeaderClient({
                 {t("nav.about")}
               </Link>
               <div className="h-px bg-gray-200 my-2" />
-              <p className="px-3 text-xs font-semibold text-gray-400 normal-case">{t("nav.products")}</p>
+              <p className="px-3 text-xs font-semibold text-gray-600 normal-case">{t("nav.products")}</p>
               {menu.map((family) => {
                 const expanded = expandedFamily === family.id;
                 return (
@@ -397,7 +397,7 @@ export default function HeaderClient({
                   href={contactUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-3 py-3 rounded-lg bg-green-600 text-white text-sm font-bold text-center mt-2"
+                  className="px-3 py-3 rounded-lg bg-green-700 text-white text-sm font-bold text-center mt-2"
                 >
                   WhatsApp{phone && <> · <span dir="ltr">{phone}</span></>}
                 </a>

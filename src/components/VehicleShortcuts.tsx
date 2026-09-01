@@ -40,12 +40,12 @@ export default async function VehicleShortcuts({ take = 12 }: { take?: number })
             className="flex items-center justify-between gap-2 min-h-tap px-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-navy-900/35 transition-colors"
           >
             <span className="min-w-0">
-              <span className="block text-xs uppercase tracking-wide text-gray-400 truncate">
+              <span className="block text-xs uppercase tracking-wide text-gray-600 truncate">
                 {v.makeName}
               </span>
               <span className="block text-sm font-semibold text-navy-950 truncate">{v.modelName}</span>
             </span>
-            <span className="text-xs text-gray-400 shrink-0">{v.productCount}</span>
+            <span className="text-xs text-gray-600 shrink-0">{v.productCount}</span>
           </Link>
         ))}
       </div>

@@ -39,7 +39,7 @@ export default function CartPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-navy-900">{item.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{t("product.reference")} {item.sku}</p>
+              <p className="text-xs text-gray-600 mt-0.5">{t("product.reference")} {item.sku}</p>
               {/* flex-wrap: the 44px tap targets on the stepper make this row's
                   minimum width exceed a 320px screen, so let the price drop to
                   its own line there rather than forcing the page to scroll. */}

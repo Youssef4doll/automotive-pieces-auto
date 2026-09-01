@@ -80,7 +80,7 @@ export default async function SearchPage({
             can see it was read as a timing kit rather than wonder why belts
             came back. */}
         {parsed.canonical.length > 0 && (
-          <span className="text-gray-400"> · compris comme : {parsed.canonical.join(", ")}</span>
+          <span className="text-gray-600"> · compris comme : {parsed.canonical.join(", ")}</span>
         )}
       </p>
 

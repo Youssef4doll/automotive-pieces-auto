@@ -145,14 +145,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         <div>
           {product.brand && (
-            <span className="text-xs font-bold text-gray-400 uppercase">{product.brand.name}</span>
+            <span className="text-xs font-bold text-gray-600 uppercase">{product.brand.name}</span>
           )}
           <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mt-1 mb-2 tracking-tight">{product.name}</h1>
-          <p className="text-xs text-gray-400 mb-3">Réf. {product.sku}</p>
+          <p className="text-xs text-gray-600 mb-3">Réf. {product.sku}</p>
 
           <div className="flex items-baseline gap-3 mb-3">
             {product.compareAtPrice && product.compareAtPrice > product.priceSell && (
-              <Price value={product.compareAtPrice} className="text-gray-400 line-through" />
+              <Price value={product.compareAtPrice} className="text-gray-600 line-through" />
             )}
             <Price value={product.priceSell} className="text-2xl font-extrabold text-navy-900" />
           </div>
@@ -231,7 +231,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                     <span className="w-1.5 h-1.5 rounded-full bg-gold-500 shrink-0" />
                     <span className="truncate">{item.name}</span>
                   </Link>
-                  <Price value={item.price} className="shrink-0 text-gray-400" />
+                  <Price value={item.price} className="shrink-0 text-gray-600" />
                 </li>
               ))}
             </ul>

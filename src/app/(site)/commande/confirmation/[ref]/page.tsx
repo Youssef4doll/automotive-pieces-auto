@@ -39,7 +39,7 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
       <div className="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-3xl mx-auto mb-5">✓</div>
       <h1 className="text-2xl font-heading font-extrabold uppercase text-navy-950 mb-2 tracking-tight">Commande confirmée !</h1>
       <p className="text-gray-600 mb-1">Merci pour votre confiance. Nous préparons votre commande.</p>
-      <p className="text-sm text-gray-400 mb-6">
+      <p className="text-sm text-gray-600 mb-6">
         Numéro de commande : <span className="font-mono font-bold text-navy-900" dir="ltr">{order.ref}</span>
       </p>
 
@@ -47,7 +47,7 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
           now?". Showing the same tracker their account page uses answers it
           here, at the moment it is asked, instead of making them go looking. */}
       <section className="text-start p-4 rounded-xl border border-gray-200 bg-white mb-4">
-        <h2 className="text-[11px] font-display font-bold uppercase tracking-[0.14em] text-gray-400 mb-3">
+        <h2 className="text-[11px] font-display font-bold uppercase tracking-[0.14em] text-gray-600 mb-3">
           Suivi de votre commande
         </h2>
         <OrderTracker

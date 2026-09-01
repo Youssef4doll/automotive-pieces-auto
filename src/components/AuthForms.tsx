@@ -77,7 +77,7 @@ export default function AuthForms() {
                 <button type="button" onClick={() => setTab("signup")} className="inline-flex items-center justify-center min-h-tap text-xs text-navy-900 underline">
                   {t("account.switchToSignup")}
                 </button>
-                <p className="text-[11px] text-gray-400 mt-2">
+                <p className="text-[11px] text-gray-600 mt-2">
                   Démo admin : admin@automotive-pieces-auto.tn / admin1234
                 </p>
               </form>
