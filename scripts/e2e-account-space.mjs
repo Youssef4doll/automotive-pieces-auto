@@ -203,7 +203,9 @@ await p.waitForTimeout(1100);
 body = await p.locator("main").innerText();
 check("real account fields are shown", body.includes("Sami Trabelsi") && body.includes(EMAIL));
 check("the delivery address comes from the last order", /7 Rue Espace/.test(body));
-check("logout is available", (await p.locator('main button:has-text("Déconnexion")').count()) === 1);
+// Two of them now — one in the navigation rail, one in the Session card — so
+// the control is reachable whether the customer scans the nav or the page.
+check("logout is available", (await p.locator('main button:has-text("Se déconnecter")').count()) >= 1);
 
 console.log("\n[11] DESKTOP GETS AN APPLICATION SHELL");
 const desk = await browser.newContext({ viewport: { width: 1440, height: 900 }, storageState: await ctx.storageState() });

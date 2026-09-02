@@ -24,7 +24,7 @@ export default async function VehicleShortcuts({ take = 12 }: { take?: number })
         <p className="text-xs font-display font-bold uppercase tracking-wide text-red-600 mb-1">
           Acheter pour ma voiture
         </p>
-        <h2 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 tracking-tight">
+        <h2 className="text-xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight">
           Les véhicules que nous couvrons
         </h2>
         <p className="text-sm text-gray-500 mt-1.5 max-w-prose">

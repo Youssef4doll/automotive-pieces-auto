@@ -117,14 +117,34 @@ console.log("\n[3] ADMIN UPLOADS A MAKE LOGO");
   }
 }
 
-console.log("\n[6] DESKTOP HEADINGS ARE NO LONGER OVERSIZED");
+console.log("\n[6] THE FAMILY TILES ARE PICTURE-LED");
 {
   const shop = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
   await shop.goto(BASE);
-  await shop.waitForTimeout(800);
-  const heroSize = await shop.locator("h1").first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-  check("the hero heading shrank off its old 60px", heroSize < 50, `${heroSize}px`);
-  check("but is still a clear headline, not body text", heroSize >= 28, `${heroSize}px`);
+  await shop.waitForTimeout(1200);
+  const card = shop.locator(`button:has-text("${family.name}")`).first();
+  await card.scrollIntoViewIfNeeded();
+  await shop.waitForTimeout(500);
+
+  // The picture sits above the label, not beside it — that is the whole shape
+  // of this layout, and it is the thing a stray flex-direction would undo.
+  const geo = await card.evaluate((el) => {
+    const pic = el.querySelector("img")?.getBoundingClientRect();
+    const label = el.querySelector("span.line-clamp-2")?.getBoundingClientRect();
+    return pic && label ? { picBottom: pic.bottom, labelTop: label.top, picW: pic.width, cardW: el.getBoundingClientRect().width } : null;
+  });
+  check("the picture is above the name, not beside it", geo && geo.picBottom <= geo.labelTop + 1, JSON.stringify(geo));
+  check("and it fills most of the tile", geo && geo.picW > geo.cardW * 0.6, geo && `${Math.round(geo.picW)}px of ${Math.round(geo.cardW)}px`);
+
+  const cols = await shop.locator('button[aria-controls^="subs-"]').first().evaluate(
+    (el) => getComputedStyle(el.parentElement).gridTemplateColumns.split(" ").length,
+  );
+  check("six across on a wide screen", cols === 6, `${cols} columns`);
+
+  // Tapping a tile still opens its subcategories in place.
+  await card.click();
+  await shop.waitForTimeout(400);
+  check("tapping a tile still opens its subcategories", (await shop.locator('[id^="subs-"] a').count()) > 0);
   await shop.close();
 }
 

@@ -8,7 +8,6 @@ import { prisma } from "@/lib/prisma";
 import { toNumber, formatTNDfr } from "@/lib/money";
 import { contactFrom, getOrderCounts } from "@/lib/data/account";
 import AccountShell from "@/components/account/AccountShell";
-import { initialsOf } from "@/lib/initials";
 import OrderTracker from "@/components/account/OrderTracker";
 import ReorderButton, { type ReorderItem } from "@/components/ReorderButton";
 import { StatusBadge, NEXT_STEP, HelpPanel } from "@/components/account/OrderBits";
@@ -73,7 +72,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
       subtitle={new Date(order.createdAt).toLocaleDateString("fr-FR", {
         day: "numeric", month: "long", year: "numeric",
       })}
-      initials={initialsOf(user.name)}
+      user={{ name: user.name, email: user.email, role: user.role }}
       orderCount={counts.total}
       activeOrders={counts.active}
       whatsapp={contact.whatsapp}

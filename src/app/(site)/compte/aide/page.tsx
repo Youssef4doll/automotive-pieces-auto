@@ -4,7 +4,6 @@ import { getSettings } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 import { getOrderCounts, contactFrom } from "@/lib/data/account";
 import AccountShell from "@/components/account/AccountShell";
-import { initialsOf } from "@/lib/initials";
 import HelpCenter, { type Faq } from "@/components/account/HelpCenter";
 
 export const metadata = { title: "Aide & contact" };
@@ -76,7 +75,7 @@ export default async function HelpPage() {
     <AccountShell
       title="Comment pouvons-nous vous aider ?"
       subtitle={`Une vraie personne vous répond. ${contact.hours}`}
-      initials={initialsOf(user.name)}
+      user={{ name: user.name, email: user.email, role: user.role }}
       orderCount={counts.total}
       activeOrders={counts.active}
       whatsapp={contact.whatsapp}

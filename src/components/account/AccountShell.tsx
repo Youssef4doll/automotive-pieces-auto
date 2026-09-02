@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { contactLink } from "@/lib/contact-link";
+import { initialsOf } from "@/lib/initials";
+import AccountMenu, { LogoutButton, type AccountUser } from "./AccountMenu";
 import {
   IconHome, IconOrders, IconCar, IconHelp, IconUser, IconPackage, IconWhatsApp,
 } from "./icons";
@@ -37,7 +39,7 @@ const ITEMS: Item[] = [
 export default function AccountShell({
   title,
   subtitle,
-  initials,
+  user,
   orderCount,
   activeOrders,
   whatsapp,
@@ -46,7 +48,8 @@ export default function AccountShell({
 }: {
   title: string;
   subtitle?: string;
-  initials: string;
+  /** Who is signed in — drives the identity card, the avatar and the menu. */
+  user: AccountUser;
   /** Lifetime orders — context on the rail, not a call to action. */
   orderCount?: number;
   /** Orders still in flight. The only count worth badging. */
@@ -59,6 +62,7 @@ export default function AccountShell({
   const pathname = usePathname();
   const isActive = (i: Item) => (i.exact ? pathname === i.href : pathname?.startsWith(i.href));
   const bottom = ITEMS.filter((i) => i.bottom);
+  const initials = initialsOf(user.name);
 
   return (
     <div className="bg-white min-h-screen">
@@ -66,6 +70,24 @@ export default function AccountShell({
         <div className="lg:grid lg:grid-cols-[236px_1fr] lg:gap-8 xl:gap-10">
           {/* ---------- desktop rail ---------- */}
           <aside className="hidden lg:flex lg:flex-col sticky top-28 self-start max-h-[calc(100vh-8rem)]">
+            {/* Who is signed in, said plainly at the top of the rail. Without
+                it the only clue was two letters in a circle, which is not an
+                answer to "am I in the right account?". */}
+            <Link
+              href="/compte/profil"
+              className="flex items-center gap-3 mb-4 p-2.5 rounded-xl border border-slate-200 bg-white hover:border-navy-900/30 transition-colors"
+            >
+              <span className="shrink-0 w-10 h-10 rounded-full bg-navy-900 text-white grid place-items-center font-display font-bold text-sm tracking-wide">
+                {initials}
+              </span>
+              <span className="min-w-0 leading-tight">
+                <span className="block text-sm font-semibold text-navy-950 truncate">{user.name}</span>
+                <span className="block text-xs text-slate-500 truncate" dir="ltr">
+                  {user.email}
+                </span>
+              </span>
+            </Link>
+
             <nav aria-label="Espace client" className="flex flex-col gap-1">
               {ITEMS.map((item) => {
                 const active = isActive(item);
@@ -108,6 +130,10 @@ export default function AccountShell({
                 </span>
               </span>
             </a>
+
+            <div className="mt-2 pt-2 border-t border-slate-200">
+              <LogoutButton />
+            </div>
           </aside>
 
           {/* ---------- content ---------- */}
@@ -122,13 +148,7 @@ export default function AccountShell({
 
               <div className="flex items-center gap-2 shrink-0">
                 {action}
-                <Link
-                  href="/compte/profil"
-                  aria-label="Mon profil"
-                  className="w-tap h-11 rounded-full bg-slate-100 border border-slate-200 text-navy-900 grid place-items-center font-display font-bold text-sm tracking-wide hover:bg-slate-200 transition-colors"
-                >
-                  {initials}
-                </Link>
+                <AccountMenu user={user} initials={initials} />
               </div>
             </header>
 

@@ -5,7 +5,6 @@ import { getSettings } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 import { getOrderCounts, contactFrom, getBuyAgain } from "@/lib/data/account";
 import AccountShell from "@/components/account/AccountShell";
-import { initialsOf } from "@/lib/initials";
 import BuyAgain from "@/components/account/BuyAgain";
 import { IconPackage } from "@/components/account/icons";
 
@@ -27,7 +26,7 @@ export default async function MyPartsPage() {
     <AccountShell
       title="Mes pièces"
       subtitle="Tout ce que vous avez déjà commandé, prêt à être racheté."
-      initials={initialsOf(user.name)}
+      user={{ name: user.name, email: user.email, role: user.role }}
       orderCount={counts.total}
       activeOrders={counts.active}
       whatsapp={contact.whatsapp}

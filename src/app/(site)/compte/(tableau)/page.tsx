@@ -6,7 +6,6 @@ import { toNumber, formatTNDfr } from "@/lib/money";
 import { getBuyAgain, getShoppableFamilies, getOrderCounts, contactFrom } from "@/lib/data/account";
 import AuthForms from "@/components/AuthForms";
 import AccountShell from "@/components/account/AccountShell";
-import { initialsOf } from "@/lib/initials";
 import OrderTracker from "@/components/account/OrderTracker";
 import QuickActions from "@/components/account/QuickActions";
 import GarageSection from "@/components/account/GarageSection";
@@ -53,7 +52,7 @@ export default async function AccountPage() {
     <AccountShell
       title={`Bonjour, ${firstName} 👋`}
       subtitle="Voici ce qui se passe avec votre voiture et vos commandes."
-      initials={initialsOf(user.name)}
+      user={{ name: user.name, email: user.email, role: user.role }}
       orderCount={counts.total}
       activeOrders={counts.active}
       whatsapp={contact.whatsapp}

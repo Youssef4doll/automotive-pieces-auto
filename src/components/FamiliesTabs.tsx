@@ -18,22 +18,31 @@ type Family = {
 /**
  * The family card's picture slot.
  *
- * Always the same size whether or not a photo exists, so the grid stays even
- * as the shop fills in pictures family by family — a card with a photo should
- * not sit taller or narrower than the one next to it that doesn't have one
- * yet.
+ * A fixed square that reserves its space whether or not a photo exists, so the
+ * grid stays even as the shop fills these in family by family — a card with a
+ * photo should not sit taller than the one next to it that doesn't have one
+ * yet, and the row should not reflow as the images decode.
+ *
+ * object-contain, not cover: these are part photographs shot on white, and
+ * cropping a brake disc to fill a square is how you end up showing a grey
+ * rectangle.
  */
 function FamilyThumb({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
-  if (imageUrl) {
-    return (
-      <span className="relative shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-white">
-        <Image src={imageUrl} alt="" fill sizes="40px" className="object-cover" />
-      </span>
-    );
-  }
   return (
-    <span className="shrink-0 w-10 h-10 rounded-lg bg-white/70 text-navy-900/25 font-display font-extrabold text-lg flex items-center justify-center">
-      {name[0]?.toUpperCase() ?? "?"}
+    <span className="relative block w-full aspect-square rounded-lg overflow-hidden">
+      {imageUrl ? (
+        <Image
+          src={imageUrl}
+          alt=""
+          fill
+          sizes="(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 150px"
+          className="object-contain"
+        />
+      ) : (
+        <span className="absolute inset-0 grid place-items-center bg-gray-50 text-navy-900/20 font-display font-extrabold text-3xl">
+          {name[0]?.toUpperCase() ?? "?"}
+        </span>
+      )}
     </span>
   );
 }
@@ -90,13 +99,15 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
       </div>
 
       {tab === "fam" ? (
-        // One column through the whole phone range: a thumbnail, a name and
-        // the chevron badge don't fit two-up on a phone without truncating
-        // every family name to five or six letters, which defeats the point
-        // of a browsable list. Two columns waits for `sm` (tablet width and
-        // up, the same breakpoint the rest of the site's grids use), where
-        // there is enough room to keep names readable.
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        // Picture-led tiles: the photo is what a shopper recognises when they
+        // don't know the French name for the part they are holding. Two up on
+        // the narrowest phones and six across on a wide screen, so sixteen
+        // families read as one browsable board rather than a long list.
+        //
+        // grid-cols-N compiles to repeat(N, minmax(0, 1fr)) — the zero floor is
+        // what keeps a long unbroken name from widening its own track and, with
+        // it, the page.
+        <div className="grid grid-cols-2 min-[380px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-2.5">
           {families.map((f) => {
             const open = openFamily === f.slug;
             return (
@@ -110,32 +121,35 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
                   aria-expanded={open}
                   aria-controls={`subs-${f.slug}`}
                   onClick={() => setOpenFamily(open ? null : f.slug)}
-                  className={`flex items-center gap-3 p-4 rounded-xl border text-start transition min-h-[76px] ${
+                  className={`group relative flex flex-col items-center gap-2 p-2.5 sm:p-3 rounded-xl border bg-white text-center transition ${
                     open
-                      ? "border-gold-500 bg-[#fffdf4]"
-                      : "border-navy-900/10 bg-gray-50 hover:border-gold-500 hover:bg-[#fffdf4] hover:-translate-y-0.5"
+                      ? "border-gold-500 bg-[#fffdf4] ring-1 ring-gold-500"
+                      : "border-navy-900/10 hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5"
                   }`}
                 >
                   <FamilyThumb name={f.name} imageUrl={f.imageUrl} />
-                  <div className="flex-1 min-w-0 flex flex-col gap-1">
-                    {/* truncate, not wrap: a two-column card at 320px leaves so
-                        little room next to the thumbnail and the chevron that
-                        an unbreakable name ("Préchauffage") could force the
-                        row wider than the card — an ellipsis degrades safely,
-                        a forced-wide row does not. */}
-                    <span className="truncate font-display font-bold uppercase tracking-wide text-[15px] text-navy-950 leading-tight">
-                      {f.name}
-                    </span>
-                    <span className="truncate text-xs text-navy-900/50">
-                      {f.children.length} <T k="families.subcats" />
-                    </span>
-                  </div>
+
+                  {/* The names run long ("Transmission et embrayage") and the
+                      tile is narrow, so they wrap and are clamped to two lines
+                      rather than truncated at the first word. `anywhere` is the
+                      backstop for the single words that are wider than the tile
+                      on a 320px screen. */}
+                  <span className="w-full min-w-0 line-clamp-2 [overflow-wrap:anywhere] font-display font-bold uppercase tracking-wide text-[12px] sm:text-[13px] text-navy-950 leading-tight">
+                    {f.name}
+                  </span>
+                  <span className="text-[12px] text-navy-900/50 leading-none">
+                    {f.children.length} <T k="families.subcats" />
+                  </span>
+
+                  {/* Corner badge rather than a row item: the tile is a column
+                      now, and a chevron under the name would read as another
+                      line of text instead of "this opens". */}
                   <span
-                    className={`shrink-0 w-7 h-7 rounded-full border border-navy-900/10 flex items-center justify-center text-red-500 transition-transform duration-200 motion-reduce:transition-none ${
+                    className={`absolute top-1.5 end-1.5 w-5 h-5 rounded-full border border-navy-900/10 bg-white flex items-center justify-center text-red-500 transition-transform duration-200 motion-reduce:transition-none ${
                       open ? "rotate-90 border-gold-500" : ""
                     }`}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                       <path d="M8 5l8 7-8 7" />
                     </svg>
                   </span>

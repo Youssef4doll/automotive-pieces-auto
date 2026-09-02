@@ -133,12 +133,8 @@ console.log("\n[4] DESKTOP IS NOT COLLATERAL DAMAGE");
   await dp.waitForTimeout(800);
   const after = await dp.evaluate(() => Math.round(document.querySelector(".sticky.top-0").getBoundingClientRect().height));
   check("the secondary bar stays put on desktop", after === before, `${before}px → ${after}px`);
-  // Desktop was intentionally taken down from a 60px poster headline to 36px —
-  // see Hero.tsx — because next to a dense catalogue layout it read as an ad
-  // banner, not a storefront. What this check actually protects is that the
-  // mobile-only clamp (28px) never leaks into the desktop breakpoint.
   const h1 = await dp.evaluate(() => getComputedStyle(document.querySelector("h1")).fontSize);
-  check("desktop heading is clearly larger than the mobile clamp", parseFloat(h1) >= 32, h1);
+  check("desktop headings keep their size", parseFloat(h1) >= 48, h1);
   await d.close();
 }
 

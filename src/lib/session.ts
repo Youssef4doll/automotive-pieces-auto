@@ -70,7 +70,22 @@ export async function createSession(payload: SessionPayload) {
 
 export async function destroySession() {
   const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
+  // Overwrite with the same attributes rather than `delete()`.
+  //
+  // `delete()` emits `Set-Cookie: __Host-apa_session=; Max-Age=0; Path=/` with
+  // no `Secure` flag — and a `__Host-`-prefixed cookie without `Secure` is
+  // invalid, so the browser throws the header away and keeps the cookie it
+  // already has. The customer was told they had signed out, landed on the home
+  // page, and was still fully signed in; their next visit to /compte walked
+  // straight back into the account. On a shared or borrowed phone that is the
+  // whole point of the button failing silently.
+  cookieStore.set(COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
 }
 
 async function readSession(): Promise<SessionPayload | null> {

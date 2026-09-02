@@ -8,7 +8,6 @@ import { prisma } from "@/lib/prisma";
 import { toNumber, formatTNDfr } from "@/lib/money";
 import { contactFrom } from "@/lib/data/account";
 import AccountShell from "@/components/account/AccountShell";
-import { initialsOf } from "@/lib/initials";
 import OrderTracker from "@/components/account/OrderTracker";
 import ReorderButton, { type ReorderItem } from "@/components/ReorderButton";
 import { StatusBadge, NEXT_STEP, HelpPanel } from "@/components/account/OrderBits";
@@ -64,7 +63,7 @@ export default async function OrdersPage({
     <AccountShell
       title="Mes commandes"
       subtitle="Suivez, consultez et recommandez vos achats."
-      initials={initialsOf(user.name)}
+      user={{ name: user.name, email: user.email, role: user.role }}
       orderCount={orders.length}
       activeOrders={counts.encours}
       whatsapp={contact.whatsapp}

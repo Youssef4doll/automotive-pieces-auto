@@ -8,7 +8,7 @@ export default function B2BBand({ contactUrl }: { contactUrl: string }) {
       <div className="mx-auto max-w-7xl px-4 py-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
         <div>
           <Eyebrow k="b2b.eyebrow" className="text-xs font-display font-bold uppercase tracking-wide text-gold-500 mb-1.5" />
-          <h2 className="font-heading font-extrabold uppercase text-xl sm:text-2xl text-white tracking-tight">
+          <h2 className="font-heading font-extrabold uppercase text-xl sm:text-3xl text-white tracking-tight">
             <T k="b2b.title" />
           </h2>
           <p className="text-white/60 text-sm mt-1">

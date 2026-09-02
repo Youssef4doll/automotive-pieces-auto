@@ -22,7 +22,7 @@ export default async function CategoryGrid() {
           <Eyebrow k="families.eyebrow" />
           <SectionHeading
             k="families.title"
-            className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 tracking-tight"
+            className="text-xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight"
           />
         </div>
         <p className="text-sm text-gray-500 max-w-md">
