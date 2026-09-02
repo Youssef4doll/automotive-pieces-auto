@@ -72,10 +72,19 @@ export const useCart = create<CartState>()(
       },
       remove: (productId) =>
         set({ items: get().items.filter((i) => i.productId !== productId) }),
+      // Clamped at both ends, not just the bottom. `add` already capped at
+      // stockQty, but the "+" on the cart page and in the drawer go through
+      // here, so a shopper could walk 6 units in stock up to any number they
+      // liked. Nothing was ever oversold — placeOrder claims stock atomically
+      // — but the refusal arrived after they had typed their name, phone and
+      // address, which is the worst possible moment to hear it. The cap is the
+      // store's job because both steppers share it.
       setQty: (productId, qty) =>
         set({
           items: get().items.map((i) =>
-            i.productId === productId ? { ...i, qty: Math.max(1, qty) } : i
+            i.productId === productId
+              ? { ...i, qty: Math.min(Math.max(1, qty), i.stockQty || 99) }
+              : i
           ),
         }),
       clear: () => set({ items: [] }),

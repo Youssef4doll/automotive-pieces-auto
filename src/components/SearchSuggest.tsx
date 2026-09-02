@@ -19,6 +19,36 @@ const KIND_LABEL: Record<Suggestion["kind"], string> = {
 };
 
 /**
+ * Answers already fetched in this tab, keyed by the exact query.
+ *
+ * Typing is not a straight line: people overshoot and backspace, and every
+ * character they delete used to cost another round trip before the list came
+ * back. Shared across every mounted search box (the hero, the header, the
+ * phone overlay) so moving between them starts warm, and module-level so it
+ * survives the components unmounting.
+ */
+const CACHE = new Map<string, Suggestion[]>();
+/** Enough for a long session of typing; old entries are dropped in order. */
+const CACHE_MAX = 120;
+
+function remember(q: string, items: Suggestion[]) {
+  if (CACHE.has(q)) CACHE.delete(q);
+  CACHE.set(q, items);
+  if (CACHE.size > CACHE_MAX) CACHE.delete(CACHE.keys().next().value as string);
+}
+
+/**
+ * How long to wait after a keystroke before asking the server.
+ *
+ * The endpoint answers in 10-20ms, so the debounce was the whole of the
+ * perceived delay: 160ms meant the list arrived a beat after the customer had
+ * stopped typing and started reading. 70ms still collapses a fast typist's
+ * burst into one request but lands inside the window where the list feels like
+ * it was already there.
+ */
+const DEBOUNCE_MS = 70;
+
+/**
  * Type-ahead for the search boxes.
  *
  * Every row is a real product, category, brand or reference from the catalogue
@@ -52,7 +82,8 @@ export default function SearchSuggest({
 
   // Debounced so typing a reference does not fire a request per character,
   // and aborted on the next keystroke so a slow reply cannot overwrite a
-  // newer one.
+  // newer one. A query already answered in this tab skips both and paints
+  // synchronously — backspacing through a word should not feel like new work.
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) {
@@ -60,19 +91,30 @@ export default function SearchSuggest({
       setOpen(false);
       return;
     }
+
+    const cached = CACHE.get(q);
+    if (cached) {
+      setItems(cached);
+      setActive(-1);
+      setOpen(cached.length > 0);
+      return;
+    }
+
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`, { signal: controller.signal });
         if (!res.ok) return;
         const data = (await res.json()) as { suggestions: Suggestion[] };
-        setItems(data.suggestions ?? []);
+        const list = data.suggestions ?? [];
+        remember(q, list);
+        setItems(list);
         setActive(-1);
-        setOpen((data.suggestions ?? []).length > 0);
+        setOpen(list.length > 0);
       } catch {
         /* aborted or offline: leave the previous list alone */
       }
-    }, 160);
+    }, DEBOUNCE_MS);
 
     return () => {
       clearTimeout(timer);

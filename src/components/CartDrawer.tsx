@@ -160,8 +160,9 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
                         </button>
                         <span className="w-8 text-center text-sm font-semibold">{item.qty}</span>
                         <button
-                          className="w-tap h-tap text-base font-bold"
+                          className="w-tap h-tap text-base font-bold disabled:opacity-30 disabled:cursor-not-allowed"
                           aria-label={t("cart.increase")}
+                          disabled={item.qty >= item.stockQty}
                           onClick={() => setQty(item.productId, item.qty + 1)}
                         >
                           +
@@ -171,6 +172,9 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
                         <Price value={item.unitPrice * item.qty} />
                       </span>
                     </div>
+                    {item.qty >= item.stockQty && (
+                      <p className="text-xs text-gray-600 mt-1">{item.stockQty} en stock</p>
+                    )}
                   </div>
                   <button
                     onClick={() => remove(item.productId)}

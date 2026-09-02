@@ -36,7 +36,28 @@ export type Suggestion = {
   hint?: string;
 };
 
+/**
+ * The suggestions depend on the query and the catalogue, never on who is
+ * asking — no session, no cart, nothing personal — so they are safe to cache
+ * shared. A minute of staleness costs at most a minute before a newly
+ * published part turns up in the type-ahead, and it takes the repeat traffic
+ * of a whole shop's worth of people typing "filtre" off the database.
+ */
+const CACHE_HEADER = "public, max-age=30, s-maxage=60, stale-while-revalidate=300";
+
 export async function GET(request: NextRequest) {
+  try {
+    return await suggest(request);
+  } catch (err) {
+    // A type-ahead must never be the thing that breaks the page. If the
+    // database is unreachable, the box stays a plain search box; the customer
+    // presses Enter and gets the results page's own error handling.
+    console.error("suggest failed", err);
+    return NextResponse.json({ suggestions: [] }, { headers: { "Cache-Control": "no-store" } });
+  }
+}
+
+async function suggest(request: NextRequest) {
   const gate = hit(await callerKey("suggest"), LIMITS.suggest.limit, LIMITS.suggest.windowMs);
   if (!gate.ok) {
     return NextResponse.json(
@@ -141,5 +162,8 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ suggestions: suggestions.slice(0, 10) });
+  return NextResponse.json(
+    { suggestions: suggestions.slice(0, 10) },
+    { headers: { "Cache-Control": CACHE_HEADER } },
+  );
 }

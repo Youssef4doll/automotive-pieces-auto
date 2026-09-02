@@ -4,6 +4,7 @@
 // box layout for the categories/makes that don't have one yet.
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
+import { waitForAdmin } from "./lib/wait-for-admin.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const PICS = process.env.PICS_DIR;
@@ -23,7 +24,7 @@ await admin.goto(`${BASE}/compte`);
 await admin.fill('input[name="email"]', "admin@automotive-pieces-auto.tn");
 await admin.fill('input[name="password"]', "admin1234");
 await admin.getByRole("button", { name: "Se connecter", exact: true }).click();
-await admin.waitForURL(`${BASE}/admin`, { timeout: 20000 });
+await waitForAdmin(admin, BASE);
 
 const family = await prisma.category.findFirst({ where: { parentId: null }, select: { id: true, name: true } });
 

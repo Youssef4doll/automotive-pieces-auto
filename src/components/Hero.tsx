@@ -24,7 +24,11 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
   }
 
   return (
-    <section className="bg-navy-900 text-white overflow-hidden">
+    // No overflow-hidden here. It was clipping the search suggestions at the
+    // hero's bottom edge — the list appeared, then got sliced in half by the
+    // brands band underneath it. The parts artwork it was guarding is
+    // object-contain inside a fixed-height box and does not overflow anyway.
+    <section className="bg-navy-900 text-white">
       <div className="mx-auto max-w-7xl px-4 py-7 sm:py-16 grid lg:grid-cols-2 gap-6 sm:gap-10 items-center">
         {/* min-w-0: this is a grid item, and a grid item's default min-width
             is auto — its own content's intrinsic width, not the track's. The

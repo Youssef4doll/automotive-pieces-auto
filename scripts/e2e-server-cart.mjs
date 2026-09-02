@@ -4,6 +4,7 @@
 // Also: the order timeline must carry the moment each step happened.
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
+import { waitForAdmin } from "./lib/wait-for-admin.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const prisma = new PrismaClient();
@@ -142,7 +143,7 @@ await admin.goto(`${BASE}/compte`);
 await admin.fill('input[name="email"]', "admin@automotive-pieces-auto.tn");
 await admin.fill('input[name="password"]', "admin1234");
 await admin.getByRole("button", { name: "Se connecter", exact: true }).click();
-await admin.waitForURL(`${BASE}/admin`, { timeout: 15000 });
+await waitForAdmin(admin, BASE);
 await admin.goto(`${BASE}/admin/paniers`);
 await admin.waitForTimeout(1200);
 const adminBody = await admin.locator("main").innerText();
@@ -186,6 +187,46 @@ await laptop.waitForTimeout(1200);
 const accountBody = await laptop.locator("main").innerText();
 check("the account page shows the progress, not just a badge",
       /Confirmée/.test(accountBody) && /\d{2}:\d{2}/.test(accountBody));
+
+console.log("\n[8] THE BASKET CANNOT BE WALKED PAST THE SHELF");
+{
+  // The "+" used to have no ceiling: a shopper could build a basket of twelve
+  // against six in stock and only be refused at the last step of checkout,
+  // after typing their name, phone and address. Nothing was ever oversold —
+  // placeOrder claims stock atomically — but the refusal came far too late.
+  const scarce = await prisma.product.findFirst({
+    where: { active: true, stockQty: { gt: 0, lt: 15 }, sku: { not: { startsWith: "PACK-" } } },
+    select: { slug: true, stockQty: true, name: true },
+  });
+  if (!scarce) {
+    console.log("  SKIP  nothing in the catalogue is scarce enough to test against");
+  } else {
+    const shopper = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await shopper.goto(`${BASE}/produit/${scarce.slug}`);
+    await shopper.waitForTimeout(900);
+    await shopper.locator('button:has-text("Ajouter au panier")').first().click();
+    await shopper.waitForTimeout(800);
+    await shopper.goto(`${BASE}/panier`);
+    await shopper.waitForTimeout(1200);
+
+    const plus = shopper.locator('button[aria-label*="ugmenter"], button[aria-label*="ncrease"]').first();
+    for (let i = 0; i < scarce.stockQty + 6; i++) {
+      if (await plus.isDisabled().catch(() => true)) break;
+      await plus.click({ timeout: 3000 }).catch(() => {});
+      await shopper.waitForTimeout(60);
+    }
+    await shopper.waitForTimeout(600);
+
+    const qty = await shopper.evaluate(
+      () => JSON.parse(localStorage.getItem("apa-cart") || "{}")?.state?.items?.[0]?.qty ?? 0,
+    );
+    check("the quantity stops at what is on the shelf", qty <= scarce.stockQty,
+          `${qty} in the basket, ${scarce.stockQty} in stock`);
+    check("and the button says so instead of ignoring the tap", await plus.isDisabled());
+    check("with the real figure named", (await shopper.locator("main").innerText()).includes(`${scarce.stockQty} en stock`));
+    await shopper.close();
+  }
+}
 
 await cleanup();
 await browser.close();

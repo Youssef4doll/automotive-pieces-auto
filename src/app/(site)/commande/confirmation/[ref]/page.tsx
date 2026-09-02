@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOrderByRef } from "@/app/actions/orders";
-import { getCurrentUser } from "@/lib/session";
-import { placedInThisBrowser } from "@/lib/order-access";
 import { toNumber } from "@/lib/money";
 import Price from "@/components/Price";
 import type { Metadata } from "next";
@@ -24,15 +22,13 @@ export async function generateMetadata({
 
 export default async function ConfirmationPage({ params }: { params: Promise<{ ref: string }> }) {
   const { ref } = await params;
+  // References are sequential and printed on this very page, so knowing one
+  // proves nothing. getOrderByRef returns the order only to the customer who
+  // owns it or the browser that placed it — the check lives inside the lookup
+  // rather than here, because that file is "use server" and every export in it
+  // is reachable on its own, page guard or no page guard.
   const order = await getOrderByRef(ref);
   if (!order) notFound();
-
-  // References are sequential and printed on this very page, so knowing one
-  // proves nothing. Either you are signed in as the customer, or you are the
-  // browser that placed it — otherwise this order is not found for you.
-  const user = await getCurrentUser();
-  const mine = (user && order.userId === user.id) || (await placedInThisBrowser(order.id));
-  if (!mine) notFound();
 
   return (
     <div className="mx-auto max-w-xl px-4 py-16 text-center">

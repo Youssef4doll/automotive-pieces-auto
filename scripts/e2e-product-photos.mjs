@@ -3,6 +3,7 @@
 // and shown to shoppers on the card, the product page and the cart.
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
+import { waitForAdmin } from "./lib/wait-for-admin.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const PICS = process.env.PICS_DIR;
@@ -30,7 +31,7 @@ await page.goto(`${BASE}/compte`);
 await page.fill('input[name="email"]', "admin@automotive-pieces-auto.tn");
 await page.fill('input[name="password"]', "admin1234");
 await page.getByRole("button", { name: "Se connecter", exact: true }).click();
-await page.waitForURL(`${BASE}/admin`, { timeout: 15000 });
+await waitForAdmin(page, BASE);
 
 console.log("\n[1] BEFORE: THE PRODUCT USES THE SHARED STATIC IMAGE");
 {

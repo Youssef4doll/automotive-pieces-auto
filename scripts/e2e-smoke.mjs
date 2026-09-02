@@ -5,6 +5,7 @@
 // Usage: start the app (npm run dev or npm run build && npm run start) on
 // port 3500, then: node scripts/e2e-smoke.mjs
 import { chromium } from "playwright";
+import { waitForAdmin } from "./lib/wait-for-admin.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3500";
 
@@ -53,7 +54,7 @@ async function main() {
   await adminPage.fill('input[name="email"]', "admin@automotive-pieces-auto.tn");
   await adminPage.fill('input[name="password"]', "admin1234");
   await adminPage.getByRole("button", { name: "Se connecter", exact: true }).click();
-  await adminPage.waitForURL(`${BASE}/admin`, { timeout: 10000 });
+  await waitForAdmin(adminPage, BASE);
   console.log("✓ Admin logged in, landed on dashboard");
 
   await adminPage.goto(`${BASE}/admin/commandes`);

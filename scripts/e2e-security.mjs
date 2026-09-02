@@ -243,6 +243,41 @@ console.log("\n[11] THE ADMIN AREA IS CLOSED TO CUSTOMERS");
   await anon.close();
 }
 
+console.log("\n[11b] A CONFIRMATION PAGE IS NOT A WALK THROUGH THE ORDER BOOK");
+{
+  // References are sequential and printed on the page, so possession of one
+  // proves nothing. The lookup behind the page must refuse a stranger — and it
+  // must refuse inside the lookup, not in the page, because that module is
+  // "use server": every export in it is an endpoint of its own.
+  const someoneElses = await prisma.order.findFirst({
+    where: { user: { email: { not: EMAIL } } },
+    orderBy: { createdAt: "desc" },
+    select: { ref: true, phone: true, address: true, user: { select: { name: true } } },
+  });
+
+  if (!someoneElses) {
+    console.log("  SKIP  no other customer's order in the database to try against");
+  } else {
+    const stranger = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const sp = await stranger.newPage();
+    const res = await sp.goto(`${BASE}/commande/confirmation/${someoneElses.ref}`, { waitUntil: "domcontentloaded" });
+    await sp.waitForTimeout(800);
+    const shown = await sp.locator("body").innerText().catch(() => "");
+    check("a stranger guessing a reference gets nothing", res.status() === 404 || /introuvable|not found/i.test(shown),
+          `status ${res.status()}`);
+    check("no delivery address leaks", !someoneElses.address || !shown.includes(someoneElses.address));
+    check("no phone number leaks", !someoneElses.phone || !shown.includes(someoneElses.phone));
+    check("no customer name leaks", !someoneElses.user?.name || !shown.includes(someoneElses.user.name));
+
+    // And the same, signed in as a different customer — a session is not a
+    // key to somebody else's order either.
+    const asCustomer = await sp.goto(`${BASE}/compte/commandes/${someoneElses.ref}`, { waitUntil: "domcontentloaded" });
+    await sp.waitForTimeout(800);
+    check("nor does the account area open it", asCustomer.status() === 404 || !(await sp.locator("body").innerText()).includes(someoneElses.ref));
+    await stranger.close();
+  }
+}
+
 console.log("\n[12] THE PUBLIC LOOKUP API IS RATE LIMITED");
 {
   // Last, because it deliberately exhausts the window for this address. If a

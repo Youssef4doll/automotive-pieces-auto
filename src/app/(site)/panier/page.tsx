@@ -53,9 +53,12 @@ export default function CartPage() {
                     −
                   </button>
                   <span className="w-8 text-center text-sm font-semibold">{item.qty}</span>
+                  {/* Disabled at the shelf's limit rather than swallowing the
+                      tap: a "+" that does nothing reads as a broken button. */}
                   <button
-                    className="w-tap h-tap font-bold text-lg"
+                    className="w-tap h-tap font-bold text-lg disabled:opacity-30 disabled:cursor-not-allowed"
                     aria-label={t("cart.increase")}
+                    disabled={item.qty >= item.stockQty}
                     onClick={() => setQty(item.productId, item.qty + 1)}
                   >
                     +
@@ -63,6 +66,11 @@ export default function CartPage() {
                 </div>
                 <Price value={item.unitPrice * item.qty} className="font-bold text-navy-900" />
               </div>
+              {item.qty >= item.stockQty && (
+                <p className="text-xs text-gray-600 mt-1.5">
+                  {item.stockQty} en stock — c&apos;est tout ce que nous avons pour le moment.
+                </p>
+              )}
             </div>
             <button
               onClick={() => remove(item.productId)}

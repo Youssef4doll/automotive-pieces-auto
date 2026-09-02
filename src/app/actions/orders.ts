@@ -8,7 +8,7 @@ import { getSettings } from "@/lib/settings";
 import { toNumber } from "@/lib/money";
 import { computeSegment } from "@/lib/segment";
 import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
-import { rememberOrder } from "@/lib/order-access";
+import { rememberOrder, placedInThisBrowser } from "@/lib/order-access";
 
 const itemSchema = z.object({
   // Prisma ids are cuids; bounding the string keeps a megabyte of junk out of
@@ -224,11 +224,33 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   }
 }
 
+/**
+ * One order, and only to someone entitled to see it.
+ *
+ * The ownership test lives here rather than in the page that calls it. This
+ * file is "use server", so every export is a callable endpoint in its own
+ * right — a check written in the page guards the page, not the function, and
+ * the data has already been read out of the database by the time that check
+ * runs. Since references are sequential and printed on the confirmation page
+ * (CMD-1042, CMD-1043), an unguarded lookup here is a walk through every
+ * customer's name, phone number and delivery address, one increment at a time.
+ *
+ * Entitled means: signed in as the order's owner, or holding the httpOnly
+ * cookie the checkout wrote — see lib/order-access. Anything else gets null,
+ * which the page turns into a 404, so a guessed reference cannot even be
+ * distinguished from one that does not exist.
+ */
 export async function getOrderByRef(ref: string) {
-  return prisma.order.findUnique({
+  const order = await prisma.order.findUnique({
     where: { ref },
     include: { items: true, history: { orderBy: { createdAt: "asc" } } },
   });
+  if (!order) return null;
+
+  const user = await getCurrentUser();
+  if (user && order.userId === user.id) return order;
+  if (await placedInThisBrowser(order.id)) return order;
+  return null;
 }
 
 export async function getMyOrders() {

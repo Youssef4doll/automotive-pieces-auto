@@ -36,6 +36,16 @@ export async function updateProfile(_prev: AccountState, formData: FormData): Pr
   const user = await getCurrentUser();
   if (!user) return { error: "Session expirée. Reconnectez-vous." };
 
+  // "Un compte existe déjà avec cet email" is a truthful answer to a real
+  // customer and an oracle to anyone scripting it: submit an address, learn
+  // whether it has an account here. Signup answers the same question, so the
+  // fix is a budget rather than a vaguer message — nobody edits their profile
+  // twenty times an hour, and a script cannot walk a mailing list through it.
+  const gate = hit(await callerKey(`profile:${user.id}`), 20, 60 * 60_000);
+  if (!gate.ok) {
+    return { error: `Trop de modifications. Réessayez dans ${Math.ceil(gate.retryAfter / 60)} minute(s).` };
+  }
+
   const parsed = profileSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),

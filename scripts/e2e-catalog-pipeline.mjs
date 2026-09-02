@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import { writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { waitForAdmin } from "./lib/wait-for-admin.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const prisma = new PrismaClient();
@@ -63,7 +64,7 @@ await admin.goto(`${BASE}/compte`);
 await admin.fill('input[name="email"]', "admin@automotive-pieces-auto.tn");
 await admin.fill('input[name="password"]', "admin1234");
 await admin.getByRole("button", { name: "Se connecter", exact: true }).click();
-await admin.waitForURL(`${BASE}/admin`, { timeout: 15000 });
+await waitForAdmin(admin, BASE);
 
 console.log("\n[1] UPLOAD AND VALIDATE — NOTHING WRITTEN YET");
 await admin.goto(`${BASE}/admin/import`);

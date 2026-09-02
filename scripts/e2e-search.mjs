@@ -5,6 +5,7 @@
 // which SQL ran.
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
+import { waitForAdmin } from "./lib/wait-for-admin.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const prisma = new PrismaClient();
@@ -170,7 +171,7 @@ console.log("\n[7] THE ADMIN SEES IT AS A BUYING LIST");
   await admin.fill('input[name="email"]', "admin@automotive-pieces-auto.tn");
   await admin.fill('input[name="password"]', "admin1234");
   await admin.getByRole("button", { name: "Se connecter", exact: true }).click();
-  await admin.waitForURL(`${BASE}/admin`, { timeout: 20000 });
+  await waitForAdmin(admin, BASE);
 
   await admin.goto(`${BASE}/admin/analytics`);
   await admin.waitForTimeout(800);
@@ -214,6 +215,49 @@ console.log("\n[8] SUGGESTIONS PREVIEW THE SEARCH THEY COME FROM");
 
   const fuzzy = await (await page.request.get(`${BASE}/api/suggest?q=plaquete`)).json();
   check("a misspelling still suggests", fuzzy.suggestions.length > 0, `${fuzzy.suggestions.length} rows`);
+
+  // Nothing personal goes into the answer, so it may be cached shared — which
+  // is what takes a whole shop typing "filtre" off the database.
+  const headers = (await page.request.get(`${BASE}/api/suggest?q=filtre`)).headers();
+  check("the answer is cacheable", /max-age/.test(headers["cache-control"] ?? ""), headers["cache-control"]);
+}
+
+console.log("\n[8b] THE TYPE-AHEAD IS FAST AND SITS ON TOP OF THE PAGE");
+{
+  await page.goto(`${BASE}/`);
+  await page.waitForTimeout(1200);
+
+  // The hero box, the one under the headline — it is the box that sits at the
+  // boundary between two sections, so it is the one that gets clipped.
+  const hero = page.locator("section form input[type=search]").first();
+  await hero.scrollIntoViewIfNeeded();
+  await hero.click();
+
+  const t0 = Date.now();
+  await hero.type("filtre", { delay: 25 });
+  await page.locator('[role="listbox"]').first().waitFor({ state: "visible", timeout: 8000 });
+  const shown = Date.now() - t0 - 6 * 25; // discount the typing itself
+  check("suggestions arrive within a beat of the last keystroke", shown < 400, `${shown}ms after typing`);
+
+  // The panel used to be sliced in half by the brands band: the hero carried
+  // overflow-hidden, so the list was clipped at the section's bottom edge.
+  const geo = await page.evaluate(() => {
+    const panel = document.querySelector('[role="listbox"]').closest("div");
+    const hero = panel.closest("section");
+    const pr = panel.getBoundingClientRect();
+    const hr = hero.getBoundingClientRect();
+    return { overhang: Math.round(pr.bottom - hr.bottom), rows: panel.querySelectorAll('[role="option"]').length };
+  });
+  check("the list is long enough to leave its section", geo.overhang > 0, `${geo.overhang}px past the hero`);
+  check("and every row of it is still rendered", geo.rows >= 5, `${geo.rows} rows`);
+
+  // Backspacing should not cost another round trip.
+  await hero.press("Backspace");
+  await page.waitForTimeout(30);
+  const t1 = Date.now();
+  await hero.type("e");
+  await page.waitForFunction(() => document.querySelectorAll('[role="option"]').length > 0, null, { timeout: 5000 });
+  check("re-typing a query already seen is instant", Date.now() - t1 < 150, `${Date.now() - t1}ms`);
 }
 
 console.log("\n[9] THE INDEX FOLLOWS THE CATALOGUE");
