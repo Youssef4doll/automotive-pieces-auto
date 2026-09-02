@@ -1,9 +1,9 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import ProductGallery from "@/components/ProductGallery";
 import FitConfidence from "@/components/FitConfidence";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getProductBySlug, getRelatedProducts } from "@/lib/data/catalog";
+import { getProductBySlug, getRelatedProducts, getProductSlugRedirect } from "@/lib/data/catalog";
 import { getSettings, publicContact } from "@/lib/settings";
 import Price from "@/components/Price";
 import ProductActions from "@/components/ProductActions";
@@ -63,7 +63,13 @@ export async function generateMetadata({
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  if (!product) notFound();
+  if (!product) {
+    // The part may simply have been renamed. A permanent redirect keeps the
+    // link that is already in Google and in customers' WhatsApp threads.
+    const moved = await getProductSlugRedirect(slug);
+    if (moved) permanentRedirect(`/produit/${moved}`);
+    notFound();
+  }
 
   const [related, settings] = await Promise.all([
     getRelatedProducts(product.categoryId, product.id, 4),

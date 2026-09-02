@@ -62,10 +62,25 @@ export async function updateProfile(_prev: AccountState, formData: FormData): Pr
     if (taken && taken.id !== user.id) return { error: "Un compte existe déjà avec cet email" };
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { name, email, phone: phone === "" ? null : phone },
-  });
+  // File what actually changed before overwriting it. Orders already carry the
+  // name they were placed under, so past business is never rewritten by a
+  // correction — this is the account's own trail, so "that is not the name I
+  // gave you" is a question the shop can answer.
+  const changes = [
+    { field: "name", oldValue: user.name, newValue: name },
+    { field: "email", oldValue: user.email, newValue: email },
+    { field: "phone", oldValue: user.phone ?? "", newValue: phone },
+  ].filter((c) => c.oldValue !== c.newValue);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: { name, email, phone: phone === "" ? null : phone },
+    }),
+    ...changes.map((c) =>
+      prisma.userProfileChange.create({ data: { ...c, userId: user.id, changedBy: "SELF" } }),
+    ),
+  ]);
 
   revalidatePath("/compte/profil");
   revalidatePath("/compte");

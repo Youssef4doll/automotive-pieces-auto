@@ -61,9 +61,36 @@ model User {
   updatedAt    DateTime  @updatedAt
   orders       Order[]
   reviews      Review[]
+  profileChanges UserProfileChange[]
 
   @@index([role])
   carts     Cart[]
+}
+
+/**
+ * Every edit to a customer's own details, kept as a record.
+ *
+ * An order already stores the name it was placed under, so history never
+ * silently rewrites itself when somebody corrects their name. This is the
+ * other half: who the account used to be, when it changed, and whether the
+ * customer did it or the shop did it for them over the phone. Without it,
+ * "that is not the name I gave you" is an argument nobody can settle.
+ */
+model UserProfileChange {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "name" | "email" | "phone"
+  field     String
+  oldValue  String
+  newValue  String
+  /// SELF when the customer edited their own profile, ADMIN when the shop did.
+  changedBy String   @default("SELF")
+  /// The admin's user id when changedBy is ADMIN, so the trail names a person.
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Brand {
@@ -185,6 +212,7 @@ model Product {
   importBatchId String?
 
   fitments      ProductFitment[]
+  oldSlugs      ProductSlugHistory[]
   references    PartReference[]
   cartItems     CartItem[]
   orderItems    OrderItem[]
@@ -211,6 +239,25 @@ enum Side {
 // Photos live in Postgres rather than on disk so they survive a redeploy and
 // work on hosts with a read-only filesystem, and so a database backup carries
 // the shop's pictures with it. Bytes are served by /api/images/[id].
+/**
+ * Addresses a product used to live at.
+ *
+ * Renaming a part rewrites its slug, which is right — /produit/plaquette-avant
+ * should not stay frozen at a typo forever. But the old address is already in
+ * Google's index, in WhatsApp messages between the shop and its customers, and
+ * in the browser history of everyone who bookmarked it. Each one is kept here
+ * so the product page can redirect instead of 404, permanently.
+ */
+model ProductSlugHistory {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
 model ProductImage {
   id        String   @id @default(cuid())
   productId String

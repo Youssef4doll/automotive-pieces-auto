@@ -51,7 +51,27 @@ const productSchema = z.object({
   active: z.coerce.boolean().optional(),
 });
 
-export type ProductFormState = { error?: string; ok?: boolean } | undefined;
+/**
+ * `values` carries back everything the admin typed.
+ *
+ * A rejected save used to hand back an empty form: React resets an
+ * uncontrolled form once its action settles, so one bad price wiped the
+ * references, the description and the fitments along with it. The form now
+ * repopulates from this, so a refusal costs one correction rather than the
+ * whole entry.
+ */
+export type ProductFormState =
+  | { error?: string; ok?: boolean; field?: string; values?: Record<string, string> }
+  | undefined;
+
+/** Everything the admin typed, minus the file inputs, so it can be given back. */
+function echoValues(formData: FormData): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of formData.entries()) {
+    if (typeof v === "string" && !k.startsWith("$")) out[k] = v;
+  }
+  return out;
+}
 
 function slugify(s: string) {
   return s
@@ -60,6 +80,62 @@ function slugify(s: string) {
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+/**
+ * A slug that is free to take.
+ *
+ * `slug` is unique, so two parts whose name and reference slugify the same way
+ * would collide and the save would fail with a Prisma error the admin cannot
+ * act on. A numeric suffix is added instead. Retired addresses count as taken:
+ * reusing one would send everyone following an old link to a different part,
+ * which is worse than a 404.
+ */
+async function uniqueProductSlug(source: string, keepId: string | null) {
+  const base = slugify(source) || "piece";
+  for (let n = 0; n < 50; n++) {
+    const candidate = n === 0 ? base : `${base}-${n + 1}`;
+    const [taken, retired] = await Promise.all([
+      prisma.product.findUnique({ where: { slug: candidate }, select: { id: true } }),
+      prisma.productSlugHistory.findUnique({ where: { slug: candidate }, select: { productId: true } }),
+    ]);
+    const freeForUs = (!taken || taken.id === keepId) && (!retired || retired.productId === keepId);
+    if (freeForUs) return candidate;
+  }
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+/**
+ * Photos attached to the form itself.
+ *
+ * They used to be reachable only after the product existed, so adding a part
+ * was always two visits: save it blind, find it in the list, open it again,
+ * then upload. Accepting them here makes "new product" one screen. Rejected
+ * files are reported but never fail the save — the part is already in the
+ * catalogue by then, and losing it to a bad JPEG would be the worse outcome.
+ */
+async function attachFormPhotos(productId: string, formData: FormData): Promise<string | null> {
+  const files = formData.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) return null;
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { name: true, _count: { select: { images: true } } },
+  });
+  if (!product) return null;
+
+  const room = 8 - product._count.images;
+  if (room <= 0) return "Maximum 8 photos par produit — les nouvelles n'ont pas été ajoutées.";
+
+  const rows = [];
+  let nextOrder = product._count.images;
+  for (const file of files.slice(0, room)) {
+    const read = await readImageFile(file);
+    if (!read.ok) return read.error;
+    rows.push({ productId, data: read.bytes, mimeType: read.mimeType, alt: product.name, order: nextOrder++ });
+  }
+  if (rows.length) await prisma.productImage.createMany({ data: rows });
+  return files.length > room ? `Seules ${room} photo(s) ont pu être ajoutées (8 maximum).` : null;
 }
 
 export async function upsertProduct(_prev: ProductFormState, formData: FormData): Promise<ProductFormState> {
@@ -71,18 +147,47 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
     active: raw.active === undefined ? true : raw.active === "on" || raw.active === "true",
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide" };
+    const issue = parsed.error.issues[0];
+    return {
+      error: issue?.message ?? "Formulaire invalide",
+      field: String(issue?.path?.[0] ?? ""),
+      values: echoValues(formData),
+    };
   }
   const data = parsed.data;
 
   let productId = data.id ?? "";
+  let photoWarning: string | null = null;
   try {
     if (data.id) {
+      // The slug follows the name. A part saved as "Plaquettes avnat" and then
+      // corrected kept the typo in its address forever, which is the one part
+      // of the record customers actually see and share. The old address is
+      // filed in ProductSlugHistory first, so every link already out there
+      // redirects instead of breaking.
+      const before = await prisma.product.findUnique({
+        where: { id: data.id },
+        select: { slug: true, name: true, sku: true },
+      });
+      const nextSlug = await uniqueProductSlug(`${data.name}-${data.sku}`, data.id);
+      const slugChanged = !!before && before.slug !== nextSlug;
+      if (slugChanged) {
+        await prisma.productSlugHistory.upsert({
+          where: { slug: before.slug },
+          create: { slug: before.slug, productId: data.id },
+          update: { productId: data.id },
+        });
+        // If the part is moving back to an address it used to hold, that row
+        // would now shadow the live page.
+        await prisma.productSlugHistory.deleteMany({ where: { slug: nextSlug } });
+      }
+
       await prisma.product.update({
         where: { id: data.id },
         data: {
           sku: data.sku,
           name: data.name,
+          ...(slugChanged ? { slug: nextSlug } : {}),
           categoryId: data.categoryId,
           brandId: data.brandId || null,
           description: data.description ?? "",
@@ -106,7 +211,7 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
         data: {
           sku: data.sku,
           name: data.name,
-          slug: slugify(`${data.name}-${data.sku}`),
+          slug: await uniqueProductSlug(`${data.name}-${data.sku}`, null),
           categoryId: data.categoryId,
           brandId: data.brandId || null,
           description: data.description ?? "",
@@ -127,15 +232,19 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
 
     await syncReferences(productId, "OEM", data.oemRefsText ?? "");
     await syncReferences(productId, "AFTERMARKET", data.aftermarketRefsText ?? "");
+    photoWarning = await attachFormPhotos(productId, formData);
     // Last, because it reads back the references that were just written. A
     // part that is saved but not indexed is a part nobody can search for.
     await reindexProducts([productId]);
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Erreur lors de l'enregistrement" };
+    return {
+      error: e instanceof Error ? e.message : "Erreur lors de l'enregistrement",
+      values: echoValues(formData),
+    };
   }
 
   revalidateProductSurfaces();
-  return { ok: true };
+  return { ok: true, error: photoWarning ?? undefined };
 }
 
 /**

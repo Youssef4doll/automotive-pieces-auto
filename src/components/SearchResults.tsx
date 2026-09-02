@@ -170,34 +170,38 @@ function NoResults({
           </p>
         )}
 
+        {/* Line icons rather than emoji. Emoji render as a different typeface
+            on every platform, carry colours nothing else on the page uses, and
+            read as chat rather than as a parts counter. These inherit the
+            text colour and the weight of the button they sit in. */}
         <div className="grid gap-2.5 sm:grid-cols-2 max-w-2xl mx-auto">
           <a
             href={contactHref}
             {...contactLinkProps(contactHref)}
             className="flex items-center gap-3 min-h-tap px-4 rounded-lg bg-green-700 hover:bg-green-800 text-white font-semibold text-sm"
           >
-            <span aria-hidden="true">💬</span>
+            <IconChat />
             {contactLabel}
           </a>
           <Link
             href="/compte/garage"
             className="flex items-center gap-3 min-h-tap px-4 rounded-lg border border-gray-300 bg-white text-navy-900 font-semibold text-sm hover:border-navy-700"
           >
-            <span aria-hidden="true">🚗</span>
+            <IconCar />
             Choisir ou changer de véhicule
           </Link>
           <Link
             href="/#finder"
             className="flex items-center gap-3 min-h-tap px-4 rounded-lg border border-gray-300 bg-white text-navy-900 font-semibold text-sm hover:border-navy-700"
           >
-            <span aria-hidden="true">🔢</span>
+            <IconHash />
             Chercher par référence
           </Link>
           <Link
             href="/#finder"
             className="flex items-center gap-3 min-h-tap px-4 rounded-lg border border-gray-300 bg-white text-navy-900 font-semibold text-sm hover:border-navy-700"
           >
-            <span aria-hidden="true">📷</span>
+            <IconCamera />
             Envoyer une photo de la carte grise
           </Link>
         </div>
@@ -222,5 +226,54 @@ function NoResults({
         </section>
       )}
     </div>
+  );
+}
+
+/* The four ways out of an empty result, drawn rather than typed as emoji. */
+
+function Stroke({ children }: { children: React.ReactNode }) {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function IconChat() {
+  return <Stroke><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-5A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4Z" /></Stroke>;
+}
+
+function IconCar() {
+  return (
+    <Stroke>
+      <path d="M5 17h14M4 17v-4.2L6 7h12l2 5.8V17" />
+      <path d="M4 17v2h3v-2M17 17v2h3v-2" />
+      <circle cx="7.5" cy="13.5" r=".8" />
+      <circle cx="16.5" cy="13.5" r=".8" />
+    </Stroke>
+  );
+}
+
+function IconHash() {
+  return <Stroke><path d="M10 3 8 21M16 3l-2 18M3.5 8.5h17M3 15.5h17" /></Stroke>;
+}
+
+function IconCamera() {
+  return (
+    <Stroke>
+      <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z" />
+      <circle cx="12" cy="13" r="3.4" />
+    </Stroke>
   );
 }

@@ -300,3 +300,21 @@ export async function getTopSubcategories(take = 3) {
       href: c.parent ? `/catalogue/${c.parent.slug}/${c.slug}` : `/catalogue/${c.slug}`,
     }));
 }
+
+/**
+ * The product a retired address used to point at.
+ *
+ * Renaming a part changes its slug, and every link already in Google, in a
+ * WhatsApp thread with a customer, or in somebody's bookmarks still carries
+ * the old one. The page checks here before giving up and redirects
+ * permanently, so a correction to a product name never costs the shop the
+ * traffic it had already earned.
+ */
+export async function getProductSlugRedirect(oldSlug: string) {
+  const row = await prisma.productSlugHistory.findUnique({
+    where: { slug: oldSlug },
+    select: { product: { select: { slug: true, active: true } } },
+  });
+  if (!row?.product?.active) return null;
+  return row.product.slug;
+}
