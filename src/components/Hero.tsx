@@ -10,17 +10,39 @@ import SearchSuggest from "@/components/SearchSuggest";
 
 export type Shortcut = { label: string; href: string };
 
+/** What the box is being asked: a part name, or a reference off the old part. */
+type Scope = "name" | "ref";
+
 export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
   const { t } = useLocale();
   const router = useRouter();
   const [q, setQ] = useState("");
+  const [scope, setScope] = useState<Scope>("name");
   const heroInputRef = useRef<HTMLInputElement>(null);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!q.trim()) return;
-    track("search_started", { query: q.trim(), source: "hero" });
-    router.push(`/recherche?q=${encodeURIComponent(q.trim())}`);
+    const value = q.trim();
+    if (!value) return;
+    track("search_started", { query: value, source: "hero", scope });
+
+    if (scope === "ref") {
+      // Straight to the part when the reference is one we stock. When it is
+      // not, fall through to the ordinary search rather than dead-ending —
+      // that page understands references too and offers the shop's own
+      // channel when it also comes up empty.
+      try {
+        const res = await fetch(`/api/reference?q=${encodeURIComponent(value)}`);
+        const data = await res.json();
+        if (data.found) {
+          router.push(`/produit/${data.slug}`);
+          return;
+        }
+      } catch {
+        /* offline or refused: the search page is still a good answer */
+      }
+    }
+    router.push(`/recherche?q=${encodeURIComponent(value)}`);
   }
 
   return (
@@ -43,22 +65,52 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
           <div className="mt-4 w-24 h-1.5 bg-red-500 rounded-full mx-auto lg:mx-0" />
           <p className="mt-5 text-white/70 text-base sm:text-lg">{t("hero.subtitle")}</p>
 
+          {/* Scope selector glued to the box, the way the big European parts
+              catalogues do it. A part number and a part name are different
+              questions: "GDB1330" typed into a name search competes with every
+              product whose description happens to contain a number, while the
+              reference lookup goes straight to the part. Defaulting to name
+              keeps it invisible for the majority who type words. */}
           <form onSubmit={submit} className="mt-6 relative">
             <div className="flex rounded-lg overflow-hidden shadow-lg bg-white">
-            <input
-              ref={heroInputRef}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              type="search"
-              autoComplete="off"
-              placeholder={t("hero.searchPlaceholder")}
-              className="flex-1 min-w-0 px-4 py-3.5 sm:py-4 bg-white text-navy-950 outline-none text-sm sm:text-base"
-            />
-            <button type="submit" className="px-5 sm:px-8 bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-sm sm:text-base tracking-wide">
-              {t("hero.searchCta")}
-            </button>
+              <label className="relative shrink-0 border-e border-gray-200">
+                <span className="sr-only">{t("hero.scopeLabel")}</span>
+                <select
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value as Scope)}
+                  className="h-full ps-3 pe-7 bg-white text-navy-950 text-sm font-semibold outline-none appearance-none cursor-pointer"
+                >
+                  <option value="name">{t("hero.scopeName")}</option>
+                  <option value="ref">{t("hero.scopeRef")}</option>
+                </select>
+                <svg
+                  width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="3" aria-hidden="true"
+                  className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-navy-900/45"
+                >
+                  <path d="m5 8 7 8 7-8" />
+                </svg>
+              </label>
+              <input
+                ref={heroInputRef}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                type="search"
+                autoComplete="off"
+                dir={scope === "ref" ? "ltr" : undefined}
+                placeholder={scope === "ref" ? "GDB1330 · 7701234567" : t("hero.searchPlaceholder")}
+                className={`flex-1 min-w-0 px-4 py-3.5 sm:py-4 bg-white text-navy-950 outline-none text-sm sm:text-base ${
+                  scope === "ref" ? "font-mono" : ""
+                }`}
+              />
+              <button type="submit" className="px-5 sm:px-8 bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-sm sm:text-base tracking-wide">
+                {t("hero.searchCta")}
+              </button>
             </div>
-            <SearchSuggest query={q} inputRef={heroInputRef} />
+            {/* Suggestions are for names. In reference mode the answer is a
+                single part or nothing, and a dropdown of near-misses would
+                just be noise over an exact lookup. */}
+            {scope === "name" && <SearchSuggest query={q} inputRef={heroInputRef} />}
           </form>
 
           {/* Real subcategories, biggest first, passed in from the server —

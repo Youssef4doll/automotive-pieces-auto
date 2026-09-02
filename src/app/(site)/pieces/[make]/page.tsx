@@ -23,7 +23,12 @@ async function load(params: Params) {
   const { make } = await params;
   const brand = await prisma.vehicleMake.findUnique({ where: { slug: make } });
   if (!brand) return null;
-  const models = (await listVehiclePages()).filter((v) => v.makeSlug === make);
+  // Alphabetical, not by stock depth. The list is read by somebody hunting
+  // for one specific model name, and "sorted by how many parts we happen to
+  // carry" is an order only the shop understands.
+  const models = (await listVehiclePages())
+    .filter((v) => v.makeSlug === make)
+    .sort((a, b) => a.modelName.localeCompare(b.modelName, "fr", { numeric: true }));
   if (models.length === 0) return null;
   return { brand, models, path: `/pieces/${make}` };
 }
@@ -74,18 +79,33 @@ export default async function MakePage({ params }: { params: Params }) {
         catalogue. Choisissez le vôtre pour ne voir que les pièces compatibles.
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-        {models.map((m) => (
-          <Link
-            key={m.modelSlug}
-            href={`${path}/${m.modelSlug}`}
-            className="flex items-center justify-between gap-2 min-h-tap px-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-navy-900/35 transition-colors"
-          >
-            <span className="text-sm font-semibold text-navy-950 truncate">{m.modelName}</span>
-            <span className="text-xs text-gray-600 shrink-0">{m.productCount}</span>
-          </Link>
-        ))}
-      </div>
+      {/* A list, not a grid of chips. Somebody looking for their car is
+          scanning for two things — the model name and whether the years match
+          the car on their drive — and a list reads down a column far faster
+          than boxes read across a grid. The years come from the vehicle
+          record; a model whose years nobody has entered simply shows none,
+          rather than a guessed range. */}
+      <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8">
+        {models.map((m) => {
+          const years = m.yearFrom ? `${m.yearFrom} – ${m.yearTo ?? "auj."}` : null;
+          return (
+            <li key={m.modelSlug} className="border-b border-gray-200">
+              <Link
+                href={`${path}/${m.modelSlug}`}
+                className="flex items-baseline gap-3 min-h-tap py-2 group"
+              >
+                <span className="w-24 shrink-0 text-xs text-gray-600 tabular-nums">
+                  {years ?? ""}
+                </span>
+                <span className="flex-1 min-w-0 text-sm font-semibold text-navy-700 group-hover:text-red-600 group-hover:underline underline-offset-2 truncate">
+                  {brand.name} {m.modelName}
+                </span>
+                <span className="shrink-0 text-xs text-gray-600 tabular-nums">{m.productCount}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

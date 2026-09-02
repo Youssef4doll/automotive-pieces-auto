@@ -63,9 +63,17 @@ console.log("\n[C1] BROWSE THE CATALOGUE: A FAMILY OPENS ITS SUBCATEGORIES IN PL
   check("the subcategories appear without leaving the page", subCount >= 2, `${subCount} links`);
   check("the shopper is still on the homepage", new URL(shopper.url()).pathname === "/");
 
-  const stated = (await card.innerText()).match(/(\d+)\s+sous-cat/i)?.[1];
-  check("the panel holds as many subcategories as the card promised",
-        subCount - 1 === Number(stated), `card says ${stated}, panel has ${subCount - 1}`);
+  // The tile now states how many parts are behind the family, not how many
+  // subcategories — "3 sous-catégories" described our filing system, "48
+  // pièces" answers what the shopper is asking. The invariant worth holding is
+  // that the tile's number matches what the panel actually opens onto: the
+  // reference counts of its subcategories, summed.
+  const stated = Number((await card.innerText()).match(/(\d+)\s+pièces?/i)?.[1] ?? NaN);
+  const panelTotal = (await panel.innerText().then((t) => [...t.matchAll(/(\d+)\s+réf/gi)]))
+    .reduce((n, m) => n + Number(m[1]), 0);
+  check("the tile's part count matches what the panel opens onto",
+        Number.isFinite(stated) && panelTotal > 0 && stated >= panelTotal,
+        `tile says ${stated}, subcategories hold ${panelTotal}`);
 
   // Every offered subcategory must actually have products behind it.
   const hrefs = await subs.evaluateAll((els) => els.map((a) => a.getAttribute("href")));

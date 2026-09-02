@@ -8,8 +8,10 @@
  * at real iPhone widths, not read off the source.
  */
 import { chromium } from "playwright";
+import { PrismaClient } from "@prisma/client";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
+const prisma = new PrismaClient();
 
 let pass = 0;
 let fail = 0;
@@ -28,7 +30,22 @@ const phone = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch:
 const ctx = await browser.newContext(phone);
 const p = await ctx.newPage();
 
-const PRODUCT = "/produit/kit-de-plaquettes-de-frein-avant-trw-gdb1330-br-4820";
+// Discovered, not hard-coded. A fixed slug worked until the rest of the
+// battery had bought that part out from under this suite — eighteen suites run
+// in sequence and several of them place real orders, so by the time this one
+// ran the "Ajouter au panier" button was legitimately disabled and a mobile-UX
+// suite failed for a reason that has nothing to do with mobile UX.
+const stocked = await prisma.product.findFirst({
+  where: { active: true, stockQty: { gt: 1 }, sku: { not: { startsWith: "PACK-" } } },
+  orderBy: { stockQty: "desc" },
+  select: { slug: true, name: true, stockQty: true },
+});
+if (!stocked) {
+  console.log("  SKIP  nothing in the catalogue is in stock to test against");
+  process.exit(0);
+}
+const PRODUCT = `/produit/${stocked.slug}`;
+console.log(`  (testing against ${stocked.name} — ${stocked.stockQty} in stock)`);
 
 console.log("\n[1] NO INPUT CAN TRIGGER iOS ZOOM");
 {
@@ -333,6 +350,14 @@ console.log("\n[12] TEXT MEETS THE CONTRAST FLOOR");
         if (!txt || txt.length < 2) continue;
         const cs = getComputedStyle(el);
         if (cs.visibility === "hidden" || cs.display === "none") continue;
+        // Screen-reader-only text is clipped to nothing on purpose — it has no
+        // visual appearance, so it has no contrast ratio to measure and a
+        // reading of 1:1 says only that the probe found the clip. Detected by
+        // what sr-only actually does rather than by class name: a box clipped
+        // away, or one collapsed to a pixel.
+        const box = el.getBoundingClientRect();
+        const clipped = /inset\(50%\)|rect\(0(px)?[, ]/.test(cs.clipPath + " " + cs.clip);
+        if (clipped || box.width <= 1 || box.height <= 1) continue;
         const rect = el.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) continue;
         const fg = lumOf(cs.color), bg = bgLum(el);
@@ -361,6 +386,7 @@ console.log("\n[12] TEXT MEETS THE CONTRAST FLOOR");
 }
 
 await browser.close();
+await prisma.$disconnect();
 
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

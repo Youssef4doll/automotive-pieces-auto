@@ -28,8 +28,12 @@ async function main() {
 
   // 2. Add a product to the cart from its product page.
   await customerPage.goto(`${BASE}/produit/kit-de-plaquettes-de-frein-avant-trw-gdb1330-br-4820`);
-  await customerPage.waitForSelector("text=Ajouter au panier");
-  await customerPage.click('button:has-text("Ajouter au panier")');
+  // The first enabled one, not simply the first. Out-of-stock parts render
+  // the same button disabled — correctly — and after a full battery of suites
+  // has placed real orders, the top of a listing is often exactly that.
+  const BUYABLE = 'button:has-text("Ajouter au panier"):not([disabled])';
+  await customerPage.waitForSelector(BUYABLE, { timeout: 20000 });
+  await customerPage.click(BUYABLE);
   await customerPage.waitForTimeout(500);
   console.log("✓ Added to cart");
 

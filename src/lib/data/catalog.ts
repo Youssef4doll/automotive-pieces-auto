@@ -26,9 +26,19 @@ export async function getMegaMenu() {
     },
   });
 
-  return families
-    .map((f) => ({ ...f, children: f.children.filter((c) => c._count.products > 0) }))
-    .filter((f) => f.children.length > 0 || f._count.products > 0);
+  return (
+    families
+      .map((f) => ({ ...f, children: f.children.filter((c) => c._count.products > 0) }))
+      .filter((f) => f.children.length > 0 || f._count.products > 0)
+      // How many parts are actually behind this tile — its own plus everything
+      // in its subcategories. The number of subcategories told the shopper
+      // about our filing system; the number of parts tells them whether it is
+      // worth opening. Counted from the catalogue, never rounded up.
+      .map((f) => ({
+        ...f,
+        productCount: f._count.products + f.children.reduce((n, c) => n + c._count.products, 0),
+      }))
+  );
 }
 
 /** The full tree, empty branches included — for the admin, never the storefront. */

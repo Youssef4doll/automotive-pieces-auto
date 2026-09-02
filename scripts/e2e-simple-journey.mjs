@@ -219,6 +219,90 @@ try {
     check("and the part really is in the basket", qty > 0, `${qty} line(s)`);
     await p.close();
   }
+
+  console.log("\n[8] THE BOARD OF FAMILIES SAYS WHAT IS BEHIND EACH TILE");
+  {
+    const p = await freshPhone();
+    await p.goto(BASE);
+    await p.waitForTimeout(1500);
+    await p.locator("#symptomes").scrollIntoViewIfNeeded();
+    await p.waitForTimeout(900);
+
+    const board = p.locator("#symptomes");
+    const tiles = board.locator('button[aria-controls^="subs-"]');
+    const n = await tiles.count();
+    check("every family is a tile", n > 5, `${n} families`);
+
+    // The count is parts, not our filing structure, and it matches the
+    // catalogue rather than being decorative.
+    const first = await tiles.first().innerText();
+    check("each tile states how many parts are behind it", /\d+\s+pièces?/.test(first), first.replace(/\n/g, " · "));
+
+    const singulars = (await board.innerText()).match(/\b1 pièces\b/g) ?? [];
+    check("and counts one part as one pièce", singulars.length === 0, singulars.join(", "));
+
+    const dbTotal = await prisma.product.count({
+      where: { active: true, category: { OR: [{ slug: "filtres" }, { parent: { slug: "filtres" } }] } },
+    });
+    const shown = (await board.innerText()).match(/FILTRES\s+(\d+)\s+pièces?/i);
+    if (shown) check("the number is the real one", Number(shown[1]) === dbTotal, `page ${shown[1]} vs db ${dbTotal}`);
+
+    // No family shows a bare letter placeholder any more.
+    const drawn = await tiles.first().locator("svg, img").count();
+    check("a tile without a photo is drawn, not lettered", drawn > 0, `${drawn} graphics`);
+    await p.close();
+  }
+
+  console.log("\n[9] A REFERENCE TYPED INTO THE HERO GOES TO THE PART");
+  {
+    const p = await freshPhone();
+    const sample = await prisma.product.findFirst({ where: { active: true }, select: { sku: true, slug: true } });
+    await p.goto(BASE);
+    await p.waitForTimeout(1500);
+
+    const scope = p.locator("section select").first();
+    check("the search box asks what kind of search this is", (await scope.count()) === 1);
+    await scope.selectOption("ref");
+    await p.waitForTimeout(300);
+
+    await p.locator('section input[type="search"]').first().fill(sample.sku);
+    await p.locator("section").first().getByRole("button", { name: /Rechercher/i }).click();
+    await p.waitForURL(/\/(produit|recherche)/, { timeout: 15000 });
+    await p.waitForTimeout(1200);
+    check("a known reference lands straight on its part", p.url().includes(`/produit/${sample.slug}`),
+          p.url().replace(BASE, ""));
+
+    // An unknown one must not dead-end.
+    await p.goto(BASE);
+    await p.waitForTimeout(1500);
+    await p.locator("section select").first().selectOption("ref");
+    await p.locator('section input[type="search"]').first().fill("ZZ-INCONNU-999");
+    await p.locator("section").first().getByRole("button", { name: /Rechercher/i }).click();
+    await p.waitForURL(/\/recherche/, { timeout: 15000 });
+    await p.waitForTimeout(1500);
+    check("an unknown one falls through to the search, not a dead end",
+          /pas trouvé de correspondance|résultat/i.test(await p.locator("main").innerText()));
+    await p.close();
+    await prisma.searchMiss.deleteMany({ where: { query: { contains: "ZZ-INCONNU" } } });
+  }
+
+  console.log("\n[10] A MAKE PAGE READS LIKE A LIST OF CARS");
+  {
+    const p = await freshPhone();
+    const mk = await prisma.vehicleMake.findFirst({
+      where: { models: { some: { engines: { some: { fitments: { some: {} } } } } } },
+      select: { slug: true, name: true },
+    });
+    await p.goto(`${BASE}/pieces/${mk.slug}`);
+    await p.waitForTimeout(1500);
+    const body = await p.locator("main").innerText();
+
+    check("models are listed, not boxed into chips", (await p.locator("main ul li a").count()) > 0);
+    const withYears = await prisma.vehicleModel.count({ where: { make: { slug: mk.slug }, yearFrom: { not: null } } });
+    if (withYears > 0) check("with the years the car was sold", /\d{4}\s*–\s*(\d{4}|auj\.)/.test(body), body.slice(0, 120).replace(/\n/g, " · "));
+    check("and each row names the make with the model", body.includes(mk.name));
+    await p.close();
+  }
 } finally {
   await browser.close();
   await prisma.$disconnect();

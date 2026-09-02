@@ -12,6 +12,7 @@ export default async function CategoryGrid() {
     slug: f.slug,
     name: f.name,
     imageUrl: f.imageUrl,
+    productCount: f.productCount,
     children: f.children.map((c) => ({ slug: c.slug, name: c.name, count: c._count.products })),
   }));
 

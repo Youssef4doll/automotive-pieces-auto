@@ -76,17 +76,23 @@ export async function getProductsForModel(modelId: string, familySlug?: string, 
  */
 export async function listVehiclePages() {
   const rows = await prisma.$queryRaw<
-    { makeSlug: string; makeName: string; makeLogoUrl: string | null; modelSlug: string; modelName: string; n: bigint }[]
+    {
+      makeSlug: string; makeName: string; makeLogoUrl: string | null;
+      modelSlug: string; modelName: string;
+      yearFrom: number | null; yearTo: number | null;
+      n: bigint;
+    }[]
   >`
     SELECT mk.slug AS "makeSlug", mk.name AS "makeName", mk."logoUrl" AS "makeLogoUrl",
            md.slug AS "modelSlug", md.name AS "modelName",
+           md."yearFrom" AS "yearFrom", md."yearTo" AS "yearTo",
            COUNT(DISTINCT p.id) AS n
     FROM "ProductFitment" f
     JOIN "VehicleEngine" e ON e.id = f."engineId"
     JOIN "VehicleModel" md ON md.id = e."modelId"
     JOIN "VehicleMake" mk ON mk.id = md."makeId"
     JOIN "Product" p ON p.id = f."productId" AND p.active
-    GROUP BY mk.slug, mk.name, mk."logoUrl", md.slug, md.name
+    GROUP BY mk.slug, mk.name, mk."logoUrl", md.slug, md.name, md."yearFrom", md."yearTo"
     HAVING COUNT(DISTINCT p.id) > 0
     ORDER BY n DESC
   `;

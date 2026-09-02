@@ -6,12 +6,15 @@ import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
 import type { DictKey } from "@/i18n/dictionaries";
 import T from "./T";
+import FamilyIcon from "./FamilyIcon";
 
 type Family = {
   slug: string;
   name: string;
   /** Uploaded from /admin/catalogue. Absent on a family nobody has photographed yet. */
   imageUrl?: string | null;
+  /** Real parts behind this tile, its subcategories included. */
+  productCount?: number;
   children: { slug: string; name: string; count: number }[];
 };
 
@@ -27,7 +30,7 @@ type Family = {
  * cropping a brake disc to fill a square is how you end up showing a grey
  * rectangle.
  */
-function FamilyThumb({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
+function FamilyThumb({ slug, imageUrl }: { slug: string; imageUrl?: string | null }) {
   return (
     <span className="relative block w-full aspect-square rounded-lg overflow-hidden">
       {imageUrl ? (
@@ -39,8 +42,11 @@ function FamilyThumb({ name, imageUrl }: { name: string; imageUrl?: string | nul
           className="object-contain"
         />
       ) : (
-        <span className="absolute inset-0 grid place-items-center bg-gray-50 text-navy-900/20 font-display font-extrabold text-3xl">
-          {name[0]?.toUpperCase() ?? "?"}
+        // A drawing of the part rather than the family's first letter. Sixteen
+        // grey letters read as sixteen identical placeholders — and "F" told a
+        // shopper nothing about whether Filtres or Freinage was behind it.
+        <span className="absolute inset-0 grid place-items-center bg-gray-50 text-navy-900/35 p-3">
+          <FamilyIcon slug={slug} className="w-full h-full" />
         </span>
       )}
     </span>
@@ -127,7 +133,7 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
                       : "border-navy-900/10 hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5"
                   }`}
                 >
-                  <FamilyThumb name={f.name} imageUrl={f.imageUrl} />
+                  <FamilyThumb slug={f.slug} imageUrl={f.imageUrl} />
 
                   {/* The names run long ("Transmission et embrayage") and the
                       tile is narrow, so they wrap and are clamped to two lines
@@ -137,8 +143,20 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
                   <span className="w-full min-w-0 line-clamp-2 [overflow-wrap:anywhere] font-display font-bold uppercase tracking-wide text-[12px] sm:text-[13px] text-navy-950 leading-tight">
                     {f.name}
                   </span>
+                  {/* What is behind the tile, counted from the catalogue.
+                      "3 sous-catégories" described our filing system; "48
+                      pièces" answers the question the shopper is actually
+                      asking, which is whether it is worth opening. */}
                   <span className="text-[12px] text-navy-900/50 leading-none">
-                    {f.children.length} <T k="families.subcats" />
+                    {typeof f.productCount === "number" ? (
+                      <>
+                        {f.productCount} <T k={f.productCount === 1 ? "families.part" : "families.parts"} />
+                      </>
+                    ) : (
+                      <>
+                        {f.children.length} <T k="families.subcats" />
+                      </>
+                    )}
                   </span>
 
                   {/* Corner badge rather than a row item: the tile is a column
