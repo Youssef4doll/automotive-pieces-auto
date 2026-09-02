@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useVehicle } from "@/lib/vehicle-store";
 
 export type FitGroups<T> = {
@@ -59,21 +58,11 @@ export default function VehicleFilterBar({
 }) {
   const vehicle = useVehicle((s) => s.vehicle);
 
-  if (!vehicle) {
-    return (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-navy-900/12 bg-gray-50 px-4 py-3 mb-4">
-        <span className="text-sm text-gray-600">
-          {total} référence{total > 1 ? "s" : ""} dans cette catégorie.
-        </span>
-        <Link
-          href="/compte/garage"
-          className="inline-flex items-center min-h-tap-compact text-sm font-semibold text-navy-600 hover:text-red-600 hover:underline underline-offset-2"
-        >
-          Indiquez votre voiture pour ne voir que les pièces qui vont dessus →
-        </Link>
-      </div>
-    );
-  }
+  // Nothing at all without a vehicle. CategoryVehicleBar, directly above the
+  // page title, already asks for the car and opens the picker in place — this
+  // used to ask for the same thing a second time, twelve pixels lower, and
+  // send the shopper off to /compte/garage to do it. One question, once.
+  if (!vehicle) return null;
 
   const car = `${vehicle.makeName} ${vehicle.modelName}`;
   const hidden = total - fitCount - unverifiedCount;

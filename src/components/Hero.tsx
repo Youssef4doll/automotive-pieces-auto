@@ -81,7 +81,12 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
           )}
         </div>
 
-        <div className="relative h-32 sm:h-72 lg:h-96">
+        {/* Hidden on phones. It is decoration — a lineup of parts, not
+            information — and at 128px plus the grid gap it was pushing "Que
+            cherchez-vous ?" and every route to find a part completely off the
+            first screen. Nothing about the type scale changes; this is 152px
+            of picture traded for the thing the visitor came to do. */}
+        <div className="relative hidden sm:block sm:h-72 lg:h-96">
           <Image
             src="/images/parts-lineup.png"
             alt="Pièces automobiles Automotive"

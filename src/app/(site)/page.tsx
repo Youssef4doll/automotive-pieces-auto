@@ -1,5 +1,5 @@
 import Hero from "@/components/Hero";
-import FinderGrid from "@/components/FinderGrid";
+import PartFinder from "@/components/PartFinder";
 import BrandMarquee from "@/components/BrandMarquee";
 import CategoryGrid from "@/components/CategoryGrid";
 import ProductGrid from "@/components/ProductGrid";
@@ -42,20 +42,36 @@ export default async function HomePage() {
 
   return (
     <>
-      <PromoGrid promos={promos} />
+      {/* The order below is the customer's journey, not a list of everything
+          the shop could say.
+
+          1. Find my part   — the only job most visitors came to do
+          2. Campaigns      — merchandising, after the job, never in front of it
+          3. Browse         — for the shopper who would rather look than type
+          4. Best sellers   — real sales data, once they know how to buy
+          5. Why us / store — trust, at the point where they are deciding
+          6. Help / B2B     — the ways out for everyone else
+
+          Two things moved a long way. The brand marquee used to sit between
+          the hero and the finder, so the first interactive thing on the page
+          was a strip of logos nobody came for; it now sits with the other
+          trust material near the bottom. And the promotional grid used to be
+          the very first thing above the hero, which made a parts shop open
+          like a billboard. */}
       <Hero shortcuts={shortcuts} />
-      <BrandMarquee />
-      <FinderGrid contactUrl={contactUrl} />
-      {/* Two ways to shop, side by side and equally valid: by the car you
-          drive, or by the kind of part you need. Neither is forced. */}
-      <VehicleShortcuts />
-      <CategoryGrid />
+      <PartFinder contactUrl={contactUrl} />
+
+      <PromoGrid promos={promos} />
       {/* Campaign band. Empty by default and invisible to shoppers until the
           shop uploads artwork in /admin/promotions — an admin sees a prompt
           there instead, so an empty band is discoverable without inventing a
           campaign that was never run. */}
       <PromoCarousel promos={campaigns} manageHref={admin ? "/admin/promotions" : null} />
-      <TrustBadges />
+
+      {/* Two ways to browse, side by side and equally valid: by the car you
+          drive, or by the kind of part you need. Neither is forced. */}
+      <CategoryGrid />
+      <VehicleShortcuts />
       {topSellers.length > 0 && (
         <section id="produits" className="mx-auto max-w-7xl px-4 py-7 sm:py-10">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
@@ -66,26 +82,17 @@ export default async function HomePage() {
                 className="text-xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight"
               />
             </div>
-            {/* Wraps instead of overflowing: four fixed chips in a nowrap row
-                pushed this section past the viewport on 320px phones. */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm font-semibold px-3.5 py-2 rounded-full bg-navy-900 text-white">
-                <T k="product.chipAll" />
-              </span>
-              <span className="text-sm font-semibold px-3.5 py-2 rounded-full bg-white border border-navy-900/15 text-navy-900/80">
-                <T k="product.chipBrake" />
-              </span>
-              <span className="text-sm font-semibold px-3.5 py-2 rounded-full bg-white border border-navy-900/15 text-navy-900/80">
-                <T k="product.chipFilter" />
-              </span>
-              <span className="text-sm font-semibold px-3.5 py-2 rounded-full bg-white border border-navy-900/15 text-navy-900/80">
-                <T k="product.chipOil" />
-              </span>
-            </div>
+            {/* The four category chips that used to sit here are gone. They
+                were <span>s styled exactly like the real filter pills on the
+                catalogue pages, so they read as controls and did nothing when
+                tapped. A control that does not control is worse than no
+                control. */}
           </div>
           <ProductGrid products={topSellers} />
         </section>
       )}
+      <TrustBadges />
+      <BrandMarquee />
       <WhyUs />
       <StoreSection />
       <NotFoundBand contactUrl={contactUrl} phone={contact.phone} />

@@ -10,6 +10,7 @@ import TrackEvent from "./TrackEvent";
 import type { CardProduct } from "./ProductCard";
 import { contactLink } from "@/lib/contact-link";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import CategoryVehicleBar from "./CategoryVehicleBar";
 import { useState } from "react";
 import { useVehicle } from "@/lib/vehicle-store";
 import VehicleFilterBar, { groupByFit } from "@/components/VehicleFilterBar";
@@ -73,6 +74,10 @@ export default function CatalogView({
           ]}
         />
       </div>
+
+      {/* The vehicle question, asked before the wall of parts rather than
+          after the shopper has scrolled through things that do not fit. */}
+      <CategoryVehicleBar categoryName={subfamily?.name ?? family.name} />
 
       <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mb-1 tracking-tight">{title}</h1>
       <p className="text-sm text-gray-500 mb-4">
