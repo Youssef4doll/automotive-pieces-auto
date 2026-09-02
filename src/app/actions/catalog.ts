@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
+import { readImageFile, mediaAssetIdFromUrl } from "@/lib/image-upload";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -42,13 +43,25 @@ const categorySchema = z.object({
   name: z.string().trim().min(2, "Le nom doit faire au moins 2 caractères"),
   slug: z.string().trim().optional(),
   parentId: z.string().optional(),
+  removeImage: z.string().optional(),
 });
+
+/**
+ * Drop a category's uploaded picture. Unlike a banner's artwork, a category
+ * image is never shared between rows, so there is no "still in use elsewhere"
+ * check to make first — it is simply deleted.
+ */
+async function deleteCategoryImage(imageUrl: string | null | undefined) {
+  const assetId = mediaAssetIdFromUrl(imageUrl);
+  if (assetId) await prisma.mediaAsset.deleteMany({ where: { id: assetId } });
+}
 
 export async function upsertCategory(
   _prev: CatalogFormState,
   formData: FormData,
 ): Promise<CatalogFormState> {
   await assertAdmin();
+  const file = formData.get("file");
   const parsed = categorySchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide" };
 
@@ -73,9 +86,35 @@ export async function upsertCategory(
     if (parent.parentId) return { error: "Le catalogue n'a que deux niveaux : famille puis sous-catégorie." };
   }
 
+  // A new upload replaces the current picture; the "remove" checkbox clears it
+  // with nothing to replace it. The two never apply at once — an upload wins.
+  let imageUrl: string | null | undefined; // undefined = leave untouched
+  let previousImageUrl: string | null | undefined;
+  if (id) {
+    const existing = await prisma.category.findUnique({ where: { id }, select: { imageUrl: true } });
+    previousImageUrl = existing?.imageUrl;
+  }
+  if (file instanceof File && file.size > 0) {
+    const read = await readImageFile(file);
+    if (!read.ok) return { error: read.error };
+    const asset = await prisma.mediaAsset.create({
+      data: { data: read.bytes, mimeType: read.mimeType },
+      select: { id: true },
+    });
+    imageUrl = `/api/images/${asset.id}`;
+  } else if (parsed.data.removeImage === "on" || parsed.data.removeImage === "true") {
+    imageUrl = null;
+  }
+
   try {
     if (id) {
-      await prisma.category.update({ where: { id }, data: { name, slug, parentId } });
+      await prisma.category.update({
+        where: { id },
+        data: { name, slug, parentId, ...(imageUrl !== undefined ? { imageUrl } : {}) },
+      });
+      if (imageUrl !== undefined && previousImageUrl && previousImageUrl !== imageUrl) {
+        await deleteCategoryImage(previousImageUrl);
+      }
     } else {
       // New entries go to the end of their level so adding one never
       // reshuffles the menu the shopper already knows.
@@ -85,7 +124,7 @@ export async function upsertCategory(
         select: { order: true },
       });
       await prisma.category.create({
-        data: { name, slug, parentId, order: (last?.order ?? 0) + 1 },
+        data: { name, slug, parentId, order: (last?.order ?? 0) + 1, imageUrl: imageUrl || null },
       });
     }
   } catch (e) {
@@ -100,7 +139,7 @@ export async function deleteCategory(id: string): Promise<CatalogFormState> {
   await assertAdmin();
   const cat = await prisma.category.findUnique({
     where: { id },
-    select: { name: true, _count: { select: { children: true, products: true } } },
+    select: { name: true, imageUrl: true, _count: { select: { children: true, products: true } } },
   });
   if (!cat) return { error: "Catégorie introuvable." };
 
@@ -118,6 +157,7 @@ export async function deleteCategory(id: string): Promise<CatalogFormState> {
   } catch (e) {
     return { error: friendlyError(e, "Suppression impossible") };
   }
+  await deleteCategoryImage(cat.imageUrl);
   revalidateStorefront();
   return { ok: `« ${cat.name} » supprimé` };
 }

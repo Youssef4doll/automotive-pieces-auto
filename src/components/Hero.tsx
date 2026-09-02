@@ -26,8 +26,17 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
   return (
     <section className="bg-navy-900 text-white overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 py-7 sm:py-16 grid lg:grid-cols-2 gap-6 sm:gap-10 items-center">
-        <div className="text-center lg:text-start">
-          <h1 className="font-display font-bold uppercase text-[28px] sm:text-6xl leading-[1.02] sm:leading-[0.95] tracking-tight">
+        {/* min-w-0: this is a grid item, and a grid item's default min-width
+            is auto — its own content's intrinsic width, not the track's. The
+            search button's unbreakable label ("Rechercher") was enough to
+            hold that floor above 320px, quietly forcing the whole hero (and
+            the page) wider than the phone screen underneath it. */}
+        <div className="min-w-0 text-center lg:text-start">
+          {/* sm: was text-6xl (60px) — a blocky, poster-sized headline that
+              dominated the page next to a dense catalogue layout. Trimmed to
+              read as a storefront heading rather than an ad banner; the
+              28px mobile size is unchanged (e2e-mobile checks it directly). */}
+          <h1 className="font-display font-bold uppercase text-[28px] sm:text-4xl leading-[1.02] sm:leading-[1.05] tracking-tight">
             <span className="block text-white">{t("hero.titleLine1")}</span>
             <span className="block text-gold-500">{t("hero.titleLine2")}</span>
           </h1>

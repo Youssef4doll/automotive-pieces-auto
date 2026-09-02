@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { listVehiclePages } from "@/lib/data/vehicles";
 
@@ -23,7 +24,7 @@ export default async function VehicleShortcuts({ take = 12 }: { take?: number })
         <p className="text-xs font-display font-bold uppercase tracking-wide text-red-600 mb-1">
           Acheter pour ma voiture
         </p>
-        <h2 className="text-xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight">
+        <h2 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 tracking-tight">
           Les véhicules que nous couvrons
         </h2>
         <p className="text-sm text-gray-500 mt-1.5 max-w-prose">
@@ -37,9 +38,21 @@ export default async function VehicleShortcuts({ take = 12 }: { take?: number })
           <Link
             key={`${v.makeSlug}/${v.modelSlug}`}
             href={`/pieces/${v.makeSlug}/${v.modelSlug}`}
-            className="flex items-center justify-between gap-2 min-h-tap px-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-navy-900/35 transition-colors"
+            className="flex items-center gap-3 min-h-tap px-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-navy-900/35 transition-colors"
           >
-            <span className="min-w-0">
+            {/* Same fixed slot whether or not the make has a logo uploaded,
+                so the grid stays even as the shop fills these in one brand
+                at a time — see the identical choice on the family cards. */}
+            {v.makeLogoUrl ? (
+              <span className="relative shrink-0 w-9 h-9 rounded-lg overflow-hidden bg-gray-50">
+                <Image src={v.makeLogoUrl} alt="" fill sizes="36px" className="object-contain p-1" />
+              </span>
+            ) : (
+              <span className="shrink-0 w-9 h-9 rounded-lg bg-gray-100 text-gray-500 font-display font-bold text-sm flex items-center justify-center">
+                {v.makeName[0]?.toUpperCase() ?? "?"}
+              </span>
+            )}
+            <span className="min-w-0 flex-1">
               <span className="block text-xs uppercase tracking-wide text-gray-600 truncate">
                 {v.makeName}
               </span>

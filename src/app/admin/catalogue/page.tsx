@@ -11,10 +11,11 @@ export default async function CatalogueAdminPage() {
       name: true,
       slug: true,
       order: true,
+      imageUrl: true,
       _count: { select: { products: true } },
       children: {
         orderBy: { order: "asc" },
-        select: { id: true, name: true, slug: true, order: true, _count: { select: { products: true } } },
+        select: { id: true, name: true, slug: true, order: true, imageUrl: true, _count: { select: { products: true } } },
       },
     },
   });
@@ -24,12 +25,14 @@ export default async function CatalogueAdminPage() {
     name: f.name,
     slug: f.slug,
     order: f.order,
+    imageUrl: f.imageUrl,
     productCount: f._count.products,
     children: f.children.map((c) => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
       order: c.order,
+      imageUrl: c.imageUrl,
       productCount: c._count.products,
     })),
   }));

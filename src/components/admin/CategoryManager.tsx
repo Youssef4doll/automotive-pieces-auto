@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { upsertCategory, deleteCategory, moveCategory, type CatalogFormState } from "@/app/actions/catalog";
 
 export type AdminCategory = {
@@ -8,15 +9,41 @@ export type AdminCategory = {
   name: string;
   slug: string;
   order: number;
+  imageUrl: string | null;
   productCount: number;
   children: {
     id: string;
     name: string;
     slug: string;
     order: number;
+    imageUrl: string | null;
     productCount: number;
   }[];
 };
+
+/** Small thumbnail used in both the family and subcategory rows. */
+function Thumb({ name, imageUrl, size = 32 }: { name: string; imageUrl: string | null; size?: number }) {
+  if (imageUrl) {
+    return (
+      <span
+        className="relative shrink-0 rounded-lg overflow-hidden bg-gray-100"
+        style={{ width: size, height: size }}
+      >
+        <Image src={imageUrl} alt="" fill sizes={`${size}px`} className="object-cover" />
+      </span>
+    );
+  }
+  // No picture yet: an initial in a plain tile, so a family missing its photo
+  // is obvious to the admin at a glance rather than showing a broken image.
+  return (
+    <span
+      className="shrink-0 rounded-lg bg-gray-100 text-gray-500 font-display font-bold flex items-center justify-center"
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+    >
+      {name[0]?.toUpperCase() ?? "?"}
+    </span>
+  );
+}
 
 export default function CategoryManager({ families }: { families: AdminCategory[] }) {
   const [msg, setMsg] = useState<CatalogFormState>(undefined);
@@ -73,10 +100,11 @@ export default function CategoryManager({ families }: { families: AdminCategory[
               <div className="flex items-center gap-2 px-3 py-2 flex-wrap">
                 <button
                   onClick={() => setOpenId(open ? null : f.id)}
-                  className="flex items-center gap-2 min-h-tap flex-1 min-w-0 text-start"
+                  className="flex items-center gap-2.5 min-h-tap flex-1 min-w-0 text-start"
                   aria-expanded={open}
                 >
                   <span className={`text-gray-600 transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+                  <Thumb name={f.name} imageUrl={f.imageUrl} />
                   <span className="font-heading font-bold uppercase text-navy-950 truncate">{f.name}</span>
                   <span className="text-xs text-gray-600 shrink-0">
                     /{f.slug} · {f.children.length} sous-cat. · {f.productCount} prod.
@@ -100,7 +128,8 @@ export default function CategoryManager({ families }: { families: AdminCategory[
                 <div className="border-t border-gray-100 bg-gray-50/60 px-3 py-2 flex flex-col gap-1.5">
                   {f.children.map((c, ci) => (
                     <div key={c.id}>
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <Thumb name={c.name} imageUrl={c.imageUrl} size={26} />
                         <span className="flex-1 min-w-0 text-sm text-gray-700 truncate">
                           {c.name}
                           <span className="text-xs text-gray-600"> /{c.slug} · {c.productCount} prod.</span>
@@ -153,12 +182,31 @@ function CategoryForm({
   pending,
   onCancel,
 }: {
-  category?: { id: string; name: string; slug: string };
+  category?: { id: string; name: string; slug: string; imageUrl?: string | null };
   parentId?: string;
   onSubmit: (fd: FormData) => void;
   pending: boolean;
   onCancel: () => void;
 }) {
+  const [preview, setPreview] = useState<string | null>(category?.imageUrl ?? null);
+  const [removeChecked, setRemoveChecked] = useState(false);
+  const objectUrl = useRef<string | null>(null);
+
+  useEffect(() => () => { if (objectUrl.current) URL.revokeObjectURL(objectUrl.current); }, []);
+
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
+    objectUrl.current = null;
+    if (!file) {
+      setPreview(category?.imageUrl ?? null);
+      return;
+    }
+    setRemoveChecked(false);
+    objectUrl.current = URL.createObjectURL(file);
+    setPreview(objectUrl.current);
+  };
+
   return (
     <form action={onSubmit} className="flex flex-wrap items-end gap-2 bg-white border border-gray-200 rounded-lg p-3">
       {category && <input type="hidden" name="id" value={category.id} />}
@@ -184,6 +232,40 @@ function CategoryForm({
           className="w-full px-3 min-h-tap border border-navy-900/15 rounded-lg text-sm outline-none focus:border-gold-500"
         />
       </label>
+
+      <div className="flex items-end gap-2 w-full sm:w-auto">
+        <span className="relative shrink-0 w-11 h-11 rounded-lg overflow-hidden bg-gray-100">
+          {preview && !removeChecked && (
+            <Image src={preview} alt="" fill sizes="44px" className="object-cover" unoptimized={preview.startsWith("blob:")} />
+          )}
+        </span>
+        <label className="flex flex-col gap-1 flex-1 min-w-32">
+          <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">Image</span>
+          <input
+            name="file"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            onChange={onPickFile}
+            className="w-full text-xs file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[11px]"
+          />
+        </label>
+        {category?.imageUrl && (
+          <label className="flex items-center gap-1.5 text-xs text-gray-600 mb-2.5 shrink-0">
+            <input
+              type="checkbox"
+              name="removeImage"
+              checked={removeChecked}
+              onChange={(e) => {
+                setRemoveChecked(e.target.checked);
+                if (e.target.checked) setPreview(null);
+                else setPreview(category.imageUrl ?? null);
+              }}
+            />
+            Retirer
+          </label>
+        )}
+      </div>
+
       <button
         disabled={pending}
         className="px-4 min-h-tap rounded-lg bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-xs tracking-wide disabled:opacity-60"

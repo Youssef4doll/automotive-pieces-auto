@@ -84,6 +84,10 @@ model Category {
   parent       Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children     Category[] @relation("CategoryTree")
   products     Product[]
+  /// Uploaded from /admin/catalogue, served from /api/images/[id] like every
+  /// other picture on the site. Lets a shopper see what a family holds before
+  /// tapping into it, instead of judging sixteen categories by name alone.
+  imageUrl     String?
 }
 
 model VehicleMake {

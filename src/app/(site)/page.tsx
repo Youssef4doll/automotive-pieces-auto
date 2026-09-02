@@ -63,7 +63,7 @@ export default async function HomePage() {
               <Eyebrow k="home.bestsellersEyebrow" />
               <SectionHeading
                 k="home.bestsellers"
-                className="text-xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight"
+                className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 tracking-tight"
               />
             </div>
             {/* Wraps instead of overflowing: four fixed chips in a nowrap row

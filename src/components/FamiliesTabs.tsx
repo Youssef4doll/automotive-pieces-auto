@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
 import type { DictKey } from "@/i18n/dictionaries";
@@ -9,8 +10,33 @@ import T from "./T";
 type Family = {
   slug: string;
   name: string;
+  /** Uploaded from /admin/catalogue. Absent on a family nobody has photographed yet. */
+  imageUrl?: string | null;
   children: { slug: string; name: string; count: number }[];
 };
+
+/**
+ * The family card's picture slot.
+ *
+ * Always the same size whether or not a photo exists, so the grid stays even
+ * as the shop fills in pictures family by family — a card with a photo should
+ * not sit taller or narrower than the one next to it that doesn't have one
+ * yet.
+ */
+function FamilyThumb({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
+  if (imageUrl) {
+    return (
+      <span className="relative shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-white">
+        <Image src={imageUrl} alt="" fill sizes="40px" className="object-cover" />
+      </span>
+    );
+  }
+  return (
+    <span className="shrink-0 w-10 h-10 rounded-lg bg-white/70 text-navy-900/25 font-display font-extrabold text-lg flex items-center justify-center">
+      {name[0]?.toUpperCase() ?? "?"}
+    </span>
+  );
+}
 
 // Same family-index/subcategory-index pairs as the reference design's SYMPTOMS
 // list — our category taxonomy was seeded in the identical order, so these
@@ -64,7 +90,13 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
       </div>
 
       {tab === "fam" ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        // One column through the whole phone range: a thumbnail, a name and
+        // the chevron badge don't fit two-up on a phone without truncating
+        // every family name to five or six letters, which defeats the point
+        // of a browsable list. Two columns waits for `sm` (tablet width and
+        // up, the same breakpoint the rest of the site's grids use), where
+        // there is enough room to keep names readable.
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           {families.map((f) => {
             const open = openFamily === f.slug;
             return (
@@ -84,11 +116,17 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
                       : "border-navy-900/10 bg-gray-50 hover:border-gold-500 hover:bg-[#fffdf4] hover:-translate-y-0.5"
                   }`}
                 >
+                  <FamilyThumb name={f.name} imageUrl={f.imageUrl} />
                   <div className="flex-1 min-w-0 flex flex-col gap-1">
-                    <span className="font-display font-bold uppercase tracking-wide text-[15px] text-navy-950 leading-tight">
+                    {/* truncate, not wrap: a two-column card at 320px leaves so
+                        little room next to the thumbnail and the chevron that
+                        an unbreakable name ("Préchauffage") could force the
+                        row wider than the card — an ellipsis degrades safely,
+                        a forced-wide row does not. */}
+                    <span className="truncate font-display font-bold uppercase tracking-wide text-[15px] text-navy-950 leading-tight">
                       {f.name}
                     </span>
-                    <span className="text-xs text-navy-900/50">
+                    <span className="truncate text-xs text-navy-900/50">
                       {f.children.length} <T k="families.subcats" />
                     </span>
                   </div>
