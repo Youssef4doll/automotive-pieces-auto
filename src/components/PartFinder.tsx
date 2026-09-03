@@ -325,7 +325,9 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
         )}
       </div>
 
-      {pickerOpen && <VehiclePicker onClose={() => setPickerOpen(false)} initialMakeSlug={presetMake} />}
+      {pickerOpen && (
+        <VehiclePicker onClose={() => setPickerOpen(false)} initialMakeSlug={presetMake} contactUrl={contactUrl} />
+      )}
     </section>
   );
 }

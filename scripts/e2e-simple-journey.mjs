@@ -92,7 +92,11 @@ try {
           /Je connais ma voiture/.test(await finder.locator('button[aria-pressed="true"]').innerText()));
 
     await finder.getByRole("button", { name: /Choisir ma voiture/ }).click();
-    await p.waitForTimeout(1200);
+    await p.waitForTimeout(1000);
+    // The dialog opens on a choice now; "I know my car" leads to the brands.
+    const dlg3 = p.locator('[role="dialog"]');
+    await dlg3.getByRole("button", { name: /Je connais ma voiture/ }).click();
+    await p.waitForTimeout(900);
 
     // Make → model → engine, with nothing typed.
     const make = await prisma.vehicleMake.findFirst({
@@ -102,11 +106,11 @@ try {
     const model = make.models[0];
     const engine = model.engines[0];
 
-    await p.getByRole("button", { name: make.name, exact: true }).first().click();
+    await dlg3.getByRole("button", { name: make.name }).first().click();
     await p.waitForTimeout(500);
-    await p.getByRole("button", { name: new RegExp(model.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+    await dlg3.getByRole("button", { name: new RegExp(model.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
     await p.waitForTimeout(500);
-    await p.getByRole("button", { name: new RegExp(engine.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+    await dlg3.getByRole("button", { name: new RegExp(engine.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
     await p.waitForTimeout(1500);
 
     const saved = await p.evaluate(() => JSON.parse(localStorage.getItem("apa-vehicle") || "{}")?.state?.vehicle);
@@ -147,6 +151,7 @@ try {
     // Asking must not mean leaving the page.
     await p.getByRole("button", { name: /Choisir ma voiture/ }).click();
     await p.waitForTimeout(1200);
+    check("the dialog opens on the choice", await p.locator('[role="dialog"]').isVisible());
     check("the picker opens over the category, not on another page",
           p.url().includes(`/catalogue/${cat.slug}`), p.url().replace(BASE, ""));
     await p.close();
@@ -301,6 +306,107 @@ try {
     const withYears = await prisma.vehicleModel.count({ where: { make: { slug: mk.slug }, yearFrom: { not: null } } });
     if (withYears > 0) check("with the years the car was sold", /\d{4}\s*–\s*(\d{4}|auj\.)/.test(body), body.slice(0, 120).replace(/\n/g, " · "));
     check("and each row names the make with the model", body.includes(mk.name));
+    await p.close();
+  }
+
+  console.log("\n[11] THE VEHICLE DIALOG OPENS ON A CHOICE, NOT A LIST OF BRANDS");
+  {
+    const p = await freshPhone();
+    await p.goto(BASE);
+    await p.waitForTimeout(1500);
+
+    // The white "Mon véhicule / Sélectionner" bar is the way in from anywhere.
+    await p.locator('button:has-text("Sélectionner")').first().click();
+    await p.waitForTimeout(900);
+    const dlg = p.locator('[role="dialog"]');
+    check("it opens as a real dialog", await dlg.isVisible());
+
+    const text = await dlg.innerText();
+    check("it asks which of the two the shopper is", /Je connais ma voiture/.test(text) && /ne sais pas laquelle/i.test(text));
+    check("and says why it is asking", /que les pièces qui vont sur votre voiture/i.test(text));
+    check("no brand list until a path is chosen", !/Volkswagen/.test(text));
+    check("and it can be skipped", /Continuer sans choisir/.test(text));
+
+    // On a phone it is a sheet anchored to the bottom, not a floating box.
+    const vp = p.viewportSize();
+    const box = await dlg.boundingBox();
+    check("on a phone it sits on the bottom edge", Math.abs((box.y + box.height) - vp.height) < 2,
+          `bottom at ${Math.round(box.y + box.height)} of ${vp.height}`);
+    check("and does not claim the screen it is not using", box.height < vp.height * 0.75,
+          `${Math.round(box.height)}px tall`);
+
+    console.log("\n[12] PATH ONE: THREE TAPS");
+    await dlg.getByRole("button", { name: /Je connais ma voiture/ }).click();
+    await p.waitForTimeout(800);
+    check("the brands appear", (await dlg.locator("ul li button").count()) > 3);
+    check("with the three steps named", /MARQUE[\s\S]*MODÈLE[\s\S]*MOTORISATION/i.test(await dlg.innerText()));
+
+    // Typing narrows without accents mattering.
+    const mk = await prisma.vehicleMake.findFirst({
+      where: { models: { some: { engines: { some: {} } } } },
+      select: { name: true, models: { where: { engines: { some: {} } }, take: 1, select: { name: true, engines: { take: 1, select: { name: true } } } } },
+    });
+    await dlg.locator('input[type="search"]').fill(mk.name.slice(0, 3).toLowerCase());
+    await p.waitForTimeout(400);
+    check("search narrows the brands", (await dlg.locator("ul li button").count()) >= 1);
+
+    await dlg.getByRole("button", { name: mk.name, exact: false }).first().click();
+    await p.waitForTimeout(600);
+    await dlg.getByRole("button", { name: new RegExp(mk.models[0].name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+    await p.waitForTimeout(600);
+    await dlg.getByRole("button", { name: new RegExp(mk.models[0].engines[0].name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+    await p.waitForTimeout(1400);
+
+    const saved = await p.evaluate(() => JSON.parse(localStorage.getItem("apa-vehicle") || "{}")?.state?.vehicle);
+    check("the car is saved and the dialog closes", saved?.makeName === mk.name && (await dlg.count()) === 0,
+          `${saved?.makeName} ${saved?.modelName} ${saved?.engineName}`);
+    check("and the bar now names it", (await p.locator("body").innerText()).includes(mk.modelName ?? mk.models[0].name));
+    await p.close();
+  }
+
+  console.log("\n[13] PATH TWO: I DON'T KNOW WHICH CAR IT IS");
+  {
+    const p = await freshPhone();
+    await p.goto(BASE);
+    await p.waitForTimeout(1500);
+    await p.locator('button:has-text("Sélectionner")').first().click();
+    await p.waitForTimeout(900);
+    const dlg = p.locator('[role="dialog"]');
+
+    await dlg.getByRole("button", { name: /ne sais pas laquelle/i }).click();
+    await p.waitForTimeout(700);
+    const help = await dlg.innerText();
+
+    check("the registration document is offered", /carte grise/i.test(help));
+    check("the VIN is offered", /châssis|VIN/i.test(help));
+    check("and a person is offered", /expert/i.test(help));
+
+    // The VIN route must hand back to the ordinary picker, not claim a model.
+    await dlg.locator('input[aria-label="VIN"]').fill("VF1BR1V0H12345678");
+    await p.waitForTimeout(300);
+    await dlg.getByRole("button", { name: /Identifier/i }).click();
+    await p.waitForTimeout(900);
+    const after = await dlg.innerText();
+    check("a decoded VIN lands on the model step", /MODÈLE/i.test(after) && (await dlg.locator("ul li button").count()) > 0,
+          after.split("\n").slice(0, 2).join(" · "));
+    check("it does not pretend to know the model",
+          (await p.evaluate(() => JSON.parse(localStorage.getItem("apa-vehicle") || "{}")?.state?.vehicle)) == null);
+
+    // Back returns to the choice rather than closing.
+    await dlg.getByRole("button", { name: /Retour/ }).click();
+    await p.waitForTimeout(500);
+    check("back steps up rather than closing", await dlg.isVisible());
+    await p.close();
+  }
+
+  console.log("\n[14] THE OLD FOUR-COLUMN FINDER IS GONE FOR GOOD");
+  {
+    const p = await freshPhone();
+    await p.goto(BASE);
+    await p.waitForTimeout(1500);
+    const body = await p.locator("body").innerText();
+    check("no 'Trouvez votre pièce en 30 secondes'", !/30 secondes/.test(body));
+    check("no 'Quatre façons'", !/Quatre façons/.test(body));
     await p.close();
   }
 } finally {
