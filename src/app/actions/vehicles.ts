@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
-import { readImageFile, mediaAssetIdFromUrl } from "@/lib/image-upload";
+import { readImageFile, mediaAssetIdFromUrl, assetUrl } from "@/lib/image-upload";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -37,14 +37,17 @@ export async function uploadMakeLogo(
   const make = await prisma.vehicleMake.findUnique({ where: { id: makeId }, select: { name: true, logoUrl: true } });
   if (!make) return { error: "Marque introuvable." };
 
-  const read = await readImageFile(file);
+  // Vectors allowed: a manufacturer ships its logo as an SVG, it renders in a
+  // 36px chip and a 44px admin row, and a bitmap scaled to both is the version
+  // that looks wrong on the phone the shop's customers actually use.
+  const read = await readImageFile(file, { allowVector: true });
   if (!read.ok) return { error: read.error };
 
   const asset = await prisma.mediaAsset.create({
     data: { data: read.bytes, mimeType: read.mimeType },
     select: { id: true },
   });
-  const logoUrl = `/api/images/${asset.id}`;
+  const logoUrl = assetUrl(asset.id, read.mimeType);
 
   await prisma.vehicleMake.update({ where: { id: makeId }, data: { logoUrl } });
 

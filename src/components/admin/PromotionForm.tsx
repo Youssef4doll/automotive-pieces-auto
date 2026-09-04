@@ -37,6 +37,7 @@ export default function PromotionForm({
   promo?: EditablePromotion;
   onSaved?: () => void;
 }) {
+  const uploaded = !!promo && promo.imageUrl.startsWith("/api/images/");
   const [placement, setPlacement] = useState<"HERO" | "CAMPAIGN">(promo?.placement ?? "CAMPAIGN");
   const [preview, setPreview] = useState<string | null>(promo?.imageUrl ?? null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -114,17 +115,17 @@ export default function PromotionForm({
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold text-navy-900/70">
-              Image {promo ? "(laisser vide pour garder l'actuelle)" : "— JPEG, PNG, WebP ou AVIF, 4 Mo max"}
+              Image {promo ? "(laisser vide pour garder l'actuelle)" : "— JPEG, PNG, WebP, AVIF ou SVG"}
             </span>
             <input
               name="file"
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/avif"
+              accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
               onChange={onPick}
               className="w-full text-sm file:me-3 file:min-h-tap file:px-4 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-xs file:tracking-wide"
             />
             <span className="text-[11px] text-navy-900/45">
-              Format conseillé : 1600 × 686 px (21:9). L&rsquo;image est recadrée au centre.
+              Format conseillé : 1600 × 686 px (21:9), recadré au centre. 4 Mo max, 500 Ko pour un SVG.
             </span>
           </label>
           <label className="flex flex-col gap-1.5">
@@ -137,6 +138,17 @@ export default function PromotionForm({
               placeholder="/images/storefront.png"
               className={field}
             />
+            {/* An uploaded picture has no path to show here — it lives at
+                /api/images/<id>, which is an address, not something anyone
+                would type. The box staying empty used to read as "this banner
+                has no image", and saving a title change then failed on
+                "Choisissez une image". It says which case it is now, and the
+                action keeps the artwork when both inputs are left alone. */}
+            {uploaded && (
+              <span className="text-[11px] text-navy-900/45">
+                Cette bannière utilise une image téléversée. Laissez les deux champs vides pour la conserver.
+              </span>
+            )}
           </label>
         </div>
       </div>

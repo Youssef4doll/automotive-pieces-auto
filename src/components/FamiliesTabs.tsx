@@ -26,26 +26,39 @@ type Family = {
  * photo should not sit taller than the one next to it that doesn't have one
  * yet, and the row should not reflow as the images decode.
  *
- * object-contain, not cover: these are part photographs shot on white, and
- * cropping a brake disc to fill a square is how you end up showing a grey
- * rectangle.
+ * object-contain, not cover: an uploaded picture here is a part photograph shot
+ * on white or an icon drawn to its own edges, and cropping either one to fill a
+ * square is how you end up showing a grey rectangle or half a brake disc.
+ *
+ * The tint lives on the wrapper so both branches share it, and a family the
+ * shop has given artwork sits in exactly the same box as one still showing its
+ * drawn fallback. The shop fills these in a few at a time, and a board where
+ * the finished tiles are visibly a different shape from the unfinished ones
+ * reads as broken rather than as work in progress.
+ *
+ * The inset cannot live there with it: an absolutely positioned child is laid
+ * out against its ancestor's padding box, so padding on the wrapper would move
+ * neither of them. Each branch states its own p-3, and they have to match.
  */
 function FamilyThumb({ slug, imageUrl }: { slug: string; imageUrl?: string | null }) {
   return (
-    <span className="relative block w-full aspect-square rounded-lg overflow-hidden">
+    <span className="relative block w-full aspect-square rounded-lg overflow-hidden bg-gray-50">
       {imageUrl ? (
+        // A vector needs no `sizes` work: next/image serves a `.svg` source
+        // as-is, and the same file is exact at 40vw on a phone and at 150px on
+        // a desktop, which is the whole reason the upload accepts one.
         <Image
           src={imageUrl}
           alt=""
           fill
           sizes="(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 150px"
-          className="object-contain"
+          className="object-contain p-3"
         />
       ) : (
         // A drawing of the part rather than the family's first letter. Sixteen
         // grey letters read as sixteen identical placeholders — and "F" told a
         // shopper nothing about whether Filtres or Freinage was behind it.
-        <span className="absolute inset-0 grid place-items-center bg-gray-50 text-navy-900/35 p-3">
+        <span className="absolute inset-0 grid place-items-center text-navy-900/35 p-3">
           <FamilyIcon slug={slug} className="w-full h-full" />
         </span>
       )}

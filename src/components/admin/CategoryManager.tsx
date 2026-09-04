@@ -24,12 +24,16 @@ export type AdminCategory = {
 /** Small thumbnail used in both the family and subcategory rows. */
 function Thumb({ name, imageUrl, size = 32 }: { name: string; imageUrl: string | null; size?: number }) {
   if (imageUrl) {
+    // An icon is drawn to its own edges, so cropping it to fill the square
+    // cuts the drawing; a photo shot on white loses only white. Contain is
+    // right for both, and it is what the storefront tile already does — the
+    // admin should be looking at the same picture the shopper will.
     return (
       <span
         className="relative shrink-0 rounded-lg overflow-hidden bg-gray-100"
         style={{ width: size, height: size }}
       >
-        <Image src={imageUrl} alt="" fill sizes={`${size}px`} className="object-cover" />
+        <Image src={imageUrl} alt="" fill sizes={`${size}px`} className="object-contain p-0.5" />
       </span>
     );
   }
@@ -236,18 +240,27 @@ function CategoryForm({
       <div className="flex items-end gap-2 w-full sm:w-auto">
         <span className="relative shrink-0 w-11 h-11 rounded-lg overflow-hidden bg-gray-100">
           {preview && !removeChecked && (
-            <Image src={preview} alt="" fill sizes="44px" className="object-cover" unoptimized={preview.startsWith("blob:")} />
+            <Image src={preview} alt="" fill sizes="44px" className="object-contain p-0.5" unoptimized={preview.startsWith("blob:")} />
           )}
         </span>
         <label className="flex flex-col gap-1 flex-1 min-w-32">
-          <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">Image</span>
+          <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">
+            Image ou icône
+          </span>
           <input
             name="file"
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/avif"
+            accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
             onChange={onPickFile}
             className="w-full text-xs file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[11px]"
           />
+          {/* SVG first because it is the right answer for this slot: the tile
+              is drawn at a dozen sizes between a 32px admin row and a
+              full-width phone card, and a vector is the only file that is
+              correct at all of them. */}
+          <span className="text-[10.5px] text-navy-900/40 leading-tight">
+            SVG conseillé (net à toutes les tailles) · JPEG, PNG, WebP, AVIF acceptés
+          </span>
         </label>
         {category?.imageUrl && (
           <label className="flex items-center gap-1.5 text-xs text-gray-600 mb-2.5 shrink-0">

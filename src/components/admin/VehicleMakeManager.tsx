@@ -151,8 +151,9 @@ function MakeRow({ make, open, onToggle }: { make: AdminMake; open: boolean; onT
           <input
             name="file"
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/avif"
+            accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
             onChange={onPick}
+            title="Logo de la marque — SVG conseillé, ou JPEG, PNG, WebP, AVIF"
             className="text-xs max-w-52 file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[11px]"
           />
           <button

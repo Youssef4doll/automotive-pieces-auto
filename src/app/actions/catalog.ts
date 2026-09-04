@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
-import { readImageFile, mediaAssetIdFromUrl } from "@/lib/image-upload";
+import { readImageFile, mediaAssetIdFromUrl, assetUrl } from "@/lib/image-upload";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -95,13 +95,16 @@ export async function upsertCategory(
     previousImageUrl = existing?.imageUrl;
   }
   if (file instanceof File && file.size > 0) {
-    const read = await readImageFile(file);
+    // Vectors allowed: a category tile is drawn at 44px in the admin list and
+    // at six different sizes across the storefront breakpoints, and an icon
+    // that is one file at every one of them is the whole reason to accept SVG.
+    const read = await readImageFile(file, { allowVector: true });
     if (!read.ok) return { error: read.error };
     const asset = await prisma.mediaAsset.create({
       data: { data: read.bytes, mimeType: read.mimeType },
       select: { id: true },
     });
-    imageUrl = `/api/images/${asset.id}`;
+    imageUrl = assetUrl(asset.id, read.mimeType);
   } else if (parsed.data.removeImage === "on" || parsed.data.removeImage === "true") {
     imageUrl = null;
   }

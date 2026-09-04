@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ProductGrid from "./ProductGrid";
 import VehicleFilterBar, { groupByFit } from "./VehicleFilterBar";
@@ -140,7 +140,20 @@ function NoResults({
   contactLabel: string;
   fallbacks: { id: string; name: string; slug: string }[];
 }) {
+  // One line per want, not one per mount.
+  //
+  // The effect on its own fires twice for a single search in development,
+  // because Strict Mode mounts, unmounts and remounts to prove an effect is
+  // safe to repeat — and this one is not, since it increments a counter on the
+  // server. React does not double-invoke in production, so the buying list is
+  // right there today, but "right as long as nothing ever remounts this" is
+  // not a property worth relying on for the number the shop orders stock
+  // against. The ref makes the write happen once per query however many times
+  // the component is mounted.
+  const logged = useRef<string | null>(null);
   useEffect(() => {
+    if (logged.current === query) return;
+    logged.current = query;
     void logSearchMiss(query);
   }, [query]);
 

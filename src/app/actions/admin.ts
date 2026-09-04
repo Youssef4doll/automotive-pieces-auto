@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/session";
 import { updateSettings, type SettingsMap } from "@/lib/settings";
 import { OrderStatus } from "@prisma/client";
 import { normalizeReference, parseReferenceList } from "@/lib/reference";
-import { readImageFile, mediaAssetIdFromUrl } from "@/lib/image-upload";
+import { readImageFile, mediaAssetIdFromUrl, assetUrl, assetUrlVariants } from "@/lib/image-upload";
 import { reindexProducts, topSearchMisses } from "@/lib/search";
 
 async function assertAdmin() {
@@ -353,8 +353,14 @@ export type PromotionFormState = { error?: string; ok?: boolean } | undefined;
 async function deleteAssetIfUnused(imageUrl: string | null | undefined, keepPromotionId?: string) {
   const assetId = mediaAssetIdFromUrl(imageUrl);
   if (!assetId) return; // a static /images/… path — not ours to delete
+  // Both spellings: a vector is stored at `<id>.svg`, and matching only the
+  // bare form would read "nothing points at this" about an icon that is on
+  // screen right now and delete it.
   const stillUsed = await prisma.promotion.count({
-    where: { imageUrl: `/api/images/${assetId}`, ...(keepPromotionId ? { id: { not: keepPromotionId } } : {}) },
+    where: {
+      imageUrl: { in: assetUrlVariants(assetId) },
+      ...(keepPromotionId ? { id: { not: keepPromotionId } } : {}),
+    },
   });
   if (stillUsed === 0) await prisma.mediaAsset.deleteMany({ where: { id: assetId } });
 }
@@ -391,14 +397,37 @@ export async function upsertPromotion(
   // point of the field, so a stale path left in the text box can't override it.
   let imageUrl = d.imageUrl?.trim() || "";
   if (file instanceof File && file.size > 0) {
-    const read = await readImageFile(file);
+    // Vectors allowed: a seasonal banner is often set as flat artwork, and one
+    // that stays sharp from a 128px admin thumbnail to a full-bleed carousel
+    // slide on a desktop is a single file rather than three exports.
+    const read = await readImageFile(file, { allowVector: true });
     if (!read.ok) return { error: read.error };
     const asset = await prisma.mediaAsset.create({
       data: { data: read.bytes, mimeType: read.mimeType },
       select: { id: true },
     });
-    imageUrl = `/api/images/${asset.id}`;
+    imageUrl = assetUrl(asset.id, read.mimeType);
   }
+
+  // Editing a banner and touching nothing but its title used to fail with
+  // "Choisissez une image", because the picture only lives in the form when it
+  // is a /images/… path: an uploaded one is at /api/images/<id>, which the
+  // path box deliberately does not show, so the form submitted no image at all
+  // and the check below could not tell "left alone" from "never set". The
+  // label already promises that leaving the file empty keeps the current
+  // artwork, so that promise is kept here — the row's own picture is the
+  // fallback, and only a banner that has never had one can fail this.
+  let previousImageUrl: string | null = null;
+  if (d.id) {
+    const before = await prisma.promotion.findUnique({
+      where: { id: d.id },
+      select: { imageUrl: true },
+    });
+    if (!before) return { error: "Bannière introuvable." };
+    previousImageUrl = before.imageUrl;
+    if (!imageUrl || imageUrl === "/images/") imageUrl = before.imageUrl;
+  }
+
   if (!imageUrl || imageUrl === "/images/") {
     return { error: "Choisissez une image (fichier ou chemin)." };
   }
@@ -414,14 +443,14 @@ export async function upsertPromotion(
   };
   try {
     if (d.id) {
-      const before = await prisma.promotion.findUnique({
-        where: { id: d.id },
-        select: { imageUrl: true },
-      });
       await prisma.promotion.update({ where: { id: d.id }, data });
       // Replacing the picture orphans the old bytes; a banner's artwork can be
-      // several megabytes, so they don't get to pile up in the database.
-      if (before && before.imageUrl !== imageUrl) await deleteAssetIfUnused(before.imageUrl, d.id);
+      // several megabytes, so they don't get to pile up in the database. The
+      // guard also covers the case above where the old URL was carried
+      // forward, which is the same URL and must not delete its own asset.
+      if (previousImageUrl && previousImageUrl !== imageUrl) {
+        await deleteAssetIfUnused(previousImageUrl, d.id);
+      }
     } else {
       await prisma.promotion.create({ data });
     }
