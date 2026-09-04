@@ -81,12 +81,26 @@ check("no order yet is explained, not left blank", /Aucune commande pour le mome
 check("the empty garage invites a vehicle", /garage est vide/i.test(body));
 check("and offers the next action", (await p.locator('main a:has-text("Trouver une pièce")').count()) > 0);
 
-console.log("\n[2] A PHONE GETS A THUMB-REACH TAB BAR");
+console.log("\n[2] A PHONE GETS ITS SECTIONS IN ONE ROW, NOT A BAR OVER THE PAGE");
 const bar = p.locator('nav[aria-label="Espace client"]:visible').last();
-check("the tab bar is present", (await bar.count()) === 1);
+check("the sections are present", (await bar.count()) === 1);
+
+// Nothing is pinned over the content any more. The old fixed tab bar covered
+// the last card on every page and could only hold five of the six sections.
+const fixed = await p.evaluate(() =>
+  [...document.querySelectorAll("nav")].filter((n) => getComputedStyle(n).position === "fixed").length);
+check("nothing is bolted to the bottom of the screen", fixed === 0, `${fixed} fixed nav(s)`);
+
 const barBox = await bar.boundingBox();
-check("it is pinned to the bottom of the screen", !!barBox && barBox.y + barBox.height >= 830, `y=${Math.round(barBox?.y ?? -1)}`);
-check("with five destinations", (await bar.locator("a").count()) === 5, `${await bar.locator("a").count()}`);
+check("the row sits with the content, near the top", !!barBox && barBox.y < 500, `y=${Math.round(barBox?.y ?? -1)}`);
+check("and every section is reachable from it", (await bar.locator("a").count()) === 6, `${await bar.locator("a").count()}`);
+
+// The row scrolls sideways rather than wrapping or overflowing the page.
+const scrollable = await bar.locator("ul").evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+check("it scrolls sideways instead of pushing the page wide", scrollable);
+const overflow = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+check("and the page itself does not scroll sideways", overflow === 0, `${overflow}px`);
+
 check("no desktop rail is visible on a phone",
       (await p.locator('aside nav[aria-label="Espace client"]:visible').count()) === 0);
 
@@ -220,7 +234,7 @@ const width = await d.evaluate(() => {
 check("content uses the screen", width > 1100, `${width}px of 1440`);
 check("a navigation rail is present", (await d.locator('aside nav[aria-label="Espace client"] a:visible').count()) === 6,
       `${await d.locator('aside nav[aria-label="Espace client"] a:visible').count()} links`);
-check("the phone tab bar is hidden on desktop",
+check("the phone section row is hidden on desktop",
       (await d.evaluate(() => {
         const navs = [...document.querySelectorAll('nav[aria-label="Espace client"]')];
         return navs.filter((n) => getComputedStyle(n).display !== "none").length;

@@ -14,7 +14,6 @@ import T from "@/components/T";
 import { getTopSellers, getActivePromotions, getTopSubcategories } from "@/lib/data/catalog";
 import { getSettings, publicContact, contactHref } from "@/lib/settings";
 import { requireAdmin } from "@/lib/session";
-import PromoGrid from "@/components/PromoGrid";
 import PromoCarousel from "@/components/PromoCarousel";
 import VehicleShortcuts from "@/components/VehicleShortcuts";
 import type { Metadata } from "next";
@@ -61,12 +60,25 @@ export default async function HomePage() {
       <Hero shortcuts={shortcuts} />
       <PartFinder contactUrl={contactUrl} />
 
-      <PromoGrid promos={promos} />
-      {/* Campaign band. Empty by default and invisible to shoppers until the
-          shop uploads artwork in /admin/promotions — an admin sees a prompt
-          there instead, so an empty band is discoverable without inventing a
-          campaign that was never run. */}
-      <PromoCarousel promos={campaigns} manageHref={admin ? "/admin/promotions" : null} />
+      {/* One banner at a time, arrows to move between them.
+          
+          The deals used to render as a separate grid above this — a wide
+          featured image with a two-column grid of smaller ones under it — so
+          the same page carried promotional artwork in two different shapes in
+          two different places. Everything the shop is currently pushing now
+          goes through one carousel: the hero slots first, then the campaigns.
+          
+          Empty by default and invisible to shoppers until the shop uploads
+          artwork in /admin/promotions — an admin sees a prompt there instead,
+          so an empty band is discoverable without inventing a campaign that
+          was never run. */}
+      <PromoCarousel
+        promos={[
+          ...promos.map((p) => ({ ...p, kind: null })),
+          ...campaigns,
+        ]}
+        manageHref={admin ? "/admin/promotions" : null}
+      />
 
       {/* Two ways to browse, side by side and equally valid: by the car you
           drive, or by the kind of part you need. Neither is forced. */}

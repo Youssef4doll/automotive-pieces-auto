@@ -15,26 +15,31 @@ type Item = {
   short: string;
   Icon: (p: { className?: string }) => React.ReactElement;
   exact?: boolean;
-  /** Shown in the phone tab bar. Five is the most a thumb row can hold. */
-  bottom?: boolean;
 };
 
 const ITEMS: Item[] = [
-  { href: "/compte", label: "Accueil", short: "Accueil", Icon: IconHome, exact: true, bottom: true },
-  { href: "/compte/commandes", label: "Mes commandes", short: "Commandes", Icon: IconOrders, bottom: true },
-  { href: "/compte/garage", label: "Mon garage", short: "Garage", Icon: IconCar, bottom: true },
+  { href: "/compte", label: "Accueil", short: "Accueil", Icon: IconHome, exact: true },
+  { href: "/compte/commandes", label: "Mes commandes", short: "Commandes", Icon: IconOrders },
+  { href: "/compte/garage", label: "Mon garage", short: "Garage", Icon: IconCar },
   { href: "/compte/pieces", label: "Mes pièces", short: "Pièces", Icon: IconPackage },
-  { href: "/compte/aide", label: "Aide", short: "Aide", Icon: IconHelp, bottom: true },
-  { href: "/compte/profil", label: "Mon profil", short: "Profil", Icon: IconUser, bottom: true },
+  { href: "/compte/aide", label: "Aide", short: "Aide", Icon: IconHelp },
+  { href: "/compte/profil", label: "Mon profil", short: "Profil", Icon: IconUser },
 ];
 
 /**
  * The application shell for the customer area.
  *
- * Desktop gets a compact rail so the content can use the full width. A phone
- * gets a sticky tab bar within thumb reach instead, because a rail on a small
- * screen either eats a third of it or hides behind a menu button. Only one of
- * the two is ever rendered visible.
+ * Desktop gets a compact rail so the content can use the full width.
+ *
+ * A phone gets the same six destinations as one scrollable row of chips
+ * directly under the page title. It used to get a fixed tab bar pinned to the
+ * bottom of the screen, and that bar was a poor trade three times over: it
+ * covered the last card on every page (paid for with a 96px spacer), it could
+ * only fit five of the six sections so "Mes pièces" was unreachable from it,
+ * and on a storefront — unlike a native app — the bottom of the viewport is
+ * already where the browser puts its own chrome. The chips sit where the eye
+ * already is after reading the heading, show every section, and scroll the
+ * page normally.
  */
 export default function AccountShell({
   title,
@@ -61,7 +66,6 @@ export default function AccountShell({
 }) {
   const pathname = usePathname();
   const isActive = (i: Item) => (i.exact ? pathname === i.href : pathname?.startsWith(i.href));
-  const bottom = ITEMS.filter((i) => i.bottom);
   const initials = initialsOf(user.name);
 
   return (
@@ -152,53 +156,69 @@ export default function AccountShell({
               </div>
             </header>
 
+            {/* ---------- phone navigation ---------- */}
+            <nav aria-label="Espace client" className="lg:hidden -mx-4 sm:-mx-6 px-4 sm:px-6 mb-5">
+              {/* One row, scrolled sideways, every section present. The active
+                  one is filled rather than merely tinted, so the state survives
+                  a greyscale screenshot and a colour-blind reader. */}
+              <ul className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                {ITEMS.map((item) => {
+                  const active = isActive(item);
+                  return (
+                    <li key={item.href} className="shrink-0">
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        className={`relative flex items-center gap-2 min-h-tap-compact px-3.5 rounded-full border text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                          active
+                            ? "bg-navy-900 border-navy-900 text-white"
+                            : "bg-white border-slate-200 text-slate-600"
+                        }`}
+                      >
+                        <item.Icon className={active ? "text-white" : "text-slate-400"} />
+                        {item.short}
+                        {item.href === "/compte/commandes" && activeOrders ? (
+                          <span
+                            className={`min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full text-[10px] font-bold tabular-nums ${
+                              active ? "bg-white text-navy-900" : "bg-red-600 text-white"
+                            }`}
+                          >
+                            {activeOrders > 9 ? "9+" : activeOrders}
+                            <span className="sr-only"> commande{activeOrders > 1 ? "s" : ""} en cours</span>
+                          </span>
+                        ) : null}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
             {children}
 
-            {/* Keeps the last card clear of the phone tab bar. */}
-            <div className="h-24 lg:hidden" aria-hidden="true" />
+            {/* Help and sign-out, at the end of the page on a phone. They live
+                in the rail on a desktop; without this they were only reachable
+                on a phone through the avatar menu. */}
+            <div className="lg:hidden mt-8 pt-5 border-t border-slate-200 flex flex-col gap-2">
+              <a
+                href={whatsapp ? contactLink({ whatsapp, email: null }) : "/compte/aide"}
+                {...(whatsapp ? { target: "_blank", rel: "noreferrer" } : {})}
+                className="flex items-center gap-3 px-3.5 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-600"
+              >
+                {whatsapp ? <IconWhatsApp className="text-green-600" /> : <IconHelp className="text-slate-400" />}
+                <span className="leading-tight">
+                  <span className="block font-semibold text-navy-950">Assistance</span>
+                  <span className="block text-xs">
+                    {whatsapp ? "Une personne répond" : "Questions fréquentes"}
+                  </span>
+                </span>
+              </a>
+              <LogoutButton className="border border-slate-200 rounded-xl" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ---------- phone tab bar ---------- */}
-      <nav
-        aria-label="Espace client"
-        className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur pb-safe"
-      >
-        <ul className="grid grid-cols-5">
-          {bottom.map((item) => {
-            const active = isActive(item);
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex flex-col items-center justify-center gap-1 min-h-tap py-2 text-[11px] ${
-                    active ? "text-navy-950 font-semibold" : "text-slate-400"
-                  }`}
-                >
-                  {/* The active state reads from the filled pill and the weight,
-                      not colour alone. */}
-                  <span
-                    className={`relative grid place-items-center w-11 h-7 rounded-full transition-colors ${
-                      active ? "bg-navy-50 text-navy-900" : "text-slate-400"
-                    }`}
-                  >
-                    <item.Icon />
-                    {item.href === "/compte/commandes" && activeOrders ? (
-                      <span className="absolute -top-1 end-1.5 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-red-600 text-white text-[10px] font-bold tabular-nums">
-                        {activeOrders > 9 ? "9+" : activeOrders}
-                        <span className="sr-only"> commande{activeOrders > 1 ? "s" : ""} en cours</span>
-                      </span>
-                    ) : null}
-                  </span>
-                  {item.short}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
     </div>
   );
 }

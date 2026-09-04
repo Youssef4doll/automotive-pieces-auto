@@ -218,11 +218,14 @@ function CarouselArrow({
       type="button"
       onClick={onClick}
       aria-label={label}
-      // Hidden on phones: the artwork is only ~160px tall there and swiping is
-      // the natural gesture, so the buttons would cover the message.
-      className={`hidden sm:flex absolute top-1/2 -translate-y-1/2 ${
-        side === "start" ? "start-3" : "end-3"
-      } w-10 h-10 items-center justify-center rounded-full bg-white/90 hover:bg-white shadow-md text-navy-950 transition-colors`}
+      // Shown at every width. Swiping is the natural gesture on a phone and
+      // still works, but an arrow is the only affordance that says "there is
+      // more than one of these" to somebody who never thinks to swipe — and a
+      // carousel whose other slides are undiscoverable is just a slow banner.
+      // Smaller and tighter to the edge on a phone so it clears the artwork.
+      className={`flex absolute top-1/2 -translate-y-1/2 ${
+        side === "start" ? "start-1.5 sm:start-3" : "end-1.5 sm:end-3"
+      } w-8 h-8 sm:w-10 sm:h-10 items-center justify-center rounded-full bg-white/90 hover:bg-white shadow-md text-navy-950 transition-colors`}
     >
       <svg
         width="18"

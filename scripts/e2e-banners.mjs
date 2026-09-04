@@ -5,6 +5,7 @@
 // nobody wrote and an average rating nobody measured.
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
+import { readFileSync } from "fs";
 import { waitForAdmin } from "./lib/wait-for-admin.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
@@ -17,8 +18,23 @@ const check = (label, ok, detail = "") => {
   console.log(`  ${ok ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`);
 };
 
-// Start from a known state: no campaign banners at all.
+// Start from a known state: no banners at all in the band.
+//
+// The home page now feeds hero slots and campaigns into one carousel, so
+// "empty" means neither. The shop's own hero artwork is real content and is
+// only parked for the run — deactivated here and switched back on at the end,
+// never deleted.
 await prisma.promotion.deleteMany({ where: { placement: "CAMPAIGN" } });
+const parkedHeroes = await prisma.promotion.findMany({
+  where: { placement: "HERO", active: true },
+  select: { id: true },
+});
+if (parkedHeroes.length) {
+  await prisma.promotion.updateMany({
+    where: { id: { in: parkedHeroes.map((h) => h.id) } },
+    data: { active: false },
+  });
+}
 
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const shopCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -236,14 +252,108 @@ console.log("\n[9] DELETING CLEANS UP AFTER ITSELF");
     (await shop.locator('section[aria-roledescription="carrousel"]').count()) === 0);
 }
 
-console.log("\n[10] THE TOP STRIP IS UNTOUCHED BY ALL OF THIS");
+console.log("\n[10] HERO SLOTS RIDE IN THE SAME CAROUSEL");
 {
-  const hero = await prisma.promotion.count({ where: { placement: "HERO", active: true } });
-  await shop.goto(BASE);
-  await shop.waitForTimeout(800);
-  const strip = await shop.locator('section[aria-label="Promotions"]').count();
-  check("the hero strip still renders its own banners", strip === (hero > 0 ? 1 : 0), `${hero} hero banner(s)`);
+  // They used to render as their own grid above the campaign band — a wide
+  // featured image with a two-column grid under it. Both feeds now go through
+  // one carousel, so a hero banner has to show up as a slide in it.
+  const hero = parkedHeroes[0];
+  if (!hero) {
+    console.log("  SKIP  the shop has no hero banner of its own to check");
+  } else {
+    await prisma.promotion.update({ where: { id: hero.id }, data: { active: true } });
+    await shop.goto(BASE);
+    await shop.waitForTimeout(1500);
+
+    const car = shop.locator('[aria-roledescription="carrousel"]');
+    check("the carousel is on the page", (await car.count()) === 1, `${await car.count()} found`);
+    const slides = await car.first().locator('[role="group"]').count();
+    check("and the hero banner is one of its slides", slides >= 1, `${slides} slide(s)`);
+    check("with no separate promo strip beside it",
+          (await shop.locator('section[aria-label="Promotions"]').count()) === 0);
+
+    await prisma.promotion.update({ where: { id: hero.id }, data: { active: false } });
+  }
 }
+
+
+console.log("\n[X] ONE CAROUSEL, NOT ARTWORK SCATTERED ACROSS THE PAGE");
+{
+  // Two banners so the arrows and dots have a reason to exist.
+  const made = [];
+  for (const [i, kind] of [[1, "SEASONAL"], [2, "DEAL"]]) {
+    const asset = await prisma.mediaAsset.create({
+      data: { data: readFileSync(`${PICS}/banner-freinage.png`), mimeType: "image/png" },
+      select: { id: true },
+    });
+    const promo = await prisma.promotion.create({
+      data: { title: `QA carousel ${i}`, imageUrl: `/api/images/${asset.id}`, placement: "CAMPAIGN", kind, active: true, order: 90 + i },
+    });
+    made.push({ promoId: promo.id, assetId: asset.id });
+  }
+
+  const shop = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+  await shop.goto(BASE);
+  await shop.waitForTimeout(1800);
+
+  const carousels = shop.locator('[aria-roledescription="carrousel"]');
+  check("the page carries exactly one promotional surface", (await carousels.count()) === 1,
+        `${await carousels.count()} found`);
+
+  const car = carousels.first();
+  await car.scrollIntoViewIfNeeded();
+  await shop.waitForTimeout(600);
+
+  // One banner visible at a time, the rest scrolled off to the side.
+  const geo = await car.evaluate((el) => {
+    const track = el.querySelector('[role="group"]').parentElement;
+    const slides = [...track.querySelectorAll('[role="group"]')];
+    const box = track.getBoundingClientRect();
+    const inView = slides.filter((s) => {
+      const r = s.getBoundingClientRect();
+      return r.left < box.right - 8 && r.right > box.left + 8;
+    }).length;
+    return { slides: slides.length, inView };
+  });
+  check("more than one banner is loaded", geo.slides > 1, `${geo.slides} slides`);
+  check("but only one is on screen at a time", geo.inView === 1, `${geo.inView} visible`);
+
+  check("arrows are offered to move between them",
+        (await car.locator("button[aria-label]").filter({ hasNotText: /./ }).count()) >= 2 ||
+        (await car.getByRole("button", { name: /suivant|précédent|next|previous/i }).count()) >= 2);
+
+  // The arrow actually advances the carousel.
+  const before = await car.evaluate((el) => el.querySelector('[role="group"]').parentElement.scrollLeft);
+  await car.getByRole("button", { name: /suivant|next/i }).first().click();
+  await shop.waitForTimeout(1200);
+  const after = await car.evaluate((el) => el.querySelector('[role="group"]').parentElement.scrollLeft);
+  check("the next arrow moves to the next banner", Math.abs(after) > Math.abs(before), `${before} → ${after}`);
+
+  // And nothing renders promo artwork outside the carousel any more.
+  const strays = await shop.evaluate(() => {
+    const car = document.querySelector('[aria-roledescription="carrousel"]');
+    return [...document.querySelectorAll('section[aria-label="Promotions"]')]
+      .filter((s) => !car || !car.contains(s)).length;
+  });
+  check("no separate promo grid is left on the page", strays === 0, `${strays} stray section(s)`);
+
+  await shop.close();
+  for (const m of made) {
+    await prisma.promotion.delete({ where: { id: m.promoId } });
+    await prisma.mediaAsset.deleteMany({ where: { id: m.assetId } });
+  }
+}
+
+// The shop's own hero banners go back exactly as they were.
+if (parkedHeroes.length) {
+  await prisma.promotion.updateMany({
+    where: { id: { in: parkedHeroes.map((h) => h.id) } },
+    data: { active: true },
+  });
+}
+const restored = await prisma.promotion.count({ where: { placement: "HERO", active: true } });
+check("the shop's own banners are switched back on", restored === parkedHeroes.length,
+      `${restored} of ${parkedHeroes.length}`);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await browser.close();
