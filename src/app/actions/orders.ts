@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { shippingFeeFor } from "@/lib/shipping";
 import { markCartConverted } from "./cart";
 import { getCurrentUser } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
@@ -135,8 +136,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       }
 
       const subtotal = lineItems.reduce((s, l) => s + l.lineTotal, 0);
-      const shippingFee =
-        data.deliveryMethod === "PICKUP" ? 0 : subtotal >= freeShippingThreshold ? 0 : 8;
+      const shippingFee = shippingFeeFor(subtotal, freeShippingThreshold, data.deliveryMethod);
       const total = subtotal + shippingFee;
 
       // Derive the reference from the highest existing one, never from

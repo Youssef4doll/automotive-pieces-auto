@@ -85,7 +85,13 @@ export default async function HomePage() {
       <CategoryGrid />
       <VehicleShortcuts />
       {topSellers.length > 0 && (
-        <section id="produits" className="mx-auto max-w-7xl px-4 py-7 sm:py-10">
+        // min-w-0: this section is a flex child of <main>, and a flex item
+        // refuses to shrink below its own content by default. The swipeable
+        // row of top sellers inside it is deliberately wider than the screen,
+        // and without this floor the section grew to fit it and took the
+        // phone's whole layout viewport with it — the page rendered zoomed
+        // out to 1172px, every other section along with it.
+        <section id="produits" className="w-full min-w-0 mx-auto max-w-7xl px-4 py-7 sm:py-10">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
             <div>
               <Eyebrow k="home.bestsellersEyebrow" />
@@ -100,7 +106,7 @@ export default async function HomePage() {
                 tapped. A control that does not control is worse than no
                 control. */}
           </div>
-          <ProductGrid products={topSellers} />
+          <ProductGrid products={topSellers} scrollOnPhone />
         </section>
       )}
       <TrustBadges />

@@ -90,6 +90,13 @@ export const primaryImageSelect = {
   images: { orderBy: { order: "asc" }, take: 1, select: { id: true } },
 } as const;
 
+/**
+ * The seeded stand-in that every product shipped pointing at: the hero
+ * artwork. It is a photograph of engine oil, an air filter and a spark plug,
+ * so on a brake disc it is not a missing picture but a wrong one.
+ */
+const SEEDED_PLACEHOLDER = "/images/parts-lineup.png";
+
 export function serializeProduct<
   T extends {
     priceBuy: unknown;
@@ -98,6 +105,7 @@ export function serializeProduct<
     imageUrl?: string;
     images?: { id: string }[];
     searchText?: string;
+    category?: { slug: string } | null;
   },
 >(p: T) {
   // Uploaded photos win over the seeded static path, so a product that has
@@ -108,9 +116,21 @@ export function serializeProduct<
   // no component reads. Dropped here rather than in every query's select, so
   // a new caller cannot forget and quietly double its page weight.
   const { images: _images, searchText: _searchText, ...rest } = p;
+
+  // Nothing photographed yet: draw the family instead of showing a picture of
+  // different parts. Only the seeded stand-in is replaced — a path the shop
+  // typed itself is theirs and is left alone. The drawing needs the category,
+  // so a query that did not ask for one keeps the old behaviour rather than
+  // guessing at a family.
+  const resolved = uploaded
+    ? `/api/images/${uploaded}`
+    : p.imageUrl === SEEDED_PLACEHOLDER && p.category?.slug
+      ? `/api/part-icon/${p.category.slug}.svg`
+      : p.imageUrl;
+
   return {
     ...rest,
-    ...(p.imageUrl !== undefined ? { imageUrl: uploaded ? `/api/images/${uploaded}` : p.imageUrl } : {}),
+    ...(p.imageUrl !== undefined ? { imageUrl: resolved } : {}),
     priceBuy: toNumber(p.priceBuy),
     priceSell: toNumber(p.priceSell),
     compareAtPrice: p.compareAtPrice ? toNumber(p.compareAtPrice) : null,
@@ -142,7 +162,28 @@ export async function getProductsForCategory(
     include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
     orderBy,
   });
-  return products.map(serializeProduct);
+
+  // What can be bought comes first, whatever the sort.
+  //
+  // Freinage held eight parts with two of them in stock, and the order above
+  // — top sellers, then newest — put six unbuyable ones at the top: the first
+  // three things a customer saw in the brake aisle were all "Rupture de
+  // stock". A part that cannot be bought is not a better answer than one that
+  // can, and that holds when the shopper has asked for cheapest-first too,
+  // which is why this sits outside the sort rather than inside it.
+  //
+  // Out-of-stock parts stay on the page. They are real references the shop
+  // carries, they say plainly that they are out, and hiding them would lose
+  // the customer who wants to know we stock the part at all. They just stop
+  // going first.
+  //
+  // Sorted here rather than in the query because Prisma cannot order by an
+  // expression, and a category holds tens of rows, not thousands.
+  const ranked = [
+    ...products.filter((p) => p.stockQty > 0),
+    ...products.filter((p) => p.stockQty <= 0),
+  ];
+  return ranked.map(serializeProduct);
 }
 
 export async function getBrandsForCategory(categoryId: string, includeDescendants = true) {
@@ -222,12 +263,20 @@ export async function getRelatedProducts(categoryId: string, excludeId: string, 
 }
 
 export async function getTopSellers(take = 8) {
+  // Every top seller is fetched and then cut down, rather than cut down by the
+  // database: `take` on the query would hand back whichever rows came first,
+  // and on the home page that meant "les pièces les plus commandées" could be
+  // a row of parts nobody can order. Buyable ones fill the row first, and an
+  // out-of-stock top seller only appears if there are not enough to fill it.
   const products = await prisma.product.findMany({
     where: { isTopSeller: true, active: true },
     include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
-    take,
   });
-  return products.map(serializeProduct);
+  const ranked = [
+    ...products.filter((p) => p.stockQty > 0),
+    ...products.filter((p) => p.stockQty <= 0),
+  ];
+  return ranked.slice(0, take).map(serializeProduct);
 }
 
 /**

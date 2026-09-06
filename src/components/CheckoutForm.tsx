@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { useCart, cartSubtotal } from "@/lib/cart-store";
 import Price from "./Price";
+import { shippingFeeFor } from "@/lib/shipping";
 import { GOVERNORATES, GRAND_TUNIS } from "@/lib/governorates";
 import { placeOrder } from "@/app/actions/orders";
 import { track } from "@/lib/track";
@@ -51,7 +52,7 @@ export default function CheckoutForm({
   const [error, setError] = useState<string | null>(null);
 
   const isGrandTunis = GRAND_TUNIS.has(governorate);
-  const shippingFee = deliveryMethod === "PICKUP" ? 0 : subtotal >= freeShippingThreshold ? 0 : 8;
+  const shippingFee = shippingFeeFor(subtotal, freeShippingThreshold, deliveryMethod);
   const total = subtotal + shippingFee;
   const estimate = deliveryMethod === "PICKUP" ? "2h" : isGrandTunis ? deliveryGrandTunis : deliveryRegions;
 

@@ -54,12 +54,22 @@ export default async function VehicleShortcuts({ take = 12 }: { take?: number })
           Stacked, the text gets the full width of the card instead of what is
           left over, and every name fits at every phone size. It goes back to
           side-by-side at md, where there is room for both. */}
+      {/* Six on a phone, twelve above it.
+
+          This is a shortcut list, not the catalogue — the finder above is the
+          path for a car that is not on it. Twelve of these stacked cards ran
+          to six rows and about 870px, on a home page already ten screens long,
+          to save a tap for the seventh-to-twelfth most stocked model. They are
+          ordered by how much the shop carries for each, so the six a phone
+          keeps are the six most likely to be somebody's car. */}
       <div className="grid grid-cols-2 min-[480px]:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
-        {vehicles.map((v) => (
+        {vehicles.map((v, i) => (
           <Link
             key={`${v.makeSlug}/${v.modelSlug}`}
             href={`/pieces/${v.makeSlug}/${v.modelSlug}`}
-            className="flex flex-col items-center text-center gap-2 p-3 md:flex-row md:text-start md:gap-3 md:p-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5 transition"
+            className={`flex flex-col items-center text-center gap-2 p-3 md:flex-row md:text-start md:gap-3 md:p-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5 transition ${
+              i >= 6 ? "hidden sm:flex" : ""
+            }`}
           >
             {/* Same fixed slot whether or not the make has a logo uploaded,
                 so the grid stays even as the shop fills these in one brand

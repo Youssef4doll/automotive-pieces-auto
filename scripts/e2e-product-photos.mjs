@@ -33,13 +33,19 @@ await page.fill('input[name="password"]', "admin1234");
 await page.getByRole("button", { name: "Se connecter", exact: true }).click();
 await waitForAdmin(page, BASE);
 
-console.log("\n[1] BEFORE: THE PRODUCT USES THE SHARED STATIC IMAGE");
+console.log("\n[1] BEFORE: THE PRODUCT IS DRAWN, NOT PHOTOGRAPHED");
 {
   const shop = await (await browser.newContext()).newPage();
   await shop.goto(`${BASE}/produit/${target.slug}`);
   await shop.waitForTimeout(600);
-  const src = await shop.locator("main img").first().getAttribute("src");
-  check("product page falls back to the generic catalogue picture", /parts-lineup/.test(decodeURIComponent(src || "")), src?.slice(0, 60));
+  const src = decodeURIComponent(await shop.locator("main img").first().getAttribute("src") || "");
+  // This used to expect the shared hero artwork — a photograph of engine oil
+  // and an air filter that every unphotographed part fell back to, so a brake
+  // disc's page showed a bottle of oil. A part with no photo now gets the line
+  // drawing for its own family instead: still honestly "no photo yet", but no
+  // longer a picture of something else.
+  check("a part with no photo is drawn from its own family", src.includes("/api/part-icon/"), src.slice(0, 70));
+  check("and never falls back to the hero artwork", !src.includes("parts-lineup"), src.slice(0, 70));
   await shop.close();
 }
 

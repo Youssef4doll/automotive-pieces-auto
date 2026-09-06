@@ -83,7 +83,10 @@ export const config = {
       // request. Anything this file did with `host` or `x-forwarded-proto` on
       // that request produced a non-image response, and the optimiser answered
       // 400 — every uploaded photo rendered as a broken image.
-      source: "/((?!_next/static|_next/image|api/images/|favicon.ico|icon.png|images/).*)",
+      // api/part-icon is here for both reasons: it serves an SVG, not HTML,
+      // so it needs no nonce — and it sets its own, stricter policy, which
+      // the site-wide one below would otherwise overwrite.
+      source: "/((?!_next/static|_next/image|api/images/|api/part-icon/|favicon.ico|icon.png|images/).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

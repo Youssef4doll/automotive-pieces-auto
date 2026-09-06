@@ -80,14 +80,22 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
               product whose description happens to contain a number, while the
               reference lookup goes straight to the part. Defaulting to name
               keeps it invisible for the majority who type words. */}
+          {/* The scope drops to its own line on a phone.
+
+              All three sat in one row at every width, and on a 390px screen
+              "Par nom" and "Rechercher" left about sixty pixels between them:
+              the placeholder rendered as "Recherc" and the box read as broken.
+              Wrapping the selector above gives the input the width of the
+              screen minus the button, which is what it needs to look like
+              somewhere you can type a part name. */}
           <form onSubmit={submit} className="mt-6 relative">
-            <div className="flex rounded-lg overflow-hidden shadow-lg bg-white">
-              <label className="relative shrink-0 border-e border-gray-200">
+            <div className="flex flex-wrap sm:flex-nowrap rounded-lg overflow-hidden shadow-lg bg-white">
+              <label className="relative w-full sm:w-auto shrink-0 border-b sm:border-b-0 sm:border-e border-gray-200">
                 <span className="sr-only">{t("hero.scopeLabel")}</span>
                 <select
                   value={scope}
                   onChange={(e) => setScope(e.target.value as Scope)}
-                  className="h-full ps-3 pe-7 bg-white text-navy-950 text-sm font-semibold outline-none appearance-none cursor-pointer"
+                  className="w-full sm:w-auto h-full min-h-tap ps-3 pe-7 bg-white text-navy-950 text-sm font-semibold outline-none appearance-none cursor-pointer"
                 >
                   <option value="name">{t("hero.scopeName")}</option>
                   <option value="ref">{t("hero.scopeRef")}</option>
