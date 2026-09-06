@@ -42,33 +42,47 @@ export default async function VehicleShortcuts({ take = 12 }: { take?: number })
           family, so it does not get a smaller control. The logo is 56px, the
           model is the loudest thing in the card, and the count says what it is
           counting. */}
-      <div className="grid grid-cols-2 min-[380px]:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
+      {/* The card turns a corner on a phone.
+
+          Logo beside text is right on a wide screen and wrong on a narrow
+          one: three columns on a 400px phone leaves each card about 115px,
+          and a 56px logo, a gap and the padding eat all but roughly thirty of
+          them. Everything then hit `truncate`, so the board read "PEU… 208 /
+          REN… Cli… / VOL… Gol…" — a wall of ellipses where the make and model
+          are the only two things a shopper is looking for.
+
+          Stacked, the text gets the full width of the card instead of what is
+          left over, and every name fits at every phone size. It goes back to
+          side-by-side at md, where there is room for both. */}
+      <div className="grid grid-cols-2 min-[480px]:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
         {vehicles.map((v) => (
           <Link
             key={`${v.makeSlug}/${v.modelSlug}`}
             href={`/pieces/${v.makeSlug}/${v.modelSlug}`}
-            className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5 transition"
+            className="flex flex-col items-center text-center gap-2 p-3 md:flex-row md:text-start md:gap-3 md:p-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5 transition"
           >
             {/* Same fixed slot whether or not the make has a logo uploaded,
                 so the grid stays even as the shop fills these in one brand
                 at a time — see the identical choice on the family cards. */}
             {v.makeLogoUrl ? (
-              <span className="relative shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-gray-50">
-                <Image src={v.makeLogoUrl} alt="" fill sizes="56px" className="object-contain p-1.5" />
+              <span className="relative shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-lg overflow-hidden bg-gray-50">
+                <Image src={v.makeLogoUrl} alt="" fill sizes="(max-width: 768px) 48px, 56px" className="object-contain p-1.5" />
               </span>
             ) : (
-              <span className="shrink-0 w-14 h-14 rounded-lg bg-gray-50 text-navy-900/35 font-display font-bold text-xl flex items-center justify-center">
+              <span className="shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-lg bg-gray-50 text-navy-900/35 font-display font-bold text-lg md:text-xl flex items-center justify-center">
                 {v.makeName[0]?.toUpperCase() ?? "?"}
               </span>
             )}
-            <span className="min-w-0 flex-1 flex flex-col gap-0.5">
+            <span className="w-full min-w-0 md:flex-1 flex flex-col gap-0.5">
               {/* 12px, not 11: the project's legibility floor, and a make
                   name set below it is the small print this card exists to get
                   away from. */}
               <span className="block text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/50 truncate">
                 {v.makeName}
               </span>
-              <span className="block text-[15px] sm:text-base font-semibold text-navy-950 leading-tight truncate">
+              {/* Wrapped to two lines rather than cut. "Série 3 (E90)" is the
+                  answer to "is this my car?", and half of it is not. */}
+              <span className="block text-[15px] md:text-base font-semibold text-navy-950 leading-tight line-clamp-2 [overflow-wrap:anywhere]">
                 {v.modelName}
               </span>
               <span className="block text-[12px] text-navy-900/50 leading-none">

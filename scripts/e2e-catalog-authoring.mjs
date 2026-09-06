@@ -183,18 +183,51 @@ console.log("\n[3] THE VEHICLE BOARD IS THE SAME WEIGHT AS THE FAMILY BOARD");
     // business being 260px tall. What matters is that the model name is the
     // loudest thing in the card and reads at a glance, which is what a bare
     // 13px line in a 44px row did not do.
-    const nameSize = await vehicleCard.evaluate((a) => {
-      const spans = [...a.querySelectorAll("span")];
-      return Math.max(...spans.map((s) => parseFloat(getComputedStyle(s).fontSize) || 0));
+    // The card is [logo, [make, model, count]] — so the model is the middle
+    // line of the last child. Taking the largest font in the card instead
+    // would have measured the logo's placeholder letter and passed on it.
+    const model = await vehicleCard.evaluate((a) => {
+      const el = a.lastElementChild?.children[1];
+      return el ? { size: parseFloat(getComputedStyle(el).fontSize), text: el.textContent.trim() } : null;
     });
-    check("the model name reads at a glance", nameSize >= 15, `${nameSize}px`);
+    check("the model name reads at a glance", !!model && model.size >= 15, model ? `${model.text} at ${model.size}px` : "not found");
+
+    // Every phone width, not one.
+    //
+    // The card was logo-beside-text at three columns from 380px up, which left
+    // about thirty pixels for the words: the board read "PEU… 208 / REN… Cli…
+    // / VOL… Gol…", a wall of ellipses hiding the only two things anyone is
+    // scanning for. One viewport would not have caught it — 390px was the
+    // width being checked, and 445px was the width that was broken — so the
+    // guard is that nothing anywhere in the card is clipped at any of them,
+    // sideways by an ellipsis or downwards by a line clamp.
+    for (const width of [320, 360, 390, 414, 445, 540, 768, 1024]) {
+      await shopper.setViewportSize({ width, height: 900 });
+      await shopper.waitForTimeout(350);
+      const clipped = await shopper.evaluate(() =>
+        [...document.querySelectorAll('a[href^="/pieces/"]')].flatMap((card) =>
+          [...card.querySelectorAll("span")]
+            .filter((s) => s.children.length === 0 && (s.textContent || "").trim().length > 1)
+            .filter((s) => s.scrollWidth > s.clientWidth + 1 || s.scrollHeight > s.clientHeight + 1)
+            .map((s) => s.textContent.trim()),
+        ),
+      );
+      check(`nothing is cut off at ${width}px`, clipped.length === 0, clipped.slice(0, 5).join(", "));
+
+      const scrolls = await shopper.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+      check(`the page does not scroll sideways at ${width}px`, !scrolls);
+    }
 
     await shopper.setViewportSize({ width: 390, height: 844 });
     await shopper.waitForTimeout(400);
     const phone = await vehicleCard.boundingBox();
     check("it still fits two-up on a phone", !!phone && phone.width < 200, phone ? `${Math.round(phone.width)}px` : "no box");
-    const scrolls = await shopper.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-    check("and the page does not scroll sideways", !scrolls);
+    // Stacked on a phone, the words get the whole card rather than what is
+    // left beside the logo — that is what stops the truncation above.
+    const stacked = await vehicleCard.evaluate((a) => getComputedStyle(a).flexDirection);
+    check("the card stacks on a phone", stacked === "column", stacked);
+    const tap = await vehicleCard.boundingBox();
+    check("and the whole card is a comfortable tap target", !!tap && tap.height >= 44 && tap.width >= 44, tap ? `${Math.round(tap.width)}x${Math.round(tap.height)}` : "no box");
   }
   await shopper.context().close();
 }

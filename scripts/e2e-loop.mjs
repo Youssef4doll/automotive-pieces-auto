@@ -208,6 +208,7 @@ console.log("\n[C2b] THE CATALOGUE FILTERS TO THE SHOPPER'S OWN CAR");
 }
 
 console.log("\n[C3] FIND A PART AND BUY IT AS A GUEST");
+let boughtName = null;
 let orderRef = null;
 {
   await shopper.goto(`${BASE}/catalogue/freinage`);
@@ -247,6 +248,15 @@ let orderRef = null;
     await shopper.goto(`${BASE}/produit/${buyable.slug}`);
     await shopper.waitForTimeout(900);
   }
+  // Remember what is actually being bought. The admin-side check further down
+  // used to look for any of a handful of guessed catalogue words, so it passed
+  // or failed on which product this walk happened to land on rather than on
+  // whether the order carried its part through.
+  // textContent, not innerText: the product title is uppercased in CSS, and
+  // innerText hands back what is painted rather than what the catalogue holds,
+  // so the name would never match the order line it is compared against.
+  boughtName = (await shopper.locator("h1").first().textContent()).trim();
+
   await shopper.locator('button:has-text("Ajouter au panier")').first().click();
   await shopper.waitForTimeout(900);
   check("adding to the cart confirms without covering the page",
@@ -316,7 +326,8 @@ let orderId = null;
   orderId = admin.url().split("/").pop();
   const detail = await admin.locator("body").innerText();
   check("the order detail carries the customer's details", detail.includes("Client Boucle") && detail.includes("20445566"));
-  check("and the part they bought", /Ajouter|plaquettes|Filtre|Disque|Huile|frein/i.test(detail));
+  // The part by name, not a word that might be in a part's name.
+  check("and the part they bought", detail.includes(boughtName), boughtName);
 }
 
 console.log("\n[A2] MOVING THE ORDER FORWARD REACHES THE CUSTOMER");
