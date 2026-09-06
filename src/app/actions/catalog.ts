@@ -200,28 +200,80 @@ const brandSchema = z.object({
   name: z.string().trim().min(2, "Le nom doit faire au moins 2 caractères"),
   slug: z.string().trim().optional(),
   logoUrl: z.string().trim().optional(),
+  removeLogo: z.string().optional(),
   isPartsBrand: z.string().optional(),
 });
+
+/** Drop a brand's uploaded logo. Never shared between rows, so no use check. */
+async function deleteBrandLogo(logoUrl: string | null | undefined) {
+  const assetId = mediaAssetIdFromUrl(logoUrl);
+  if (assetId) await prisma.mediaAsset.deleteMany({ where: { id: assetId } });
+}
 
 export async function upsertBrand(
   _prev: CatalogFormState,
   formData: FormData,
 ): Promise<CatalogFormState> {
   await assertAdmin();
-  const parsed = brandSchema.safeParse(Object.fromEntries(formData.entries()));
+  const file = formData.get("file");
+  const parsed = brandSchema.safeParse({
+    ...Object.fromEntries(formData.entries()),
+    // A file input always submits, empty or not, and must not reach zod as a
+    // stray string field.
+    file: undefined,
+  });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide" };
 
   const { id, name } = parsed.data;
   const slug = slugify(parsed.data.slug?.trim() || name);
   if (!slug) return { error: "Le nom ne produit aucun lien valide — utilisez des lettres." };
-  const logoUrl = parsed.data.logoUrl?.trim() || null;
   const isPartsBrand = parsed.data.isPartsBrand === "on" || parsed.data.isPartsBrand === "true";
+
+  // A brand logo could only be set by typing a server path, which meant the
+  // shop could not add one at all — nobody outside the project knows where
+  // files live, and there was no way to put one there. It is uploaded now, the
+  // same way a category picture is. The typed path stays for the logos that
+  // ship with the project.
+  //
+  // Three inputs, one outcome, in priority order: a new upload wins, then the
+  // remove box, then the typed path. `undefined` means leave the current one
+  // alone, which is what an edit that touches nothing else has to do.
+  const previous = id
+    ? (await prisma.brand.findUnique({ where: { id }, select: { logoUrl: true } }))?.logoUrl
+    : null;
+
+  let logoUrl: string | null | undefined;
+  if (file instanceof File && file.size > 0) {
+    // Vectors allowed: a manufacturer ships its logo as an SVG, and it renders
+    // from a 28px row in this list to a full-size brand page.
+    const read = await readImageFile(file, { allowVector: true });
+    if (!read.ok) return { error: read.error };
+    const asset = await prisma.mediaAsset.create({
+      data: { data: read.bytes, mimeType: read.mimeType },
+      select: { id: true },
+    });
+    logoUrl = assetUrl(asset.id, read.mimeType);
+  } else if (parsed.data.removeLogo === "on" || parsed.data.removeLogo === "true") {
+    logoUrl = null;
+  } else {
+    const typed = parsed.data.logoUrl?.trim();
+    // An uploaded logo has no path to show, so the box comes back empty on
+    // every edit. Treating that emptiness as "clear the logo" would wipe the
+    // picture every time the admin renamed a brand.
+    if (typed) logoUrl = typed;
+    else if (!id) logoUrl = null;
+    else if (previous && !previous.startsWith("/api/images/")) logoUrl = null;
+  }
 
   try {
     if (id) {
-      await prisma.brand.update({ where: { id }, data: { name, slug, logoUrl, isPartsBrand } });
+      await prisma.brand.update({
+        where: { id },
+        data: { name, slug, isPartsBrand, ...(logoUrl !== undefined ? { logoUrl } : {}) },
+      });
+      if (logoUrl !== undefined && previous && previous !== logoUrl) await deleteBrandLogo(previous);
     } else {
-      await prisma.brand.create({ data: { name, slug, logoUrl, isPartsBrand } });
+      await prisma.brand.create({ data: { name, slug, logoUrl: logoUrl ?? null, isPartsBrand } });
     }
   } catch (e) {
     return { error: friendlyError(e, "Erreur lors de l'enregistrement") };
@@ -235,7 +287,7 @@ export async function deleteBrand(id: string): Promise<CatalogFormState> {
   await assertAdmin();
   const brand = await prisma.brand.findUnique({
     where: { id },
-    select: { name: true, _count: { select: { products: true } } },
+    select: { name: true, logoUrl: true, _count: { select: { products: true } } },
   });
   if (!brand) return { error: "Marque introuvable." };
   if (brand._count.products > 0) {
@@ -247,6 +299,7 @@ export async function deleteBrand(id: string): Promise<CatalogFormState> {
   } catch (e) {
     return { error: friendlyError(e, "Suppression impossible") };
   }
+  await deleteBrandLogo(brand.logoUrl);
   revalidateStorefront();
   return { ok: `« ${brand.name} » supprimée` };
 }

@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { upsertProduct, type ProductFormState } from "@/app/actions/admin";
+import SearchableSelect from "./SearchableSelect";
 
 type Category = { id: string; name: string; parent: { name: string } | null };
 type Brand = { id: string; name: string };
@@ -114,23 +115,37 @@ export default function ProductForm({
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Catégorie">
-          <select name="categoryId" required value={v.categoryId} onChange={set("categoryId")} className={`w-full min-h-tap px-3 py-2.5 rounded-lg border text-sm outline-none focus:border-gold-500 transition-colors ${bad("categoryId")}`}>
-            <option value="">— Choisir —</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.parent ? `${c.parent.name} › ${c.name}` : c.name}
-              </option>
-            ))}
-          </select>
+        {/* Both of these were native <select>s over lists too long to scroll:
+            a hundred and forty categories, and a brand list that grows with
+            every supplier. A native select can only be searched by jumping to
+            a first letter, so filing a part under Éclairage meant scrolling
+            past everything else beginning with E — on the one screen that gets
+            used more than any other in the admin. Typing filters them now. */}
+        <Field label="Catégorie" hint="Tapez pour filtrer — « frein », « bougie », « ecl »…">
+          <SearchableSelect
+            name="categoryId"
+            required
+            invalid={state?.error != null && state.field === "categoryId"}
+            value={v.categoryId}
+            onChange={(id) => setV((p) => ({ ...p, categoryId: id }))}
+            options={categories.map((c) => ({
+              value: c.id,
+              label: c.name,
+              group: c.parent?.name ?? null,
+            }))}
+            placeholder="— Choisir —"
+            emptyLabel={null}
+          />
         </Field>
         <Field label="Marque">
-          <select name="brandId" value={v.brandId} onChange={set("brandId")} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors">
-            <option value="">—</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
+          <SearchableSelect
+            name="brandId"
+            value={v.brandId}
+            onChange={(id) => setV((p) => ({ ...p, brandId: id }))}
+            options={brands.map((b) => ({ value: b.id, label: b.name }))}
+            placeholder="—"
+            emptyLabel="— Aucune marque —"
+          />
         </Field>
       </div>
 

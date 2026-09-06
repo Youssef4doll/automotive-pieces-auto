@@ -6,6 +6,7 @@ import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { waitForAdmin } from "./lib/wait-for-admin.mjs";
+import { pickOption } from "./lib/pick-option.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const PICS = process.env.PICS_DIR;
@@ -73,14 +74,16 @@ try {
 
   console.log("\n[2] A NEW PRODUCT TAKES ITS PHOTOS ON THE WAY IN");
   {
-    const cat = await prisma.category.findFirst({ where: { parentId: { not: null } }, select: { id: true } });
+    const cat = await prisma.category.findFirst({ where: { parentId: { not: null } }, select: { id: true, name: true } });
     await p.goto(`${BASE}/admin/stock/nouveau`);
     await p.waitForTimeout(900);
     check("the add form offers a photo field", (await p.locator('input[name="photos"]').count()) === 1);
 
     await p.fill('input[name="sku"]', SKU);
     await p.fill('input[name="name"]', `Plaquette QA ${STAMP}`);
-    await p.selectOption('select[name="categoryId"]', cat.id);
+    // The picker filters as you type now; see scripts/lib/pick-option.mjs.
+    const filedUnder = await pickOption(p, "categoryId", cat.name);
+    check("the category picker filed it where it was told", filedUnder === cat.id, `${filedUnder} vs ${cat.id}`);
     await p.fill('input[name="priceBuy"]', "20");
     await p.fill('input[name="priceSell"]', "35");
     await p.fill('input[name="stockQty"]', "7");

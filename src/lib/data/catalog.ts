@@ -13,7 +13,20 @@ import { parseQuery, rankProducts } from "@/lib/search";
  * young one. Categories reappear on their own the moment they hold a product,
  * so this needs no maintenance as the catalogue grows.
  */
-export async function getMegaMenu() {
+/**
+ * @param includeEmpty Show families and subcategories that hold no parts yet.
+ *
+ * Off for shoppers: a tile that opens onto nothing is a dead end, and sixteen
+ * of them is a catalogue that looks stocked and is not.
+ *
+ * On for an admin, because otherwise adding a category looks like it did
+ * nothing. The category was created, it is in the admin list, and the home
+ * page — the first place anyone checks — did not change, with no explanation
+ * anywhere for why. The tile now appears for whoever is signed in as an admin,
+ * marked as not yet visible to customers, so the answer to "did that work?" is
+ * on the screen where the question gets asked.
+ */
+export async function getMegaMenu(includeEmpty = false) {
   const families = await prisma.category.findMany({
     where: { parentId: null },
     orderBy: { order: "asc" },
@@ -28,8 +41,11 @@ export async function getMegaMenu() {
 
   return (
     families
-      .map((f) => ({ ...f, children: f.children.filter((c) => c._count.products > 0) }))
-      .filter((f) => f.children.length > 0 || f._count.products > 0)
+      .map((f) => ({
+        ...f,
+        children: includeEmpty ? f.children : f.children.filter((c) => c._count.products > 0),
+      }))
+      .filter((f) => includeEmpty || f.children.length > 0 || f._count.products > 0)
       // How many parts are actually behind this tile — its own plus everything
       // in its subcategories. The number of subcategories told the shopper
       // about our filing system; the number of parts tells them whether it is

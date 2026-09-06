@@ -88,7 +88,14 @@ const SYMPTOM_LINKS: { key: DictKey; g: number; s: number }[] = [
   { key: "sym.16", g: 15, s: 1 },
 ];
 
-export default function FamiliesTabs({ families }: { families: Family[] }) {
+export default function FamiliesTabs({
+  families,
+  admin = false,
+}: {
+  families: Family[];
+  /** Signed in as an admin: empty families are in the list, and marked as such. */
+  admin?: boolean;
+}) {
   const { t } = useLocale();
   const [tab, setTab] = useState<"fam" | "sym">("fam");
   // One family open at a time. Expanding every card at once turns a scannable
@@ -129,6 +136,9 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
         <div className="grid grid-cols-2 min-[380px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-2.5">
           {families.map((f) => {
             const open = openFamily === f.slug;
+            // Only an admin is ever handed one of these, so the badge below
+            // cannot reach a shopper.
+            const hidden = admin && !f.productCount;
             return (
               <Fragment key={f.slug}>
                 {/* A button, not a link: the first tap opens the family's
@@ -143,7 +153,9 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
                   className={`group relative flex flex-col items-center gap-2 p-2.5 sm:p-3 rounded-xl border bg-white text-center transition ${
                     open
                       ? "border-gold-500 bg-[#fffdf4] ring-1 ring-gold-500"
-                      : "border-navy-900/10 hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5"
+                      : hidden
+                        ? "border-dashed border-navy-900/25 hover:border-gold-500"
+                        : "border-navy-900/10 hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5"
                   }`}
                 >
                   <FamilyThumb slug={f.slug} imageUrl={f.imageUrl} />
@@ -171,6 +183,16 @@ export default function FamiliesTabs({ families }: { families: Family[] }) {
                       </>
                     )}
                   </span>
+
+                  {/* Admin only. A family with nothing in it is on this board
+                      so that creating one is visibly something that happened,
+                      but it is not on the shopper's board — this says which,
+                      so the tile is not mistaken for a live one. */}
+                  {hidden && (
+                    <span className="text-[10.5px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
+                      Masquée · vide
+                    </span>
+                  )}
 
                   {/* Corner badge rather than a row item: the tile is a column
                       now, and a chevron under the name would read as another

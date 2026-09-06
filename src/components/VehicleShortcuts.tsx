@@ -33,32 +33,48 @@ export default async function VehicleShortcuts({ take = 12 }: { take?: number })
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+      {/* Cards, at the weight of the family board above.
+
+          These were single-line rows barely taller than a tap target, with a
+          36px logo and the part count as a bare number — the two boards did
+          the same job on the same page, and this one read as a footnote to the
+          other. Picking your car is not a smaller decision than picking a part
+          family, so it does not get a smaller control. The logo is 56px, the
+          model is the loudest thing in the card, and the count says what it is
+          counting. */}
+      <div className="grid grid-cols-2 min-[380px]:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
         {vehicles.map((v) => (
           <Link
             key={`${v.makeSlug}/${v.modelSlug}`}
             href={`/pieces/${v.makeSlug}/${v.modelSlug}`}
-            className="flex items-center gap-3 min-h-tap px-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-navy-900/35 transition-colors"
+            className="flex items-center gap-3 p-3 sm:p-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5 transition"
           >
             {/* Same fixed slot whether or not the make has a logo uploaded,
                 so the grid stays even as the shop fills these in one brand
                 at a time — see the identical choice on the family cards. */}
             {v.makeLogoUrl ? (
-              <span className="relative shrink-0 w-9 h-9 rounded-lg overflow-hidden bg-gray-50">
-                <Image src={v.makeLogoUrl} alt="" fill sizes="36px" className="object-contain p-1" />
+              <span className="relative shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-gray-50">
+                <Image src={v.makeLogoUrl} alt="" fill sizes="56px" className="object-contain p-1.5" />
               </span>
             ) : (
-              <span className="shrink-0 w-9 h-9 rounded-lg bg-gray-100 text-gray-500 font-display font-bold text-sm flex items-center justify-center">
+              <span className="shrink-0 w-14 h-14 rounded-lg bg-gray-50 text-navy-900/35 font-display font-bold text-xl flex items-center justify-center">
                 {v.makeName[0]?.toUpperCase() ?? "?"}
               </span>
             )}
-            <span className="min-w-0 flex-1">
-              <span className="block text-xs uppercase tracking-wide text-gray-600 truncate">
+            <span className="min-w-0 flex-1 flex flex-col gap-0.5">
+              {/* 12px, not 11: the project's legibility floor, and a make
+                  name set below it is the small print this card exists to get
+                  away from. */}
+              <span className="block text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/50 truncate">
                 {v.makeName}
               </span>
-              <span className="block text-sm font-semibold text-navy-950 truncate">{v.modelName}</span>
+              <span className="block text-[15px] sm:text-base font-semibold text-navy-950 leading-tight truncate">
+                {v.modelName}
+              </span>
+              <span className="block text-[12px] text-navy-900/50 leading-none">
+                {v.productCount} pièce{v.productCount > 1 ? "s" : ""}
+              </span>
             </span>
-            <span className="text-xs text-gray-600 shrink-0">{v.productCount}</span>
           </Link>
         ))}
       </div>

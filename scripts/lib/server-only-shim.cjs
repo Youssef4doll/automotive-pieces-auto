@@ -8,6 +8,10 @@
  * server library from a test script fails before the first line of it runs.
  * Next's own copy is pointed at here, which is the same module the app gets.
  */
+// require(), not import: this file is loaded with `node --require` so that it
+// runs before anything else resolves a module, and it patches CommonJS
+// resolution itself. An ESM version of it would load too late to do its job.
+/* eslint-disable @typescript-eslint/no-require-imports */
 const Module = require("node:module");
 const path = require("node:path");
 

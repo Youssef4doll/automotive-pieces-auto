@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { upsertBrand, deleteBrand, type CatalogFormState } from "@/app/actions/catalog";
 
 export type AdminBrand = {
@@ -53,6 +54,18 @@ export default function BrandManager({ brands }: { brands: AdminBrand[] }) {
         {brands.map((b) => (
           <li key={b.id} className="border border-gray-200 rounded-xl bg-white">
             <div className="flex items-center gap-2 px-3 py-2 flex-wrap">
+              {/* The logo, at the size it is worth checking. Uploading one and
+                  then having to reopen the form to find out whether it took is
+                  the reason this row shows it. */}
+              {b.logoUrl ? (
+                <span className="relative shrink-0 w-9 h-9 rounded-lg overflow-hidden bg-gray-50 border border-gray-200">
+                  <Image src={b.logoUrl} alt="" fill sizes="36px" className="object-contain p-1" />
+                </span>
+              ) : (
+                <span className="shrink-0 w-9 h-9 rounded-lg bg-gray-100 text-gray-400 font-display font-bold text-sm flex items-center justify-center">
+                  {b.name[0]?.toUpperCase() ?? "?"}
+                </span>
+              )}
               <span className="flex-1 min-w-0">
                 <span className="font-heading font-bold uppercase text-navy-950">{b.name}</span>
                 <span className="text-xs text-gray-600"> /{b.slug} · {b.productCount} prod.</span>
@@ -107,6 +120,32 @@ function BrandForm({
   onCancel: () => void;
 }) {
   const input = "w-full px-3 min-h-tap border border-navy-900/15 rounded-lg text-sm outline-none focus:border-gold-500";
+
+  // The logo could only be set by typing a path into a text box, which meant
+  // in practice that it could not be set: the shop has the manufacturer's PNG
+  // or SVG on a laptop, not on the server, and no way to put it there. It is
+  // uploaded now, like every other picture on the site.
+  const [preview, setPreview] = useState<string | null>(brand?.logoUrl ?? null);
+  const [removeChecked, setRemoveChecked] = useState(false);
+  const objectUrl = useRef<string | null>(null);
+
+  useEffect(() => () => { if (objectUrl.current) URL.revokeObjectURL(objectUrl.current); }, []);
+
+  const uploaded = !!brand?.logoUrl?.startsWith("/api/images/");
+
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
+    objectUrl.current = null;
+    if (!file) {
+      setPreview(brand?.logoUrl ?? null);
+      return;
+    }
+    setRemoveChecked(false);
+    objectUrl.current = URL.createObjectURL(file);
+    setPreview(objectUrl.current);
+  };
+
   return (
     <form action={onSubmit} className="flex flex-wrap items-end gap-2 bg-white border border-gray-200 rounded-lg p-3">
       {brand && <input type="hidden" name="id" value={brand.id} />}
@@ -118,10 +157,69 @@ function BrandForm({
         <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">Lien (auto si vide)</span>
         <input name="slug" defaultValue={brand?.slug} placeholder="bosch" className={input} />
       </label>
+
+      <div className="flex items-end gap-2 w-full sm:w-auto">
+        <span className="relative shrink-0 w-11 h-11 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+          {preview && !removeChecked && (
+            <Image
+              src={preview}
+              alt=""
+              fill
+              sizes="44px"
+              className="object-contain p-1"
+              unoptimized={preview.startsWith("blob:")}
+            />
+          )}
+        </span>
+        <label className="flex flex-col gap-1 flex-1 min-w-36">
+          <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">Logo</span>
+          <input
+            name="file"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
+            onChange={onPickFile}
+            className="w-full text-xs file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[11px]"
+          />
+          <span className="text-[10.5px] text-navy-900/40 leading-tight">
+            SVG conseillé (net à toutes les tailles) · JPEG, PNG, WebP, AVIF acceptés
+          </span>
+        </label>
+        {brand?.logoUrl && (
+          <label className="flex items-center gap-1.5 text-xs text-gray-600 mb-2.5 shrink-0">
+            <input
+              type="checkbox"
+              name="removeLogo"
+              checked={removeChecked}
+              onChange={(e) => {
+                setRemoveChecked(e.target.checked);
+                setPreview(e.target.checked ? null : brand.logoUrl);
+              }}
+            />
+            Retirer
+          </label>
+        )}
+      </div>
+
+      {/* Kept for the logos that ship with the project. An uploaded one has no
+          path to show here, so the box is left empty and labelled rather than
+          reading as "this brand has no logo". */}
       <label className="flex flex-col gap-1 flex-1 min-w-36">
-        <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">Logo (chemin)</span>
-        <input name="logoUrl" defaultValue={brand?.logoUrl ?? ""} placeholder="/images/brands/bosch.png" className={input} />
+        <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">
+          …ou un chemin d&rsquo;image du site
+        </span>
+        <input
+          name="logoUrl"
+          defaultValue={uploaded ? "" : brand?.logoUrl ?? ""}
+          placeholder="/images/brands/bosch.png"
+          className={input}
+        />
+        {uploaded && (
+          <span className="text-[10.5px] text-navy-900/40 leading-tight">
+            Logo téléversé — laissez vide pour le conserver.
+          </span>
+        )}
       </label>
+
       <label className="flex items-center gap-2 text-sm min-h-tap">
         <input type="checkbox" name="isPartsBrand" defaultChecked={brand?.isPartsBrand ?? true} />
         Marque de pièces

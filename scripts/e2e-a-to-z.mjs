@@ -5,6 +5,7 @@
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
 import { waitForAdmin } from "./lib/wait-for-admin.mjs";
+import { pickOption } from "./lib/pick-option.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const PICS = process.env.PICS_DIR;
@@ -130,8 +131,9 @@ await admin.goto(`${BASE}/admin/stock/nouveau`);
 await admin.waitForTimeout(800);
 await admin.fill('input[name="sku"]', SKU);
 await admin.fill('input[name="name"]', PRODUCT);
-await admin.selectOption('select[name="categoryId"]', { label: `${FAM} › ${SUB}` });
-await admin.selectOption('select[name="brandId"]', { label: BRAND });
+// The pickers filter as you type now; see scripts/lib/pick-option.mjs.
+await pickOption(admin, "categoryId", SUB);
+await pickOption(admin, "brandId", BRAND);
 await admin.fill('textarea[name="description"]', "Amortisseur avant, test de bout en bout.");
 await admin.fill('input[name="priceBuy"]', "80");
 await admin.fill('input[name="priceSell"]', "149.90");

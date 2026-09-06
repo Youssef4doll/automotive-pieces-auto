@@ -1,5 +1,6 @@
 import { getMegaMenu } from "@/lib/data/catalog";
 import { getSettings, publicContact } from "@/lib/settings";
+import { requireAdmin } from "@/lib/session";
 import SectionHeading from "./SectionHeading";
 import Eyebrow from "./Eyebrow";
 import T from "./T";
@@ -7,7 +8,11 @@ import { FamiliesFooter } from "./FamiliesFooter";
 import FamiliesTabs from "./FamiliesTabs";
 
 export default async function CategoryGrid() {
-  const [families, settings] = await Promise.all([getMegaMenu(), getSettings()]);
+  // An admin sees the whole catalogue, empty families included, so that adding
+  // one is visibly something that happened. A shopper sees only what has parts
+  // behind it. Same component, same page, two audiences.
+  const admin = await requireAdmin();
+  const [families, settings] = await Promise.all([getMegaMenu(!!admin), getSettings()]);
   const familiesForTabs = families.map((f) => ({
     slug: f.slug,
     name: f.name,
@@ -31,7 +36,7 @@ export default async function CategoryGrid() {
         </p>
       </div>
 
-      <FamiliesTabs families={familiesForTabs} />
+      <FamiliesTabs families={familiesForTabs} admin={!!admin} />
 
       <FamiliesFooter whatsapp={publicContact(settings).whatsapp} />
     </section>

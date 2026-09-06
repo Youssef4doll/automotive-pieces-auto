@@ -4,6 +4,7 @@
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
 import { waitForAdmin } from "./lib/wait-for-admin.mjs";
+import { optionLabels } from "./lib/pick-option.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const prisma = new PrismaClient();
@@ -146,8 +147,10 @@ check("brand stored in the database", !!brand, brand?.slug);
 
 await page.goto(`${BASE}/admin/stock/nouveau`);
 await page.waitForTimeout(800);
-const brandOptions = await page.locator('select[name="brandId"]').innerText();
-check("the new brand is selectable on the product form", brandOptions.includes(BRAND));
+// The brand picker is a filterable combobox now, so this asks it the way an
+// admin would: type the new brand's name and see whether it comes back.
+const brandOptions = (await optionLabels(page, "brandId", BRAND)).join(" | ");
+check("the new brand is selectable on the product form", brandOptions.includes(BRAND), brandOptions || "(nothing offered)");
 
 console.log("\n[7] A PRODUCT EDIT REACHES THE SHOP");
 const demo = await prisma.product.findFirst({ where: { active: true }, select: { id: true, slug: true, priceSell: true } });
