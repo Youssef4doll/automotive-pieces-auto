@@ -137,46 +137,64 @@ export default async function AccountPage() {
           </section>
         )}
 
-        <QuickActions whatsapp={contact.whatsapp} />
+        {/* Two columns once there is room for them.
 
-        <GarageSection />
+            Everything below the live order used to be one stacked ribbon:
+            seven full-width cards, three thousand pixels of scroll on a
+            desktop, with the right-hand half of every one of them empty. The
+            split is by what the card is for, not by size — the left column is
+            what you came to do (buy again, check an order), the right is what
+            you keep coming back to (your car, the ways in, getting hold of
+            someone). Below xl it collapses back to the single column the
+            phone has always had, in the same order. */}
+        <div className="grid xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] gap-4 lg:gap-5 items-start">
+          <div className="flex flex-col gap-4 lg:gap-5 min-w-0">
+            <QuickActions whatsapp={contact.whatsapp} />
 
-        <ShopForCar categories={families} />
+            <BuyAgain items={buyAgain} />
 
-        <BuyAgain items={buyAgain} />
+            {recent.length > 0 && (
+              <section aria-labelledby="recent" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex items-baseline justify-between gap-3 mb-2 flex-wrap">
+                  <h2 id="recent" className="font-heading font-extrabold uppercase text-navy-950 tracking-tight">
+                    Mes commandes
+                  </h2>
+                  <Link
+                    href="/compte/commandes"
+                    className="inline-flex items-center gap-1 min-h-tap-compact text-xs font-semibold text-navy-900 hover:text-red-600"
+                  >
+                    Voir toutes mes commandes <IconArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+                <div className="flex flex-col divide-y divide-slate-100">
+                  {recent.map((o) => (
+                    <OrderRow
+                      key={o.id}
+                      order={{
+                        ref: o.ref,
+                        status: o.status,
+                        total: toNumber(o.total),
+                        createdAt: o.createdAt.toISOString(),
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
 
-        {recent.length > 0 && (
-          <section aria-labelledby="recent" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-            <div className="flex items-baseline justify-between gap-3 mb-2 flex-wrap">
-              <h2 id="recent" className="font-heading font-extrabold uppercase text-navy-950 tracking-tight">
-                Mes commandes
-              </h2>
-              <Link
-                href="/compte/commandes"
-                className="inline-flex items-center gap-1 min-h-tap-compact text-xs font-semibold text-navy-900 hover:text-red-600"
-              >
-                Voir toutes mes commandes <IconArrowRight className="w-4 h-4" />
-              </Link>
+          <div className="flex flex-col gap-4 lg:gap-5 min-w-0">
+            <GarageSection />
+
+            <ShopForCar categories={families} />
+
+            {/* Side by side while they are the full width of the page, stacked
+                once they are in a column of their own. */}
+            <div className="grid lg:grid-cols-2 xl:grid-cols-1 gap-4 lg:gap-5 [&>*]:min-w-0">
+              <HelpPanel contact={contact} orderRef={active?.ref} />
+              <TrustPanel />
             </div>
-            <div className="flex flex-col divide-y divide-slate-100">
-              {recent.map((o) => (
-                <OrderRow
-                  key={o.id}
-                  order={{
-                    ref: o.ref,
-                    status: o.status,
-                    total: toNumber(o.total),
-                    createdAt: o.createdAt.toISOString(),
-                  }}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="grid lg:grid-cols-2 gap-4 lg:gap-5 [&>*]:min-w-0">
-          <HelpPanel contact={contact} orderRef={active?.ref} />
-          <TrustPanel />
+          </div>
         </div>
 
         {counts.total > 0 && (

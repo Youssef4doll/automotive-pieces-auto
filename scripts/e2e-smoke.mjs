@@ -5,7 +5,10 @@
 // Usage: start the app (npm run dev or npm run build && npm run start) on
 // port 3500, then: node scripts/e2e-smoke.mjs
 import { chromium } from "playwright";
+import { PrismaClient } from "@prisma/client";
 import { waitForAdmin } from "./lib/wait-for-admin.mjs";
+
+const prisma = new PrismaClient();
 
 const BASE = process.env.BASE_URL || "http://localhost:3500";
 
@@ -27,10 +30,21 @@ async function main() {
   console.log("✓ Customer logged in");
 
   // 2. Add a product to the cart from its product page.
-  await customerPage.goto(`${BASE}/produit/kit-de-plaquettes-de-frein-avant-trw-gdb1330-br-4820`);
+  //
+  // Whichever part is actually in stock, not a slug written into the test.
+  // The battery places real orders every round, so the one this used to name
+  // eventually sold out and the smoke test started failing on a shop that was
+  // working perfectly — 44 of its 55 parts were buyable at the time.
+  const stocked = await prisma.product.findFirst({
+    where: { active: true, stockQty: { gt: 2 } },
+    orderBy: { stockQty: "desc" },
+    select: { slug: true, name: true },
+  });
+  if (!stocked) throw new Error("No product is in stock — nothing to buy.");
+  console.log(`  buying: ${stocked.name}`);
+  await customerPage.goto(`${BASE}/produit/${stocked.slug}`);
   // The first enabled one, not simply the first. Out-of-stock parts render
-  // the same button disabled — correctly — and after a full battery of suites
-  // has placed real orders, the top of a listing is often exactly that.
+  // the same button disabled — correctly — and a page can offer more than one.
   const BUYABLE = 'button:has-text("Ajouter au panier"):not([disabled])';
   await customerPage.waitForSelector(BUYABLE, { timeout: 20000 });
   await customerPage.click(BUYABLE);
@@ -90,6 +104,7 @@ async function main() {
   console.log("✓ Stock row after order:", stockRow.replace(/\s+/g, " ").trim());
 
   await browser.close();
+  await prisma.$disconnect();
   console.log("\nALL CHECKS DONE");
 }
 

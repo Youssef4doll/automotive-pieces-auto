@@ -64,7 +64,14 @@ export default function BuyAgain({
       </div>
 
       <div className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto no-scrollbar sm:overflow-visible">
-        <ul className="flex gap-3 w-max sm:w-auto sm:grid sm:grid-cols-2 xl:grid-cols-3">
+        {/* As many cards as fit, decided by this box rather than by the
+            window. `xl:grid-cols-3` counted the viewport, so when the
+            dashboard put this card into a column two-thirds of the page wide,
+            it still forced three across: part names broke a letter at a time
+            and the price ran over the Racheter button. auto-fill against a
+            230px floor asks the only question that matters — how many fit in
+            here — and gets it right in either column. */}
+        <ul className="flex gap-3 w-max sm:w-auto sm:grid sm:grid-cols-[repeat(auto-fill,minmax(230px,1fr))]">
           {items.map((item) => {
             const out = item.stockQty <= 0;
             const justAdded = added[item.productId];

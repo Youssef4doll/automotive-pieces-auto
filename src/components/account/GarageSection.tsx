@@ -48,12 +48,16 @@ export default function GarageSection({ compact = false }: { compact?: boolean }
       </div>
 
       {vehicles.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center">
-          <span className="inline-grid place-items-center w-12 h-12 rounded-full bg-slate-100 text-slate-400 mb-3">
+        // A prompt, not a monument. This was a 230px dashed box holding one
+        // sentence and one button, and it is the state every new customer
+        // lands on — so it was the tallest thing on their dashboard while
+        // saying the least.
+        <div className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-center">
+          <span className="inline-grid place-items-center w-10 h-10 rounded-full bg-slate-100 text-slate-400 mb-2">
             <IconCar />
           </span>
           <p className="font-semibold text-navy-950 mb-1">Votre garage est vide</p>
-          <p className="text-sm text-slate-500 mb-4 max-w-sm mx-auto">
+          <p className="text-sm text-slate-500 mb-3 max-w-sm mx-auto">
             Ajoutez votre voiture pour trouver plus facilement les bonnes pièces.
           </p>
           <button

@@ -70,7 +70,13 @@ export default function AccountShell({
 
   return (
     <div className="bg-white min-h-screen">
-      <div className="w-full min-w-0 mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8 py-5 lg:py-9">
+      {/* 1400, not 1240. The rail takes 236 of it before the page starts, so
+          the old cap left the dashboard's own content under 900px on a laptop
+          — narrow enough that putting two columns in it made both of them
+          cramped, while 400px of the screen sat empty to the right of
+          everything. These are cards and tables, not prose; they have no
+          reading measure to protect. */}
+      <div className="w-full min-w-0 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-5 lg:py-9">
         <div className="lg:grid lg:grid-cols-[236px_1fr] lg:gap-8 xl:gap-10">
           {/* ---------- desktop rail ---------- */}
           <aside className="hidden lg:flex lg:flex-col sticky top-28 self-start max-h-[calc(100vh-8rem)]">

@@ -51,7 +51,16 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
     // brands band underneath it. The parts artwork it was guarding is
     // object-contain inside a fixed-height box and does not overflow anyway.
     <section className="bg-navy-900 text-white">
-      <div className="mx-auto max-w-7xl px-4 py-7 sm:py-16 grid lg:grid-cols-2 gap-6 sm:gap-10 items-center">
+      {/* The artwork gets the larger half on a desktop.
+
+          It used to be an even split, and the reference's picture is wider
+          than half — the only ways to reach that size inside an even split
+          were to bleed it off the edge of the page, which put a horizontal
+          scrollbar on the two commonest desktop widths, or to bleed it
+          inwards, which laid the brake caliper across the subtitle. Moving
+          the split is what actually makes room for it. The text column keeps
+          a comfortable measure; nothing above lg changes. */}
+      <div className="mx-auto max-w-7xl px-4 py-7 sm:py-16 grid lg:grid-cols-[1fr_1.35fr] gap-6 sm:gap-10 items-center">
         {/* min-w-0: this is a grid item, and a grid item's default min-width
             is auto — its own content's intrinsic width, not the track's. The
             search button's unbreakable label ("Rechercher") was enough to
@@ -138,13 +147,31 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
             cherchez-vous ?" and every route to find a part completely off the
             first screen. Nothing about the type scale changes; this is 152px
             of picture traded for the thing the visitor came to do. */}
+        {/* Two things taken from the reference design and nothing else: how
+            big the artwork sits on a desktop, and the shadow under it.
+
+            The size comes from the grid above rather than from a negative
+            margin here, so the picture reaches the reference's width without
+            ever leaving its own column — no page scrollbar, nothing laid over
+            the text. The picture is 3:1 in a box taller than it is wide at
+            this breakpoint, so the fit is decided by the width: a wider track
+            is what makes the parts bigger. */}
         <div className="relative hidden sm:block sm:h-72 lg:h-96">
           <Image
             src="/images/parts-lineup.png"
             alt="Pièces automobiles Automotive"
             fill
-            sizes="(max-width: 1024px) 100vw, 50vw"
+            sizes="(max-width: 1024px) 100vw, 60vw"
             className="object-contain"
+            // Two stacked drop-shadows, straight from the reference. They
+            // trace the parts themselves rather than a box, because
+            // drop-shadow follows the PNG's alpha — which is the whole point
+            // of using it here instead of box-shadow. Tailwind can express
+            // one of these; stacking two is clearer written out.
+            style={{
+              filter:
+                "drop-shadow(0 34px 40px rgba(0,0,0,.6)) drop-shadow(0 8px 16px rgba(0,0,0,.4))",
+            }}
             priority
           />
         </div>
