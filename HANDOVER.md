@@ -28,8 +28,8 @@ gets "command not found" on every platform. `npx prisma …` works too.
 
 | Variable | What it is |
 |---|---|
-| `DATABASE_URL` | Pooled connection (port 6543 on Supabase). Needs `?pgbouncer=true`. |
-| `DATABASE_URL_UNPOOLED` | Direct connection (5432). Used only by `prisma migrate`. Required wherever `DATABASE_URL` is pooled — **Vercel included**; see below. |
+| `DATABASE_URL` | Pooled connection — hostname carries `-pooler` on Neon, port 6543 + `?pgbouncer=true` on Supabase. |
+| `DATABASE_URL_UNPOOLED` | Direct connection. Used only by `prisma migrate`. Required wherever `DATABASE_URL` is pooled — **Vercel included**; see below. |
 | `SESSION_SECRET` | Signs the session cookie. Long and random. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical origin, for sitemap/OG/canonicals. Falls back to `VERCEL_URL`. |
 
@@ -45,19 +45,29 @@ migrates itself.
 
 **If a deploy fails with `P1012 — Environment variable not found:
 DATABASE_URL_UNPOOLED`**, that variable is missing from the host, not from the
-code. The schema declares it as the migration connection and Prisma validates
-it on *every* command, including `generate` — so the build dies before it has
-touched a database, which is a confusing way to report a missing variable.
-On Vercel: Settings → Environment Variables → add it to Production, Preview and
-Development, then redeploy.
+code. The schema declares it as the migration connection, and `prisma migrate
+deploy` validates it up front before touching a database — `prisma generate`
+does not need it and runs fine without it, so this only ever bites the migrate
+step (which is the one `npm run build` runs). On Vercel: Settings →
+Environment Variables → add it to Production, Preview and Development, then
+redeploy. The value:
+
+- **Neon** — the same string as `DATABASE_URL` with `-pooler` dropped from the
+  hostname; same user, password, database and port.
+- **Supabase** — same credentials on host `db.<ref>.supabase.co`, port 5432 —
+  or the "Session pooler" string on port 5432 if your network is IPv4-only.
 
 `scripts/prisma.mjs` wraps the CLI and takes one case off the table: when
 `DATABASE_URL_UNPOOLED` is absent and `DATABASE_URL` is *not* pooled, the two
 would be the same string, so it fills it in. When it can see a pooler in the
-URL — `pgbouncer=true`, a `pooler.` host, or port 6543 — it refuses and prints
-what to set and where, because copying a pooled URL across would trade a clear
-"variable not found" for a migration that fails half-way through against a real
-database.
+URL — `pgbouncer=true`, a `-pooler`/`pooler.` host, or port 6543 — it refuses
+and prints what to set and where, because copying a pooled URL across would
+trade a clear "variable not found" for a migration that fails half-way through
+against a real database. It only applies this check ahead of `migrate`, for
+the same reason: applying it to `generate` too would fail `npm install`'s
+postinstall hook on any host whose `DATABASE_URL` is pooled, even though
+`generate` had nothing to complain about — a real bug in an earlier draft of
+this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ---
 

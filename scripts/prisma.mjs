@@ -73,9 +73,14 @@ if (isMigrate && !process.env[DIRECT] && url) {
       `\n${DIRECT} is not set, and DATABASE_URL cannot stand in for it — ${pooled}.\n\n` +
         "Migrations need a direct connection: a pooler's transaction mode does not\n" +
         "support the session-level features they use.\n\n" +
-        `Set ${DIRECT} to the direct string for the same database. On Supabase that\n` +
-        "is the same credentials on host db.<ref>.supabase.co, port 5432 — or the\n" +
-        '"Session pooler" string on port 5432 if your network is IPv4-only.\n\n' +
+        `Set ${DIRECT} to the direct string for the same database:\n\n` +
+        "  Neon     — drop the \"-pooler\" out of the hostname; same user, password,\n" +
+        "             database and port. Console: Project → Connect → toggle off\n" +
+        '             "Connection pooling" to see it, or `neon env pull` writes\n' +
+        "             both DATABASE_URL and DATABASE_URL_UNPOOLED for you.\n" +
+        "  Supabase — same credentials on host db.<ref>.supabase.co, port 5432 — or\n" +
+        '             the "Session pooler" string on port 5432 if your network is\n' +
+        "             IPv4-only.\n\n" +
         "On Vercel: Settings → Environment Variables → add it to Production, Preview\n" +
         "and Development, then redeploy.\n"
     );
