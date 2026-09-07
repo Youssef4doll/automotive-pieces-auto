@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { track } from "@/lib/track";
 import { useCart, cartCount } from "@/lib/cart-store";
-import LanguageSwitcher from "./LanguageSwitcher";
 import MegaMenu, { type MegaMenuFamily } from "./MegaMenu";
+import MobileNav from "./MobileNav";
 import VehiclePicker from "./VehiclePicker";
 import VehicleStoreBar from "./VehicleStoreBar";
 import SearchSuggest from "@/components/SearchSuggest";
@@ -40,7 +40,6 @@ export default function HeaderClient({
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [vehicleOpen, setVehicleOpen] = useState(false);
-  const [expandedFamily, setExpandedFamily] = useState<string | null>(null);
   const [q, setQ] = useState("");
   // Mobile search is a toggle, not a permanent row: the always-visible field
   // cost a whole band of the sticky header on every page while the shopper
@@ -314,97 +313,19 @@ export default function HeaderClient({
       </div>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="absolute inset-y-0 start-0 w-[85%] max-w-sm bg-white overflow-y-auto">
-            <div className="flex items-center justify-between p-4 bg-navy-900 text-white">
-              <Image src="/images/logo-white.png" alt="" width={130} height={43} className="h-7 w-auto" />
-              <button onClick={() => setMobileOpen(false)} className="p-2" aria-label="Fermer le menu">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-3 flex flex-col gap-1 font-display uppercase tracking-wide">
-              <button
-                onClick={() => {
-                  setVehicleOpen(true);
-                  setMobileOpen(false);
-                }}
-                className="text-start px-3 py-3 rounded-lg bg-gold-500 text-navy-950 font-bold text-sm"
-              >
-                {t("nav.byVehicle")}
-              </button>
-              <Link href="/compte" onClick={() => setMobileOpen(false)} className="px-3 py-3 rounded-lg hover:bg-gray-100 text-sm font-bold text-navy-900">
-                {userName ?? t("nav.account")}
-              </Link>
-              {isAdmin && (
-                <Link href="/admin" onClick={() => setMobileOpen(false)} className="px-3 py-3 rounded-lg hover:bg-gray-100 text-sm font-bold text-navy-900">
-                  {t("nav.admin")}
-                </Link>
-              )}
-              <Link href="/#marques" onClick={() => setMobileOpen(false)} className="px-3 py-3 rounded-lg hover:bg-gray-100 text-sm font-bold text-navy-900">
-                {t("nav.brands")}
-              </Link>
-              <Link href="/#magasin" onClick={() => setMobileOpen(false)} className="px-3 py-3 rounded-lg hover:bg-gray-100 text-sm font-bold text-navy-900">
-                {t("nav.about")}
-              </Link>
-              <div className="h-px bg-gray-200 my-2" />
-              <p className="px-3 text-xs font-semibold text-gray-600 normal-case">{t("nav.products")}</p>
-              {menu.map((family) => {
-                const expanded = expandedFamily === family.id;
-                return (
-                  <div key={family.id} className={expanded ? "bg-gray-50 rounded-lg" : ""}>
-                    <button
-                      onClick={() => setExpandedFamily(expanded ? null : family.id)}
-                      className={`w-full flex items-center justify-between gap-2 px-3 py-3 rounded-lg text-sm font-bold text-navy-900 border-s-[3px] ${
-                        expanded ? "border-gold-500" : "border-transparent hover:bg-gray-100"
-                      }`}
-                    >
-                      {family.name}
-                      <span
-                        className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] transition-transform ${
-                          expanded ? "bg-red-50 text-red-600 rotate-180" : "bg-gray-100 text-red-500"
-                        }`}
-                      >
-                        ▼
-                      </span>
-                    </button>
-                    {expanded && (
-                      <div className="flex flex-col">
-                        {family.children.map((sub) => (
-                          <Link
-                            key={sub.id}
-                            href={`/catalogue/${family.slug}/${sub.slug}`}
-                            onClick={() => setMobileOpen(false)}
-                            className="flex items-center gap-2 ps-8 pe-3 py-2.5 text-sm font-medium normal-case text-navy-900/80 border-t border-gray-100"
-                          >
-                            <span className="text-gold-500">•</span>
-                            {sub.name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              <div className="h-px bg-gray-200 my-2" />
-              <div className="px-3 py-2 normal-case">
-                <LanguageSwitcher />
-              </div>
-              {whatsapp && (
-                <a
-                  href={contactUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-3 rounded-lg bg-green-700 text-white text-sm font-bold text-center mt-2"
-                >
-                  WhatsApp{phone && <> · <span dir="ltr">{phone}</span></>}
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
+        <MobileNav
+          menu={menu}
+          userName={userName}
+          isAdmin={isAdmin}
+          whatsapp={whatsapp}
+          phone={phone}
+          contactUrl={contactUrl}
+          onClose={() => setMobileOpen(false)}
+          onPickVehicle={() => {
+            setMobileOpen(false);
+            setVehicleOpen(true);
+          }}
+        />
       )}
 
       {vehicleOpen && <VehiclePicker onClose={() => setVehicleOpen(false)} />}

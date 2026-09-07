@@ -2,18 +2,35 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import CategoryThumb from "./CategoryThumb";
+
+export type MegaMenuChild = {
+  id: string;
+  name: string;
+  slug: string;
+  count: number;
+  /** Uploaded from /admin/catalogue; null falls back to the family drawing. */
+  imageUrl: string | null;
+};
 
 export type MegaMenuFamily = {
   id: string;
   name: string;
   slug: string;
-  children: { id: string; name: string; slug: string; count: number }[];
+  /** Parts behind this family — its own plus every subcategory's. */
+  count: number;
+  imageUrl: string | null;
+  children: MegaMenuChild[];
 };
 
 /** Two-pane hover flyout: a fixed-width list of families on the start side,
  * and the currently-hovered family's subcategories on the end side — same
  * structure as the reference design's desktop mega-menu (not a flat grid
- * dumping every family's subcategories at once). */
+ * dumping every family's subcategories at once).
+ *
+ * Both panes carry pictures, for the reason in CategoryThumb: sixteen family
+ * names in a column is a wall of text, and the shape of a brake disc is read
+ * faster than the word "Freinage". */
 export default function MegaMenu({
   families,
   onNavigate,
@@ -26,7 +43,10 @@ export default function MegaMenu({
 
   return (
     <div className="absolute top-full inset-x-0 z-40">
-      <div className="mx-auto max-w-7xl bg-white text-navy-950 shadow-2xl border-b-[3px] border-gold-500 grid grid-cols-[264px_1fr] h-[min(460px,70vh)]">
+      {/* The rail is wider than it was: a picture went into every row, and at
+          264px "Direction et trains roulants" lost three more words to the
+          ellipsis than it could afford. */}
+      <div className="mx-auto max-w-7xl bg-white text-navy-950 shadow-2xl border-b-[3px] border-gold-500 grid grid-cols-[316px_1fr] h-[min(460px,70vh)]">
         <div className="border-e border-gray-200 bg-[#fafbfd] overflow-y-auto py-2.5">
           {families.map((family, i) => (
             <Link
@@ -34,14 +54,18 @@ export default function MegaMenu({
               href={`/catalogue/${family.slug}`}
               onClick={onNavigate}
               onMouseEnter={() => setActive(i)}
-              className={`flex items-center justify-between gap-2.5 px-5 py-2.5 font-heading font-bold uppercase text-[12.5px] tracking-wide border-s-[3px] hover:text-red-600 ${
+              className={`flex items-center gap-2.5 ps-3.5 pe-4 py-1.5 font-heading font-bold uppercase text-[12.5px] tracking-wide border-s-[3px] hover:text-red-600 ${
                 i === active ? "bg-white border-red-500" : "border-transparent"
               }`}
             >
-              <span className="truncate">{family.name}</span>
+              <CategoryThumb slug={family.slug} imageUrl={family.imageUrl} size={30} />
+              <span className="flex-1 min-w-0 truncate">{family.name}</span>
               <span className="shrink-0 flex items-baseline gap-1.5">
+                {/* Parts, not subcategories — the same number the subcategory
+                    links below carry, and the one that tells the shopper
+                    whether the family is worth opening. */}
                 <span className="text-[11px] font-normal tabular-nums text-gray-600">
-                  {family.children.length}
+                  {family.count}
                 </span>
                 <span className="text-[9px] opacity-50 rtl:rotate-180">▶</span>
               </span>
@@ -59,16 +83,17 @@ export default function MegaMenu({
                 {activeFamily.name}
               </Link>
               <div
-                className="mt-4.5 grid gap-x-7 gap-y-2.5"
-                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(168px, 1fr))" }}
+                className="mt-4.5 grid gap-x-6 gap-y-1"
+                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(196px, 1fr))" }}
               >
                 {activeFamily.children.map((sub) => (
                   <Link
                     key={sub.id}
                     href={`/catalogue/${activeFamily.slug}/${sub.slug}`}
                     onClick={onNavigate}
-                    className="group flex items-baseline gap-1.5 py-1 text-[13.5px] text-navy-600 hover:text-red-600"
+                    className="group flex items-center gap-2.5 py-1 text-[13.5px] text-navy-600 hover:text-red-600"
                   >
+                    <CategoryThumb slug={sub.slug} imageUrl={sub.imageUrl} size={24} />
                     <span className="truncate group-hover:underline underline-offset-2">{sub.name}</span>
                     {/* Beside the name, not pushed to the far edge: these
                         columns are wide, and justify-between stranded the

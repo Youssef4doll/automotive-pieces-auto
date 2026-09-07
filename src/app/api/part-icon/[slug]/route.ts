@@ -32,9 +32,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   // generic part outline rather than nothing.
   const familySlug = category?.parent?.slug ?? category?.slug ?? null;
 
+  // The drawings are authored on a 24-unit grid. Scaled by 3 and offset by
+  // (96 − 24×3)/2 they sit centred and fill three quarters of the canvas.
+  // They used to fill half of it, which was fine on a 400px product card and
+  // far too timid at 40px, where these now also appear as the picture beside a
+  // category in the navigation. Slate-500 rather than slate-400 for the same
+  // reason: at thumbnail size the lighter line barely registered.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Photo à venir">
 <rect width="96" height="96" fill="#f8fafc"/>
-<g transform="translate(24 24) scale(2)" fill="none" stroke="#94a3b8" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">${partIconMarkup(familySlug)}</g>
+<g transform="translate(12 12) scale(3)" fill="none" stroke="#64748b" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">${partIconMarkup(familySlug)}</g>
 </svg>`;
 
   return new Response(svg, {

@@ -10,15 +10,21 @@ export default async function Header() {
     getCurrentUser(),
   ]);
 
+  // Only what the menu draws. The category rows carry a picture now, so
+  // imageUrl comes along — the bytes do not: it is a path to /api/images/[id],
+  // and when it is null the family's line drawing stands in on the client.
   const menu = families.map((f) => ({
     id: f.id,
     name: f.name,
     slug: f.slug,
+    count: f.productCount,
+    imageUrl: f.imageUrl,
     children: f.children.map((c) => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
       count: c._count.products,
+      imageUrl: c.imageUrl,
     })),
   }));
 

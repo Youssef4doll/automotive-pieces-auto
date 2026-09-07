@@ -43,7 +43,7 @@ migrates itself.
 
 ## 2. The test battery
 
-22 Playwright suites, ~866 checks, driving real browsers against a real
+23 Playwright suites, ~900 checks, driving real browsers against a real
 database. They are the main safety net and they have caught more real bugs
 than they have cost.
 
@@ -136,6 +136,31 @@ empty families badged "masquée · vide". `getMegaMenu(includeEmpty)`.
 carries and they say plainly that they are out. They just stop leading the
 aisle.
 
+**The navigation carries a picture per category, and TecDoc is not in it.**
+The phone menu is a drill-down list — families with pictures, tap one and the
+screen becomes that family's subcategories — and the desktop flyout carries the
+same pictures. Each comes from the category's own uploaded image, falling back
+to `/api/part-icon/[slug]`, so the placeholder is already in place and a real
+photo replaces it with no code change.
+
+The vehicle sheet is shaped like the ones the big European catalogues run, and
+that is all it borrows. Those are driven by TecDoc — a licensed commercial
+vehicle and fitment database — with a number-plate box that queries a national
+register. This shop has no TecDoc subscription and there is no consultable
+register for Tunisian plates, so neither is here: the lists are the shop's own
+`VehicleMake`/`VehicleModel`/`VehicleEngine` rows, and the picker says in one
+line why there is no plate box rather than leaving people hunting for it. The
+local equivalent is the carte grise, which is the first card on the "I don't
+know" path. See the header comment in `VehiclePicker.tsx`.
+
+**A "most popular makes" panel exists but is data-gated.** It only renders when
+the sixth-ranked make genuinely holds more parts than the seventh. Today it
+does not — seven of the ten makes cover 52 parts each, because most of the
+catalogue is generic servicing kit — so the picker shows one alphabetical list
+and the panel stays hidden. It turns itself on if the catalogue ever
+specialises. Ranking seven tied numbers would have been an alphabetical
+tie-break dressed as a recommendation.
+
 **A part with no photo is drawn, not illustrated with something else.** Every
 seeded product points at the hero artwork — a photograph of engine oil. So a
 brake disc's page showed a bottle of oil. `/api/part-icon/[slug]` serves the
@@ -194,7 +219,21 @@ parts shop where nothing has a picture will not convert.
 
 **The upload works and is tested.** Admin → Stock → open a product → Photos.
 Up to 8 per product, JPEG/PNG/WebP/AVIF, 4 MB each. Nothing has been uploaded
-yet. Same for brand logos: 19 brands, 0 logos.
+yet.
+
+The same is true everywhere else a picture can go, and every one of them has a
+working upload form and an honest stand-in until it is used:
+
+| Where | Uploaded | Admin page | Stand-in until then |
+|---|---|---|---|
+| Product photos | 0 of 55 | Stock → product → Photos | the family line drawing |
+| Category pictures | 0 of 144 | Catalogue | the family line drawing |
+| Parts-brand logos | 0 of 19 | Catalogue → Marques | the brand's name |
+| Vehicle-make logos | 0 of 10 | Catalogue → Véhicules | the make's initials |
+
+Category pictures are the cheapest win of the four: sixteen images put a real
+photograph on every row of the phone menu and the desktop flyout, which is the
+first screen most shoppers touch.
 
 ### 5.2 The catalogue is thin
 

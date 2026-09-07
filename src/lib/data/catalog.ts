@@ -327,11 +327,65 @@ export async function getPartsBrands() {
   return prisma.brand.findMany({ where: { isPartsBrand: true }, orderBy: { name: "asc" } });
 }
 
+/**
+ * Every make the shop covers, with how deeply it covers each one.
+ *
+ * `partCount` is the number of distinct active products that have a fitment row
+ * against one of the make's engines — read out of the fitment table, not
+ * estimated and not a popularity figure. It is what lets the picker put the
+ * makes we can actually serve first, and say the number out loud, instead of
+ * ordering ten manufacturers alphabetically and letting the shopper find out
+ * after three taps that we hold nothing for theirs.
+ *
+ * Deliberately not a `groupBy`: a product fitting six engines of the same make
+ * is one part, not six, and SQL would have to count distinct products across a
+ * join. The table is small (about 1,200 rows) so the de-duplication is done
+ * here, where it is obvious what is being counted.
+ *
+ * Only the fields the picker draws are selected — engine codes, displacements
+ * and the rest are internal and would triple the payload of a request every
+ * shopper makes.
+ */
 export async function getVehicleMakes() {
-  return prisma.vehicleMake.findMany({
-    orderBy: { name: "asc" },
-    include: { models: { orderBy: { name: "asc" }, include: { engines: { orderBy: { name: "asc" } } } } },
-  });
+  const [makes, fitments] = await Promise.all([
+    prisma.vehicleMake.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        logoUrl: true,
+        models: {
+          orderBy: { name: "asc" },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            yearFrom: true,
+            yearTo: true,
+            engines: {
+              orderBy: { name: "asc" },
+              select: { id: true, name: true, fuel: true, powerHp: true },
+            },
+          },
+        },
+      },
+    }),
+    prisma.productFitment.findMany({
+      where: { product: { active: true } },
+      select: { productId: true, engine: { select: { model: { select: { makeId: true } } } } },
+    }),
+  ]);
+
+  const productsByMake = new Map<string, Set<string>>();
+  for (const f of fitments) {
+    const makeId = f.engine.model.makeId;
+    let seen = productsByMake.get(makeId);
+    if (!seen) productsByMake.set(makeId, (seen = new Set()));
+    seen.add(f.productId);
+  }
+
+  return makes.map((m) => ({ ...m, partCount: productsByMake.get(m.id)?.size ?? 0 }));
 }
 
 /**

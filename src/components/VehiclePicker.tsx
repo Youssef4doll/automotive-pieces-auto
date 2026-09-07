@@ -1,14 +1,25 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/i18n/LocaleProvider";
+import { parts as partsLabel } from "@/i18n/plural";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import { decodeVinMakeSlug, isValidVinFormat } from "@/lib/vin";
 import { track } from "@/lib/track";
 
 type Engine = { id: string; name: string; fuel: string | null; powerHp: number | null };
-type Model = { id: string; name: string; yearFrom: number | null; yearTo: number | null; engines: Engine[] };
-type Make = { id: string; name: string; slug: string; models: Model[] };
+type Model = { id: string; name: string; slug: string; yearFrom: number | null; yearTo: number | null; engines: Engine[] };
+type Make = {
+  id: string;
+  name: string;
+  slug: string;
+  /** Uploaded from /admin/catalogue/vehicules. Null draws the initials. */
+  logoUrl: string | null;
+  /** Distinct active parts with a fitment against this make. Counted, not guessed. */
+  partCount: number;
+  models: Model[];
+};
 
 /**
  * "Which car do you drive?", asked properly.
@@ -30,6 +41,22 @@ type Make = { id: string; name: string; slug: string; models: Model[] };
  * One layout, two shapes: a full-height sheet a thumb can work on a phone, a
  * centred dialog on a desktop. `dvh` rather than `vh` because mobile browser
  * chrome makes `100vh` taller than the screen actually is.
+ *
+ * ---------------------------------------------------------------------------
+ * On what this is not
+ *
+ * The big European catalogues run this screen on TecDoc — a licensed
+ * commercial database of vehicles and part compatibility — and put a
+ * number-plate box at the top of it, which queries a national vehicle
+ * register. This shop has neither: TecDoc needs a paid subscription and API
+ * credentials, and there is no consultable register for Tunisian plates. So
+ * the plate box is not here pretending to work, and the make/model/engine
+ * lists are the shop's own vehicle table, not an imported catalogue. What is
+ * borrowed is the shape of the interaction, which is free.
+ *
+ * The one honest local equivalent of a plate lookup is the carte grise, which
+ * carries all three answers and which a customer can photograph in five
+ * seconds. That is the first card on the "I don't know" path.
  */
 
 type Path = "choose" | "know" | "help";
@@ -106,9 +133,64 @@ export default function VehiclePicker({
   }, [path, step]);
 
   const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  const q = norm(filter);
+  const q = norm(filter.trim());
   const filteredMakes = makes.filter((m) => norm(m.name).includes(q));
   const filteredModels = make?.models.filter((m) => norm(m.name).includes(q)) ?? [];
+
+  /**
+   * The search box on the first screen looks past the makes to the models.
+   *
+   * Someone who wants brake pads for a Clio types "clio", not "renault" — and
+   * a box that only matched manufacturers answered that with "no result",
+   * which is the worst possible reply to a correct query. Matching on
+   * "make model" as one string means "renault clio" and "clio" both land, and
+   * the row goes straight to the motorisation step, so a model match saves a
+   * tap rather than costing one.
+   *
+   * Two characters minimum: a single letter matches most of the table and the
+   * list stops being a result.
+   */
+  const modelMatches =
+    q.length >= 2
+      ? makes.flatMap((mk) =>
+          mk.models
+            .filter((mo) => norm(`${mk.name} ${mo.name}`).includes(q))
+            .map((mo) => ({ make: mk, model: mo }))
+        )
+      : [];
+
+  // Ranked by how many parts we actually hold for each — the fitment table's
+  // own count, not a popularity figure nobody measured. A make we cannot serve
+  // does not get to sit at the top of the list.
+  const ranked = [...makes].sort(
+    (a, b) => b.partCount - a.partCount || a.name.localeCompare(b.name, "fr")
+  );
+  /**
+   * …but only when the ranking says something.
+   *
+   * Measured against the catalogue as it stands, it does not: seven of the ten
+   * makes cover 52 parts each and the other three cover 51, 50 and 46, because
+   * most of what the shop stocks is generic servicing kit that fits nearly
+   * everything. A "best-stocked" panel over seven tied numbers would be an
+   * alphabetical tie-break wearing the costume of a recommendation, which is
+   * the sort of thing this project does not do.
+   *
+   * So the block asks the data for permission: it appears only if the sixth
+   * make genuinely holds more than the seventh — a real cut, not a tie. Today
+   * that is false and the picker shows one honest alphabetical list. It turns
+   * itself on if the catalogue ever specialises.
+   */
+  const showRanked =
+    !q && makes.length > 6 && ranked[5].partCount > ranked[6].partCount;
+  const bestStocked = showRanked ? ranked.slice(0, 6) : [];
+  const restOfMakes = showRanked ? ranked.slice(6) : filteredMakes;
+
+  function pickModel(mk: Make, mo: Model) {
+    setMake(mk);
+    setModel(mo);
+    setStep("engine");
+    setFilter("");
+  }
 
   function pickEngine(engine: Engine) {
     if (!make || !model) return;
@@ -235,8 +317,8 @@ export default function VehiclePicker({
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 type="search"
-                aria-label={t(step === "make" ? "vp.searchMake" : "vp.searchModel")}
-                placeholder={t(step === "make" ? "vp.searchMake" : "vp.searchModel")}
+                aria-label={t(step === "make" ? "vp.searchAny" : "vp.searchModel")}
+                placeholder={t(step === "make" ? "vp.searchAny" : "vp.searchModel")}
                 className="w-full ps-9 pe-3 min-h-tap rounded-xl border border-gray-300 text-base outline-none focus:border-navy-700"
               />
             </div>
@@ -316,23 +398,93 @@ export default function VehiclePicker({
           )}
 
           {path === "know" && !loading && step === "make" && (
-            filteredMakes.length === 0 ? (
+            filteredMakes.length === 0 && modelMatches.length === 0 ? (
               <NoMatch onHelp={() => setPath("help")} />
             ) : (
-              <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {filteredMakes.map((m) => (
-                  <li key={m.id}>
-                    <button
-                      type="button"
-                      onClick={() => { setMake(m); setStep("model"); setFilter(""); }}
-                      className="w-full text-start px-3.5 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 text-sm font-semibold text-navy-950 flex items-center justify-between gap-2"
-                    >
-                      <span className="min-w-0 truncate">{m.name}</span>
-                      <span className="shrink-0 text-xs text-gray-400">{m.models.length}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex flex-col gap-5">
+                {/* The makes we can serve best, said as a fact about the
+                    catalogue rather than as a claim about popularity. */}
+                {showRanked && (
+                  <section>
+                    <SectionHead title={t("vp.bestStocked")} hint={t("vp.bestStockedHint")} />
+                    <ul className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {bestStocked.map((m) => (
+                        <li key={m.id}>
+                          <button
+                            type="button"
+                            onClick={() => { setMake(m); setStep("model"); setFilter(""); }}
+                            className="w-full h-full flex flex-col items-center justify-start gap-1.5 p-2.5 rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50"
+                          >
+                            <MakeMark make={m} />
+                            <span className="w-full truncate text-xs font-semibold text-navy-950 text-center">
+                              {m.name}
+                            </span>
+                            <span className="w-full truncate text-xs text-gray-500 text-center tabular-nums">
+                              {partsLabel(t, m.partCount)}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                {restOfMakes.length > 0 && (
+                  <section>
+                    <SectionHead title={t(showRanked ? "vp.otherMakes" : "vp.allMakes")} />
+                    <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {restOfMakes.map((m) => (
+                        <li key={m.id}>
+                          <button
+                            type="button"
+                            onClick={() => { setMake(m); setStep("model"); setFilter(""); }}
+                            className="w-full text-start ps-2 pe-2.5 py-1.5 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 flex items-center gap-2"
+                          >
+                            <MakeMark make={m} size={30} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold text-navy-950">{m.name}</span>
+                              {/* What we can actually do for this make. A make
+                                  we hold nothing for says so rather than
+                                  looking identical to one we cover. */}
+                              <span className="block truncate text-xs text-gray-500 tabular-nums">
+                                {m.partCount > 0 ? partsLabel(t, m.partCount) : t("vp.noParts")}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                {/* Typing "clio" lands here rather than on "no result". */}
+                {modelMatches.length > 0 && (
+                  <section>
+                    <SectionHead title={t("vp.modelsMatching")} />
+                    <ul className="flex flex-col gap-2">
+                      {modelMatches.map(({ make: mk, model: mo }) => (
+                        <li key={`${mk.id}-${mo.id}`}>
+                          <button
+                            type="button"
+                            onClick={() => pickModel(mk, mo)}
+                            className="w-full text-start ps-2 pe-3.5 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 flex items-center gap-2.5"
+                          >
+                            <MakeMark make={mk} size={30} />
+                            <span className="min-w-0 flex-1 text-sm">
+                              <span className="block truncate font-semibold text-navy-950">
+                                {mk.name} {mo.name}
+                              </span>
+                              {yearsOf(mo) && (
+                                <span className="block text-xs text-gray-500 tabular-nums">{yearsOf(mo)}</span>
+                              )}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
             )
           )}
 
@@ -342,7 +494,7 @@ export default function VehiclePicker({
             ) : (
               <ul className="flex flex-col gap-2">
                 {filteredModels.map((m) => {
-                  const years = m.yearFrom ? `${m.yearFrom}–${m.yearTo ?? "…"}` : null;
+                  const years = yearsOf(m);
                   return (
                     <li key={m.id}>
                       <button
@@ -441,15 +593,86 @@ export default function VehiclePicker({
                   {t("vp.expertCta")}
                 </a>
               </HelpCard>
+
+              {/* People arrive expecting to type their plate, because the
+                  European catalogues offer it. Saying why we don't costs two
+                  lines and stops the shopper hunting for a box that isn't
+                  there. It is a note, not a card — nothing to click. */}
+              <p className="text-xs text-gray-500 leading-relaxed px-1">
+                <span className="font-semibold text-gray-600">{t("vp.plateTitle")}</span>{" "}
+                {t("vp.plateHint")}
+              </p>
             </div>
           )}
         </div>
+
+        {/* A way out of every screen, not just the first one.
+            Somebody who cannot find their car in the list should be able to
+            keep shopping from wherever they gave up, rather than backing out
+            step by step to reach the one link that let them through. */}
+        {path !== "choose" && (
+          <footer className="shrink-0 border-t border-gray-100 px-3 py-2 text-center">
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-tap-compact px-3 text-sm text-gray-500 hover:text-navy-950 underline underline-offset-2"
+            >
+              {t("vp.skip")}
+            </button>
+          </footer>
+        )}
       </div>
     </div>
   );
 }
 
+/** "2012–2019", or "2012–…" while the model is still made. Never invented: an
+ *  unknown start year prints nothing at all. */
+function yearsOf(m: Model): string | null {
+  return m.yearFrom ? `${m.yearFrom}–${m.yearTo ?? "…"}` : null;
+}
+
 /* ------------------------------------------------------------------ bits -- */
+
+function SectionHead({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="mb-2">
+      <h3 className="text-xs font-display font-bold uppercase tracking-wide text-gray-500">{title}</h3>
+      {hint && <p className="text-xs text-gray-500 mt-1 leading-snug">{hint}</p>}
+    </div>
+  );
+}
+
+/**
+ * A manufacturer's logo, or its initials.
+ *
+ * The logo is uploaded from /admin/catalogue/vehicules and none has been yet,
+ * so today every one of these is a monogram. That is the point: fetching
+ * manufacturer logos from the web would put someone else's trademarks on our
+ * pages without a licence, and a grey square would tell the shopper nothing.
+ * Initials are ours, they are legible at 30px, and they disappear the moment a
+ * real logo is uploaded.
+ */
+function MakeMark({ make, size = 44 }: { make: Make; size?: number }) {
+  return (
+    <span
+      className="relative shrink-0 grid place-items-center overflow-hidden rounded-lg bg-slate-100"
+      style={{ width: size, height: size }}
+    >
+      {make.logoUrl ? (
+        <Image src={make.logoUrl} alt="" fill sizes={`${size}px`} className="object-contain p-1" />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="font-heading font-extrabold text-navy-800/70 leading-none"
+          style={{ fontSize: Math.round(size * 0.4) }}
+        >
+          {make.name.slice(0, 2).toUpperCase()}
+        </span>
+      )}
+    </span>
+  );
+}
 
 function BigChoice({
   onClick, icon, title, hint, primary = false,
