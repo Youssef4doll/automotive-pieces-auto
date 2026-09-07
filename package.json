@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && next build",
+    "build": "node scripts/prisma.mjs migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
+    "db:migrate": "node scripts/prisma.mjs migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force",
-    "postinstall": "prisma generate"
+    "db:reset": "node scripts/prisma.mjs migrate reset --force",
+    "postinstall": "node scripts/prisma.mjs generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

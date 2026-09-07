@@ -15,17 +15,21 @@ worth reading first — what is not.
 ```bash
 npm install                 # postinstall runs `prisma generate`
 cp .env.example .env        # then fill in the values below
-npx prisma migrate deploy   # 15 migrations
+npm run db:migrate          # 15 migrations
 npm run db:seed             # catalogue, vehicles, demo customer, admin
 npm run dev                 # http://localhost:3000
 ```
+
+Use the `npm run` scripts rather than a bare `prisma …`: the CLI is a local
+dependency, not a global command, so `prisma migrate deploy` in a fresh shell
+gets "command not found" on every platform. `npx prisma …` works too.
 
 **Environment.** `.env.example` is the reference and explains each one.
 
 | Variable | What it is |
 |---|---|
 | `DATABASE_URL` | Pooled connection (port 6543 on Supabase). Needs `?pgbouncer=true`. |
-| `DATABASE_URL_UNPOOLED` | Direct connection (5432). Used only by `prisma migrate`. |
+| `DATABASE_URL_UNPOOLED` | Direct connection (5432). Used only by `prisma migrate`. Required wherever `DATABASE_URL` is pooled — **Vercel included**; see below. |
 | `SESSION_SECRET` | Signs the session cookie. Long and random. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical origin, for sitemap/OG/canonicals. Falls back to `VERCEL_URL`. |
 
@@ -38,6 +42,22 @@ deployment** — it is in a public repository.
 
 `npm run build` runs `prisma migrate deploy` before `next build`, so a deploy
 migrates itself.
+
+**If a deploy fails with `P1012 — Environment variable not found:
+DATABASE_URL_UNPOOLED`**, that variable is missing from the host, not from the
+code. The schema declares it as the migration connection and Prisma validates
+it on *every* command, including `generate` — so the build dies before it has
+touched a database, which is a confusing way to report a missing variable.
+On Vercel: Settings → Environment Variables → add it to Production, Preview and
+Development, then redeploy.
+
+`scripts/prisma.mjs` wraps the CLI and takes one case off the table: when
+`DATABASE_URL_UNPOOLED` is absent and `DATABASE_URL` is *not* pooled, the two
+would be the same string, so it fills it in. When it can see a pooler in the
+URL — `pgbouncer=true`, a `pooler.` host, or port 6543 — it refuses and prints
+what to set and where, because copying a pooled URL across would trade a clear
+"variable not found" for a migration that fails half-way through against a real
+database.
 
 ---
 
