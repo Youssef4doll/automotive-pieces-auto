@@ -185,8 +185,16 @@ check("the customer is told what happens next", /En route|livreur/i.test(timelin
 await laptop.goto(`${BASE}/compte`);
 await laptop.waitForTimeout(1200);
 const accountBody = await laptop.locator("main").innerText();
-check("the account page shows the progress, not just a badge",
-      /Confirmée/.test(accountBody) && /\d{2}:\d{2}/.test(accountBody));
+// The account page is a hub now, not a dashboard: the full timeline (checked
+// above, on the order's own page) would be too much detail for it. What it
+// still owes the customer is where the order has got to and what happens
+// next, without making them open anything to find out.
+check("the account page names where the order has got to",
+      /Confirmée|Préparée|Expédiée/.test(accountBody), accountBody.split("\n").slice(0, 4).join(" · "));
+check("and says what happens next rather than only a badge",
+      /En route|livreur|Nous préparons|Nous confirmons/i.test(accountBody));
+check("with the timeline one tap away",
+      (await laptop.locator(`main a[href^="/compte/commandes/"]`).count()) > 0);
 
 console.log("\n[8] THE BASKET CANNOT BE WALKED PAST THE SHELF");
 {

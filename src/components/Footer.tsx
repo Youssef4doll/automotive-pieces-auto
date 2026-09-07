@@ -4,6 +4,7 @@ import { getMegaMenu } from "@/lib/data/catalog";
 import { getSettings, publicContact, contactHref, isExternalContact } from "@/lib/settings";
 import { About, Heading, Rights, LangRow } from "./FooterClient";
 import NewsletterForm from "./NewsletterForm";
+import PaymentDeliveryBand from "./PaymentDeliveryBand";
 import T from "./T";
 
 export default async function Footer() {
@@ -88,19 +89,19 @@ export default async function Footer() {
           <div className="mt-3">
             <NewsletterForm />
           </div>
-          <div className="flex flex-wrap gap-2 mt-3">
-            <span className="text-[11px] px-2 py-1 rounded border border-white/20 text-white/60 uppercase">
-              <T k="footer.chipCod" />
-            </span>
-            <span className="text-[11px] px-2 py-1 rounded border border-white/20 text-white/60 uppercase">
-              <T k="footer.chipCard" />
-            </span>
-          </div>
         </div>
       </div>
 
+      {/* Replaces two chips that sat in the newsletter column and read as
+          decoration — one of which promised "carte bancaire" while the
+          checkout refuses it. */}
+      <PaymentDeliveryBand
+        grandTunis={settings.delivery_grand_tunis}
+        regions={settings.delivery_regions}
+      />
+
       <div className="mx-auto max-w-7xl px-4 pb-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-white/10">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6">
           <p className="text-xs text-white/40">
             © {new Date().getFullYear()} Automotive Pièces Auto. <Rights />
           </p>

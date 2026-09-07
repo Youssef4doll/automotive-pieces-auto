@@ -77,9 +77,19 @@ await p.goto(`${BASE}/compte`);
 await p.waitForTimeout(1300);
 let body = await p.locator("main").innerText();
 check("greets the customer by name", /Bonjour, Sami/i.test(body));
-check("no order yet is explained, not left blank", /Aucune commande pour le moment/i.test(body));
-check("the empty garage invites a vehicle", /garage est vide/i.test(body));
-check("and offers the next action", (await p.locator('main a:has-text("Trouver une pièce")').count()) > 0);
+check("asks what they came to do", /Que souhaitez-vous faire/i.test(body));
+// The hub replaced a dashboard that opened with an empty-order panel and an
+// empty-garage panel. With nothing moving there is nothing to say about an
+// order, so nothing is said — the tiles are the page.
+check("nothing pretends to be a live order", !/Nous préparons|Nous confirmons/i.test(body));
+const tiles = p.locator('ul[aria-label="Sections de votre compte"] li a');
+check("every section is a tile", (await tiles.count()) === 5, `${await tiles.count()} tiles`);
+// The empty garage still invites a vehicle — on the garage's own page.
+await p.goto(`${BASE}/compte/garage`);
+await p.waitForTimeout(1100);
+check("the empty garage invites a vehicle", /garage est vide|Ajouter/i.test(await p.locator("main").innerText()));
+await p.goto(`${BASE}/compte`);
+await p.waitForTimeout(1100);
 
 console.log("\n[2] A PHONE GETS ITS SECTIONS IN ONE ROW, NOT A BAR OVER THE PAGE");
 const bar = p.locator('nav[aria-label="Espace client"]:visible').last();
@@ -132,38 +142,52 @@ await p.waitForURL(/\/commande\/confirmation\//, { timeout: 20000 }).catch(() =>
 const ref = p.url().split("/").pop();
 check("order placed", /^CMD-/.test(ref || ""), ref);
 
-console.log("\n[4] THE DASHBOARD LEADS WITH THE LIVE ORDER");
+console.log("\n[4] THE LIVE ORDER IS ONE LINE, AND IT IS THE FIRST LINE");
 await p.goto(`${BASE}/compte`);
 await p.waitForTimeout(1400);
 body = await p.locator("main").innerText();
-check("the order is the hero", /Votre commande/i.test(body) && body.includes(ref), ref);
+// The full timeline belongs on the order's own page. What the hub owes the
+// customer is the answer to "where is it?" and a way through.
+check("the order is named", body.includes(ref), ref);
 check("prices use French formatting", /\d+,\d{2} DT/.test(body), body.match(/\d+,\d{2} DT/)?.[0]);
 check("no English-style decimal slipped through", !/\d+\.\d{2} DT/.test(body));
-check("the tracker shows when the order was placed", /Commandée/.test(body) && /\d+ \w+/.test(body));
 check("it says what happens next", /Nous confirmons|Nous préparons/i.test(body));
-const track = await p.locator('main a:has-text("Suivre ma commande")').first().boundingBox();
-check("the primary action is above the fold on a phone", !!track && track.y < 844, `y=${Math.round(track?.y ?? -1)}`);
+const strip = p.locator(`main a[href="/compte/commandes/${ref}"]`).first();
+check("the whole strip is the way in", (await strip.count()) > 0);
+const track = await strip.boundingBox();
+check("and it is above the fold on a phone", !!track && track.y < 844, `y=${Math.round(track?.y ?? -1)}`);
 
-console.log("\n[5] QUICK ACTIONS AND THE VEHICLE BRIDGE");
-check("four quick actions are offered", (await p.locator('main a:has-text("Trouver une pièce")').count()) > 0
-      && (await p.locator('main a:has-text("Commander à nouveau")').count()) > 0);
-check("category shortcuts come from real stocked families",
-      (await p.locator('main a[href^="/catalogue/"]').count()) > 0,
-      `${await p.locator('main a[href^="/catalogue/"]').count()} chips`);
-for (const href of await p.locator('main a[href^="/catalogue/"]').evaluateAll((e) => e.map((x) => x.getAttribute("href")))) {
-  const res = await p.request.get(BASE + href);
-  if (res.status() !== 200) check(`  ${href} is a live page`, false, `status=${res.status()}`);
+console.log("\n[5] EVERY TILE IS A DOOR, AND EVERY DOOR OPENS");
+{
+  // The hub's whole promise: five sections, no tile leading anywhere that has
+  // not been built. The reference it was modelled on has tiles for saved
+  // cards, documents, returns and an address book — none of which exist here,
+  // and a tile onto a 404 is worse than no tile.
+  const tiles = p.locator('ul[aria-label="Sections de votre compte"] li a');
+  const hrefs = await tiles.evaluateAll((els) => els.map((a) => a.getAttribute("href")));
+  check("five tiles", hrefs.length === 5, hrefs.join(" "));
+  for (const href of hrefs) {
+    const res = await p.request.get(BASE + href);
+    check(`  ${href} opens`, res.status() === 200, `status=${res.status()}`);
+  }
+  // Counts are read from real records, never estimated, so a badge can only
+  // appear where there is something to count.
+  const orderTile = await tiles.filter({ hasText: "Mes commandes" }).innerText();
+  check("the orders tile counts real orders", /\d/.test(orderTile), orderTile.replace(/\n/g, " · ").slice(0, 60));
 }
-check("no category shortcut leads to a dead page", true);
 
-console.log("\n[6] BUY AGAIN");
-const rail = p.locator('section[aria-labelledby="buy-again"]');
-check("the rail appears once there is history", (await rail.count()) === 1);
-await rail.locator('button:has-text("Racheter")').first().click();
-await p.waitForTimeout(1200);
-check("racheter confirms in place", /Ajouté/i.test(await rail.innerText()));
-check("and the part really reaches the cart",
-      (await p.evaluate(() => JSON.parse(localStorage.getItem("apa-cart") || "{}")?.state?.items?.length ?? 0)) > 0);
+console.log("\n[6] BUY AGAIN, ON THE PAGE THAT NOW OWNS IT");
+await p.goto(`${BASE}/compte/pieces`);
+await p.waitForTimeout(1300);
+{
+  const rail = p.locator('section[aria-labelledby="buy-again"]');
+  check("the rail appears once there is history", (await rail.count()) === 1);
+  await rail.locator('button:has-text("Racheter")').first().click();
+  await p.waitForTimeout(1200);
+  check("racheter confirms in place", /Ajouté/i.test(await rail.innerText()));
+  check("and the part really reaches the cart",
+        (await p.evaluate(() => JSON.parse(localStorage.getItem("apa-cart") || "{}")?.state?.items?.length ?? 0)) > 0);
+}
 
 console.log("\n[7] ORDERS: FILTERS AND A REAL DETAIL PAGE");
 await p.goto(`${BASE}/compte/commandes`);

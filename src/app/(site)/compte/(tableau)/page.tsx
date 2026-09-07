@@ -3,16 +3,12 @@ import { getCurrentUser } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 import { toNumber, formatTNDfr } from "@/lib/money";
-import { getBuyAgain, getShoppableFamilies, getOrderCounts, contactFrom } from "@/lib/data/account";
+import { getOrderCounts, contactFrom } from "@/lib/data/account";
 import AuthForms from "@/components/AuthForms";
 import AccountShell from "@/components/account/AccountShell";
-import OrderTracker from "@/components/account/OrderTracker";
-import QuickActions from "@/components/account/QuickActions";
-import GarageSection from "@/components/account/GarageSection";
-import ShopForCar from "@/components/account/ShopForCar";
-import BuyAgain from "@/components/account/BuyAgain";
-import { StatusBadge, NEXT_STEP, OrderRow, TrustPanel, HelpPanel } from "@/components/account/OrderBits";
-import { IconArrowRight, IconPackage } from "@/components/account/icons";
+import AccountTiles from "@/components/account/AccountTiles";
+import { StatusBadge, NEXT_STEP } from "@/components/account/OrderBits";
+import { IconArrowRight } from "@/components/account/icons";
 
 export const metadata = { title: "Mon compte" };
 
@@ -20,189 +16,74 @@ export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) return <AuthForms />;
 
-  const [settings, orders, counts, buyAgain, families, spend] = await Promise.all([
+  const [settings, active, counts, partCount] = await Promise.all([
     getSettings(),
-    prisma.order.findMany({
-      where: { userId: user.id },
+    // Only the one order that is still moving. A delivered order is history,
+    // and history lives behind the "Mes commandes" tile.
+    prisma.order.findFirst({
+      where: { userId: user.id, status: { notIn: ["DELIVERED", "CANCELLED"] } },
       orderBy: { createdAt: "desc" },
-      take: 4,
-      select: {
-        id: true, ref: true, status: true, total: true, createdAt: true,
-        governorate: true, deliveryMethod: true,
-        history: { orderBy: { createdAt: "asc" }, select: { status: true, createdAt: true } },
-        items: { select: { id: true, name: true, qty: true } },
-      },
+      select: { ref: true, status: true, total: true, createdAt: true },
     }),
     getOrderCounts(user.id),
-    getBuyAgain(user.id, 6),
-    getShoppableFamilies(8),
-    prisma.order.aggregate({
-      where: { userId: user.id, status: { not: "CANCELLED" } },
-      _sum: { total: true },
-    }),
+    // How many distinct parts this customer has bought, for the tile's badge.
+    prisma.orderItem
+      .findMany({
+        where: { order: { userId: user.id } },
+        select: { productId: true },
+        distinct: ["productId"],
+      })
+      .then((rows) => rows.filter((r) => r.productId).length),
   ]);
 
   const contact = contactFrom(settings);
   const firstName = user.name.split(" ")[0];
-  // "Active" means still moving. A delivered order is history, not a task.
-  const active = orders.find((o) => !["DELIVERED", "CANCELLED"].includes(o.status)) ?? null;
-  const recent = orders.filter((o) => o.id !== active?.id).slice(0, 3);
 
   return (
     <AccountShell
-      title={`Bonjour, ${firstName} 👋`}
-      subtitle="Voici ce qui se passe avec votre voiture et vos commandes."
+      title={`Bonjour, ${firstName}`}
+      subtitle="Que souhaitez-vous faire ?"
       user={{ name: user.name, email: user.email, role: user.role }}
       orderCount={counts.total}
       activeOrders={counts.active}
       whatsapp={contact.whatsapp}
     >
-      <div className="flex flex-col gap-4 lg:gap-5">
-        {/* ---------- hero: the live order ---------- */}
-        {active ? (
-          <section
-            aria-labelledby="active-order"
-            className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+      <div className="flex flex-col gap-4 sm:gap-5">
+        {/* One line, not a dashboard.
+
+            The page this replaced opened with the live order's full timeline,
+            which is the right amount of detail on the order's own page and too
+            much on a hub. "Where is my order?" is still the question most
+            people arrive with, so it is still answered here — reference,
+            status, what happens next, and a way in. Everything else about the
+            order is one tap away. Nothing shows at all when nothing is
+            moving. */}
+        {active && (
+          <Link
+            href={`/compte/commandes/${active.ref}`}
+            className="group flex flex-wrap items-center gap-x-4 gap-y-2 p-4 sm:px-5 rounded-2xl border border-navy-900/15 bg-navy-50/40 hover:border-navy-900 transition-colors"
           >
-            <div className="px-5 pt-5 pb-4 sm:px-6 border-b border-slate-100">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="min-w-0">
-                  <p id="active-order" className="text-[11px] font-display font-bold uppercase tracking-[0.14em] text-slate-400">
-                    Commande en cours
-                  </p>
-                  <p className="font-mono font-bold text-xl sm:text-2xl text-navy-950 mt-1" dir="ltr">{active.ref}</p>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Passée le{" "}
-                    {new Date(active.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
-                    {" à "}
-                    {new Date(active.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                    {" · "}
-                    <span className="font-semibold text-navy-950">{formatTNDfr(toNumber(active.total))}</span>
-                    {" · "}
-                    {active.deliveryMethod === "PICKUP" ? "Retrait en magasin" : `Livraison ${active.governorate}`}
-                  </p>
-                </div>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono font-bold text-navy-950" dir="ltr">
+                  {active.ref}
+                </span>
                 <StatusBadge status={active.status} />
-              </div>
-            </div>
-
-            <div className="px-5 py-5 sm:px-6">
-              {/* Compact on purpose: the dashboard answers "where is it?" in a
-                  glance and keeps the CTA above the fold. The full timeline
-                  lives on the order page, which is where you go to read it. */}
-              <OrderTracker
-                status={active.status}
-                placedAt={active.createdAt.toISOString()}
-                events={active.history.map((h) => ({ status: h.status, at: h.createdAt.toISOString() }))}
-                compact
-              />
-
-              <p className="text-sm text-slate-600 mt-4 leading-relaxed">{NEXT_STEP[active.status]}</p>
-
-              <div className="flex flex-wrap items-center gap-2 mt-5">
-                <Link
-                  href={`/compte/commandes/${active.ref}`}
-                  className="inline-flex items-center gap-2 min-h-tap px-5 rounded-xl bg-navy-950 hover:bg-navy-800 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"
-                >
-                  Suivre ma commande <IconArrowRight className="w-4 h-4" />
-                </Link>
-                <Link
-                  href="/compte/commandes"
-                  className="inline-flex items-center min-h-tap px-4 rounded-xl border border-slate-300 text-navy-900 text-sm font-semibold hover:border-navy-700 transition-colors"
-                >
-                  Voir les détails
-                </Link>
-              </div>
-            </div>
-          </section>
-        ) : (
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
-            <span className="inline-grid place-items-center w-12 h-12 rounded-full bg-slate-100 text-slate-400 mb-3">
-              <IconPackage />
+              </span>
+              <span className="block text-sm text-slate-600 mt-1">{NEXT_STEP[active.status]}</span>
             </span>
-            <p className="font-semibold text-navy-950 mb-1">
-              {counts.total > 0 ? "Aucune commande en cours" : "Aucune commande pour le moment"}
-            </p>
-            <p className="text-sm text-slate-500 mb-4 max-w-sm mx-auto">
-              {counts.total > 0
-                ? "Vos commandes récentes restent accessibles ci-dessous."
-                : "Votre prochain achat apparaîtra ici."}
-            </p>
-            <Link
-              href="/recherche"
-              className="inline-flex items-center gap-2 min-h-tap px-5 rounded-xl bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-xs tracking-wide"
-            >
-              Trouver une pièce
-            </Link>
-          </section>
+            <span className="flex items-center gap-3 shrink-0">
+              <span className="font-heading font-extrabold text-navy-950 tabular-nums">
+                {formatTNDfr(toNumber(active.total))}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-display font-bold uppercase tracking-wide text-navy-900 group-hover:text-red-600 transition-colors">
+                Suivre <IconArrowRight className="w-4 h-4" />
+              </span>
+            </span>
+          </Link>
         )}
 
-        {/* Two columns once there is room for them.
-
-            Everything below the live order used to be one stacked ribbon:
-            seven full-width cards, three thousand pixels of scroll on a
-            desktop, with the right-hand half of every one of them empty. The
-            split is by what the card is for, not by size — the left column is
-            what you came to do (buy again, check an order), the right is what
-            you keep coming back to (your car, the ways in, getting hold of
-            someone). Below xl it collapses back to the single column the
-            phone has always had, in the same order. */}
-        <div className="grid xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] gap-4 lg:gap-5 items-start">
-          <div className="flex flex-col gap-4 lg:gap-5 min-w-0">
-            <QuickActions whatsapp={contact.whatsapp} />
-
-            <BuyAgain items={buyAgain} />
-
-            {recent.length > 0 && (
-              <section aria-labelledby="recent" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                <div className="flex items-baseline justify-between gap-3 mb-2 flex-wrap">
-                  <h2 id="recent" className="font-heading font-extrabold uppercase text-navy-950 tracking-tight">
-                    Mes commandes
-                  </h2>
-                  <Link
-                    href="/compte/commandes"
-                    className="inline-flex items-center gap-1 min-h-tap-compact text-xs font-semibold text-navy-900 hover:text-red-600"
-                  >
-                    Voir toutes mes commandes <IconArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
-                <div className="flex flex-col divide-y divide-slate-100">
-                  {recent.map((o) => (
-                    <OrderRow
-                      key={o.id}
-                      order={{
-                        ref: o.ref,
-                        status: o.status,
-                        total: toNumber(o.total),
-                        createdAt: o.createdAt.toISOString(),
-                      }}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-4 lg:gap-5 min-w-0">
-            <GarageSection />
-
-            <ShopForCar categories={families} />
-
-            {/* Side by side while they are the full width of the page, stacked
-                once they are in a column of their own. */}
-            <div className="grid lg:grid-cols-2 xl:grid-cols-1 gap-4 lg:gap-5 [&>*]:min-w-0">
-              <HelpPanel contact={contact} orderRef={active?.ref} />
-              <TrustPanel />
-            </div>
-          </div>
-        </div>
-
-        {counts.total > 0 && (
-          <p className="text-xs text-slate-400 text-center">
-            {counts.total} commande{counts.total > 1 ? "s" : ""} · {formatTNDfr(toNumber(spend._sum.total ?? 0))} depuis votre
-            inscription
-          </p>
-        )}
+        <AccountTiles orderCount={counts.total} partCount={partCount} />
       </div>
     </AccountShell>
   );
