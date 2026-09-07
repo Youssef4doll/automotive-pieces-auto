@@ -6,15 +6,25 @@
  *   node scripts/prisma.mjs generate
  *
  * Why this exists: `schema.prisma` declares `directUrl = env("DATABASE_URL_UNPOOLED")`,
- * and Prisma validates that for *every* command, including `generate`. So a
- * deployment that sets only DATABASE_URL fails at build with
+ * and `prisma migrate deploy` needs that variable set even to run — it fails
+ * up front with
  *
  *   Error code: P1012 — Environment variable not found: DATABASE_URL_UNPOOLED
  *
- * which is a confusing way to say "you are missing an environment variable",
- * because the build never got as far as touching the database.
+ * before touching a database, which reads like a schema problem and is
+ * actually a missing variable.
  *
- * Two cases hide behind that error and they want opposite answers:
+ * `prisma generate` does NOT need it — generate only reads the schema and
+ * writes a client, it opens no connection at all, and runs fine against a
+ * pooled DATABASE_URL with no DATABASE_URL_UNPOOLED in sight (verified: a
+ * bare `prisma generate` against a pgbouncer URL and no direct one succeeds).
+ * An earlier version of this script applied the check to every subcommand,
+ * including generate — which meant `npm install`'s postinstall hook (plain
+ * `prisma generate`, no migration in sight) failed on any host whose
+ * DATABASE_URL is pooled, even though generate had nothing to complain about.
+ * So the fill-in/refuse logic below runs only ahead of `migrate`.
+ *
+ * Two cases hide behind the migrate error and they want opposite answers:
  *
  *  - There is no pooler. DATABASE_URL is already a direct connection (a plain
  *    Postgres server, a local database, a direct Neon string). The two URLs
@@ -49,8 +59,9 @@ try {
 
 const DIRECT = "DATABASE_URL_UNPOOLED";
 const url = process.env.DATABASE_URL;
+const isMigrate = process.argv[2] === "migrate";
 
-if (!process.env[DIRECT] && url) {
+if (isMigrate && !process.env[DIRECT] && url) {
   const pooled =
     /[?&]pgbouncer=true/i.test(url) ? "it carries ?pgbouncer=true"
       : /pooler\./i.test(url) ? "its host is a pooler"
