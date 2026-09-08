@@ -7,6 +7,7 @@ import { useLocale } from "@/i18n/LocaleProvider";
 import type { DictKey } from "@/i18n/dictionaries";
 import T from "./T";
 import FamilyIcon from "./FamilyIcon";
+import SubcategoryTile from "./SubcategoryTile";
 
 type Family = {
   slug: string;
@@ -15,7 +16,7 @@ type Family = {
   imageUrl?: string | null;
   /** Real parts behind this tile, its subcategories included. */
   productCount?: number;
-  children: { slug: string; name: string; count: number }[];
+  children: { slug: string; name: string; imageUrl?: string | null; count: number }[];
 };
 
 /**
@@ -215,28 +216,26 @@ export default function FamiliesTabs({
                     id={`subs-${f.slug}`}
                     className="col-span-full -mt-0.5 mb-1 p-3 rounded-xl border border-gold-500/60 bg-[#fffdf4]"
                   >
-                    <ul className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    {/* Same picture-led tile as the desktop mega-menu's
+                        flyout — this panel and that one are the same
+                        question ("what does this family hold?") asked from
+                        two different places, and used to be answered with
+                        two different-looking lists. */}
+                    <div
+                      className="grid gap-1"
+                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(116px, 1fr))" }}
+                    >
                       {f.children.map((c) => (
-                        <li key={c.slug}>
-                          <Link
-                            href={`/catalogue/${f.slug}/${c.slug}`}
-                            className="flex items-center gap-2 h-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/10 bg-white hover:border-navy-900 transition-colors"
-                          >
-                            <span className="flex-1 min-w-0">
-                              <span className="block text-[13.5px] font-semibold text-navy-950 leading-tight">
-                                {c.name}
-                              </span>
-                              <span className="block text-[12px] text-navy-900/45">
-                                {c.count} <T k="families.refs" />
-                              </span>
-                            </span>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="shrink-0 text-red-500">
-                              <path d="M8 5l8 7-8 7" />
-                            </svg>
-                          </Link>
-                        </li>
+                        <SubcategoryTile
+                          key={c.slug}
+                          href={`/catalogue/${f.slug}/${c.slug}`}
+                          slug={c.slug}
+                          imageUrl={c.imageUrl ?? null}
+                          name={c.name}
+                          size={64}
+                        />
                       ))}
-                    </ul>
+                    </div>
                     <Link
                       href={`/catalogue/${f.slug}`}
                       className="inline-flex items-center gap-1.5 min-h-tap-compact mt-2 text-[13px] font-semibold text-navy-900 hover:text-red-600"

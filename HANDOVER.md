@@ -191,6 +191,30 @@ and the panel stays hidden. It turns itself on if the catalogue ever
 specialises. Ranking seven tied numbers would have been an alphabetical
 tie-break dressed as a recommendation.
 
+**Subcategory browsing is picture tiles, not text rows — one component, three
+places.** The desktop mega-menu's flyout panel and the homepage's expanded
+family card both answer the same question ("what does this family hold?"),
+and used to answer it two different ways: the flyout listed small icons in a
+row, the homepage panel listed bare text with a count. Both now use
+`SubcategoryTile` — a bigger picture (56px / 48px) with the name below it, no
+count on the tile itself. `grid-template-columns: repeat(auto-fill,
+minmax(…, 1fr))`, not `auto-fit`: a family with two subcategories should leave
+the rest of its row empty rather than stretching two tiles to fill it.
+
+**The category page's brand filter is checkboxes, OR'd together — not a
+single choice.** It used to be `?brand=slug`, one brand at a time; picking a
+second replaced the first. `src/lib/catalog-filters.ts` turns that into a
+`?brand=a,b` set with `parseBrandParam`/`toggleBrand`/`filterHref`, shared by
+the desktop sidebar, the phone's chip row, and the "remove this filter" chip
+above the grid so the three cannot drift into different querystring shapes.
+`getProductsForCategory`'s `brandSlugs` filters with `{ slug: { in: [...] } }`
+— a genuine OR, so ticking Bosch and Valeo shows both, not neither. The
+per-brand counts shown beside each checkbox are the whole category's, never
+recomputed for the current selection, so unticking one box never makes the
+others' numbers move under the shopper's finger. `Checkbox.tsx` draws the
+square; the row underneath it is a plain `<Link>`, so the filter still works
+with JavaScript off.
+
 **A part with no photo is drawn, not illustrated with something else.** Every
 seeded product points at the hero artwork — a photograph of engine oil. So a
 brake disc's page showed a bottle of oil. `/api/part-icon/[slug]` serves the

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCategoryBySlug, getProductsForCategory, getBrandsForCategory } from "@/lib/data/catalog";
 import { getSettings, publicContact } from "@/lib/settings";
+import { parseBrandParam } from "@/lib/catalog-filters";
 import CatalogView from "@/components/CatalogView";
 import { pageMeta, clampDescription } from "@/lib/seo";
 import JsonLd from "@/components/JsonLd";
@@ -37,12 +38,13 @@ export default async function SubfamilyPage({
 }) {
   const { family, subfamily } = await params;
   const { brand, sort } = await searchParams;
+  const brandSlugs = parseBrandParam(brand);
 
   const category = await getCategoryBySlug(subfamily);
   if (!category || !category.parent || category.parent.slug !== family) notFound();
 
   const [products, brands, settings] = await Promise.all([
-    getProductsForCategory(category.id, { brandSlug: brand || undefined, sort: sort as Sort | undefined }),
+    getProductsForCategory(category.id, { brandSlugs, sort: sort as Sort | undefined }),
     getBrandsForCategory(category.id, false),
     getSettings(),
   ]);
@@ -69,7 +71,7 @@ export default async function SubfamilyPage({
       siblings={(siblingCategory?.children ?? []).map((c) => ({ id: c.id, name: c.name, slug: c.slug, productCount: c._count.products }))}
       products={products}
       brands={brands}
-      activeBrandSlug={brand}
+      activeBrandSlugs={brandSlugs}
       activeSort={sort}
       whatsapp={publicContact(settings).whatsapp}
     />

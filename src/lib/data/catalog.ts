@@ -139,7 +139,12 @@ export function serializeProduct<
 
 export async function getProductsForCategory(
   categoryId: string,
-  opts: { includeDescendants?: boolean; brandSlug?: string; sort?: "popularity" | "price-asc" | "price-desc" } = {}
+  opts: {
+    includeDescendants?: boolean;
+    /** OR'd together — a checkbox filter, not a single choice. */
+    brandSlugs?: string[];
+    sort?: "popularity" | "price-asc" | "price-desc";
+  } = {}
 ) {
   let categoryIds = [categoryId];
   if (opts.includeDescendants) {
@@ -157,7 +162,7 @@ export async function getProductsForCategory(
     where: {
       categoryId: { in: categoryIds },
       active: true,
-      ...(opts.brandSlug ? { brand: { slug: opts.brandSlug } } : {}),
+      ...(opts.brandSlugs?.length ? { brand: { slug: { in: opts.brandSlugs } } } : {}),
     },
     include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
     orderBy,

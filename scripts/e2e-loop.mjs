@@ -63,17 +63,28 @@ console.log("\n[C1] BROWSE THE CATALOGUE: A FAMILY OPENS ITS SUBCATEGORIES IN PL
   check("the subcategories appear without leaving the page", subCount >= 2, `${subCount} links`);
   check("the shopper is still on the homepage", new URL(shopper.url()).pathname === "/");
 
-  // The tile now states how many parts are behind the family, not how many
+  // The tile states how many parts are behind the family, not how many
   // subcategories — "3 sous-catégories" described our filing system, "48
-  // pièces" answers what the shopper is asking. The invariant worth holding is
-  // that the tile's number matches what the panel actually opens onto: the
-  // reference counts of its subcategories, summed.
+  // pièces" answers what the shopper is asking. The panel used to restate
+  // each subcategory's own count too, and this check summed those visible
+  // numbers to cross-check the tile — but the panel's rows are pictures now
+  // (SubcategoryTile), deliberately without a count on each one, so there is
+  // nothing left on screen to sum. The invariant is still worth holding; it
+  // is checked against the database instead of against the panel's text.
   const stated = Number((await card.innerText()).match(/(\d+)\s+pièces?/i)?.[1] ?? NaN);
-  const panelTotal = (await panel.innerText().then((t) => [...t.matchAll(/(\d+)\s+réf/gi)]))
-    .reduce((n, m) => n + Number(m[1]), 0);
-  check("the tile's part count matches what the panel opens onto",
-        Number.isFinite(stated) && panelTotal > 0 && stated >= panelTotal,
-        `tile says ${stated}, subcategories hold ${panelTotal}`);
+  const firstSubHref = await subs.first().getAttribute("href");
+  const familySlug = firstSubHref?.split("/")[2];
+  const familyRow = familySlug
+    ? await prisma.category.findUnique({ where: { slug: familySlug }, select: { id: true, children: { select: { id: true } } } })
+    : null;
+  const realCount = familyRow
+    ? await prisma.product.count({
+        where: { active: true, categoryId: { in: [familyRow.id, ...familyRow.children.map((c) => c.id)] } },
+      })
+    : NaN;
+  check("the tile's part count matches the database, not just a plausible number",
+        Number.isFinite(stated) && stated === realCount,
+        `tile says ${stated}, database says ${realCount}`);
 
   // Every offered subcategory must actually have products behind it.
   const hrefs = await subs.evaluateAll((els) => els.map((a) => a.getAttribute("href")));

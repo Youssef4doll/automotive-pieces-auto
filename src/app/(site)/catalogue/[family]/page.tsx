@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { pageMeta, clampDescription } from "@/lib/seo";
 import { getCategoryBySlug, getProductsForCategory, getBrandsForCategory } from "@/lib/data/catalog";
 import { getSettings, publicContact } from "@/lib/settings";
+import { parseBrandParam } from "@/lib/catalog-filters";
 import CatalogView from "@/components/CatalogView";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumbSchema, itemListSchema } from "@/lib/schema";
@@ -41,6 +42,7 @@ export default async function FamilyPage({
 }) {
   const { family } = await params;
   const { brand, sort } = await searchParams;
+  const brandSlugs = parseBrandParam(brand);
 
   const category = await getCategoryBySlug(family);
   if (!category || category.parentId) notFound();
@@ -48,7 +50,7 @@ export default async function FamilyPage({
   const [products, brands, settings] = await Promise.all([
     getProductsForCategory(category.id, {
       includeDescendants: true,
-      brandSlug: brand || undefined,
+      brandSlugs,
       sort: sort as Sort | undefined,
     }),
     getBrandsForCategory(category.id, true),
@@ -73,7 +75,7 @@ export default async function FamilyPage({
       siblings={category.children.map((c) => ({ id: c.id, name: c.name, slug: c.slug, productCount: c._count.products }))}
       products={products}
       brands={brands}
-      activeBrandSlug={brand}
+      activeBrandSlugs={brandSlugs}
       activeSort={sort}
       whatsapp={publicContact(settings).whatsapp}
     />

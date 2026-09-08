@@ -14,6 +14,8 @@ import CategoryVehicleBar from "./CategoryVehicleBar";
 import { useState } from "react";
 import { useVehicle } from "@/lib/vehicle-store";
 import VehicleFilterBar, { groupByFit } from "@/components/VehicleFilterBar";
+import Checkbox from "./Checkbox";
+import { filterHref, toggleBrand } from "@/lib/catalog-filters";
 
 type Sibling = { id: string; name: string; slug: string; productCount?: number };
 type BrandFacet = { name: string; slug: string; count: number };
@@ -24,7 +26,7 @@ export default function CatalogView({
   siblings,
   products,
   brands,
-  activeBrandSlug,
+  activeBrandSlugs = [],
   activeSort,
   whatsapp,
 }: {
@@ -33,7 +35,8 @@ export default function CatalogView({
   siblings: Sibling[];
   products: CardProduct[];
   brands: BrandFacet[];
-  activeBrandSlug?: string;
+  /** Several at once, OR'd together — a checkbox filter, not a single choice. */
+  activeBrandSlugs?: string[];
   activeSort?: string;
   whatsapp: string | null;
 }) {
@@ -120,11 +123,12 @@ export default function CatalogView({
           <div className="-mx-4 px-4 overflow-x-auto no-scrollbar">
             <div className="flex gap-2 w-max">
               {brands.map((b) => {
-                const active = activeBrandSlug === b.slug;
+                const active = activeBrandSlugs.includes(b.slug);
                 return (
                   <Link
                     key={b.slug}
-                    href={`${basePath}?brand=${active ? "" : b.slug}${activeSort ? `&sort=${activeSort}` : ""}`}
+                    href={filterHref(basePath, toggleBrand(activeBrandSlugs, b.slug), activeSort)}
+                    aria-pressed={active}
                     className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 min-h-tap-compact rounded-full border text-sm ${
                       active
                         ? "bg-gold-500 border-gold-500 text-navy-950 font-semibold"
@@ -166,28 +170,41 @@ export default function CatalogView({
           )}
           {brands.length > 0 && (
             <div>
-              <h3 className="text-xs font-bold text-gray-600 uppercase mb-2">Marque</h3>
-              <ul className="space-y-1">
-                {brands.map((b) => (
-                  <li key={b.slug}>
-                    <Link
-                      href={`${basePath}?brand=${activeBrandSlug === b.slug ? "" : b.slug}${activeSort ? `&sort=${activeSort}` : ""}`}
-                      className={`flex items-center justify-between px-2 rounded-lg text-sm min-h-tap ${
-                        activeBrandSlug === b.slug ? "bg-gold-500/20 text-navy-900 font-semibold" : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      <span>{b.name}</span>
-                      <span className="text-xs text-gray-600">{b.count}</span>
-                    </Link>
-                  </li>
-                ))}
+              <h3 className="text-xs font-bold text-gray-600 uppercase mb-2">
+                Marque{activeBrandSlugs.length > 0 && ` (${activeBrandSlugs.length})`}
+              </h3>
+              {/* Checkboxes, not a single toggle: a shopper who trusts both
+                  Bosch and Valeo used to have to pick one and reload to try
+                  the other. The count beside each name is the whole
+                  category's, not recomputed for the current selection —
+                  unticking a box should never make the others' numbers
+                  shift under the shopper's finger. */}
+              <ul className="space-y-0.5">
+                {brands.map((b) => {
+                  const checked = activeBrandSlugs.includes(b.slug);
+                  return (
+                    <li key={b.slug}>
+                      <Link
+                        href={filterHref(basePath, toggleBrand(activeBrandSlugs, b.slug), activeSort)}
+                        aria-pressed={checked}
+                        className={`flex items-center gap-2.5 px-2 rounded-lg text-sm min-h-tap ${
+                          checked ? "text-navy-950 font-semibold" : "text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        <Checkbox checked={checked} />
+                        <span className="flex-1 min-w-0 truncate">{b.name}</span>
+                        <span className="text-xs text-gray-500 tabular-nums">{b.count}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
         </aside>
 
         <div className="flex-1 min-w-0">
-          <CatalogControls basePath={basePath} activeBrandSlug={activeBrandSlug} activeSort={activeSort} />
+          <CatalogControls basePath={basePath} brands={brands} activeBrandSlugs={activeBrandSlugs} activeSort={activeSort} />
 
           {products.length > 0 && (
             <VehicleFilterBar

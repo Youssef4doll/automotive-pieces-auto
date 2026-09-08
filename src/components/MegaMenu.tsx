@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import CategoryThumb from "./CategoryThumb";
+import SubcategoryTile from "./SubcategoryTile";
 
 export type MegaMenuChild = {
   id: string;
@@ -82,24 +83,24 @@ export default function MegaMenu({
               >
                 {activeFamily.name}
               </Link>
+              {/* Picture-led tiles, not a list — see SubcategoryTile for why.
+                  auto-fill rather than auto-fit: a family with only two or
+                  three subcategories should leave the rest of the row empty,
+                  not stretch two tiles into two enormous ones. */}
               <div
-                className="mt-4.5 grid gap-x-6 gap-y-1"
-                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(196px, 1fr))" }}
+                className="mt-4 grid gap-1"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}
               >
                 {activeFamily.children.map((sub) => (
-                  <Link
+                  <SubcategoryTile
                     key={sub.id}
                     href={`/catalogue/${activeFamily.slug}/${sub.slug}`}
                     onClick={onNavigate}
-                    className="group flex items-center gap-2.5 py-1 text-[13.5px] text-navy-600 hover:text-red-600"
-                  >
-                    <CategoryThumb slug={sub.slug} imageUrl={sub.imageUrl} size={24} />
-                    <span className="truncate group-hover:underline underline-offset-2">{sub.name}</span>
-                    {/* Beside the name, not pushed to the far edge: these
-                        columns are wide, and justify-between stranded the
-                        number 400px from the label it belongs to. */}
-                    <span className="shrink-0 text-[12px] tabular-nums text-gray-600">({sub.count})</span>
-                  </Link>
+                    slug={sub.slug}
+                    imageUrl={sub.imageUrl}
+                    name={sub.name}
+                    size={76}
+                  />
                 ))}
               </div>
             </>
