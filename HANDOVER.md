@@ -183,13 +183,24 @@ line why there is no plate box rather than leaving people hunting for it. The
 local equivalent is the carte grise, which is the first card on the "I don't
 know" path. See the header comment in `VehiclePicker.tsx`.
 
-**A "most popular makes" panel exists but is data-gated.** It only renders when
-the sixth-ranked make genuinely holds more parts than the seventh. Today it
-does not — seven of the ten makes cover 52 parts each, because most of the
-catalogue is generic servicing kit — so the picker shows one alphabetical list
-and the panel stays hidden. It turns itself on if the catalogue ever
-specialises. Ranking seven tied numbers would have been an alphabetical
-tie-break dressed as a recommendation.
+**The make list is one alphabetical list, and it was a ranked one.** There
+used to be a "Marques les mieux fournies" panel of the top six by parts held,
+then "Autres marques" — gated so it only appeared when the sixth make
+genuinely outstocked the seventh, which on the production catalogue it did.
+It was removed anyway. The ranking was real and it was still the wrong shape
+for this screen: nobody opens this dialog to browse manufacturers, they open
+it holding one specific car, and a coverage ranking obstructs that — you
+cannot tell which of two panels your make landed in without reading both.
+The part count stays on every row, so coverage is still on screen; it just no
+longer decides the order.
+
+**The vehicle picker does not focus its search box on a phone.** Focusing an
+input summons the on-screen keyboard, which covers the bottom half of the
+screen — and the sheet is bottom-anchored, so tapping "Je connais ma voiture"
+opened a keyboard nobody asked for on top of the list of makes. It focuses
+only when `matchMedia("(pointer: fine)")` matches, so a mouse or trackpad
+still gets it and a phone does not. `e2e-nav.mjs` asserts `document.activeElement`
+is not the search box on a touch-emulated context.
 
 **Subcategory browsing is picture tiles, not text rows — one component, three
 places.** The desktop mega-menu's flyout panel and the homepage's expanded

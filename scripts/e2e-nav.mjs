@@ -139,7 +139,7 @@ console.log("\n[3] A SUBCATEGORY ROW ACTUALLY GOES SOMEWHERE");
   check("the page has its own heading", (h1 || "").trim().length > 0, (h1 || "").trim());
 }
 
-console.log("\n[4] THE VEHICLE SHEET LISTS MAKES WITH REAL COVERAGE");
+console.log("\n[4] THE VEHICLE SHEET: ONE ALPHABETICAL LIST, AND NO KEYBOARD");
 {
   await openDrawer();
   await p.click(`${DRAWER} button:has-text("véhicule")`);
@@ -150,13 +150,28 @@ console.log("\n[4] THE VEHICLE SHEET LISTS MAKES WITH REAL COVERAGE");
 
   const txt = await p.textContent(DRAWER);
   check("each make says how many parts we hold for it", /\d+ pièces/.test(txt), (txt.match(/\d+ pièces/) || ["none"])[0]);
-  // The panel is data-gated: it may only appear when the sixth make genuinely
-  // outstocks the seventh. On a catalogue of generic servicing parts they tie,
-  // so a panel here would be an alphabetical tie-break dressed as advice.
-  const ranked = txt.includes("mieux fournies");
-  const heading = txt.includes("Toutes les marques") || txt.includes("Autres marques");
-  check("the make list is headed", heading, ranked ? "ranked block shown" : "flat list");
-  check("a ranked block only appears alongside a remainder list", !ranked || txt.includes("Autres marques"));
+
+  // This screen used to split the makes into "les mieux fournies" and "autres
+  // marques". The ranking was real, and it was still the wrong shape: nobody
+  // opens this dialog to browse manufacturers, they open it holding one car,
+  // and a coverage ranking makes you read two panels to find out which one
+  // yours landed in.
+  check("no two-tier split — one list of every make", !/mieux fournies|Autres marques/.test(txt),
+    (txt.match(/mieux fournies|Autres marques/) || ["single list"])[0]);
+
+  const names = await p.$$eval(`${DRAWER} ul li button`, (bs) =>
+    bs.map((b) => (b.textContent || "").trim().replace(/^[A-Z]{2}/, "").split("\n")[0].trim()).filter(Boolean)
+  );
+  const sorted = [...names].sort((a, b) => a.localeCompare(b, "fr"));
+  check("and it is in alphabetical order, so a shopper can find their own",
+    JSON.stringify(names) === JSON.stringify(sorted), names.slice(0, 4).join(" → "));
+
+  // The bug this replaced: focusing the search on a touch device summoned the
+  // on-screen keyboard, which covers the bottom half of the screen — so the
+  // grid of makes the shopper just asked for opened underneath it.
+  const focused = await p.evaluate(() => document.activeElement?.getAttribute?.("type") ?? document.activeElement?.tagName);
+  check("the on-screen keyboard is not summoned on a touch device", focused !== "search", `focus is on ${focused}`);
+
   check("there is a way out of this screen", txt.includes("sans choisir"));
 }
 

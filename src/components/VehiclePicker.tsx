@@ -126,10 +126,27 @@ export default function VehiclePicker({
     };
   }, [onClose]);
 
-  // Focus the search when a list appears — a keyboard user should be able to
-  // type immediately, and it does not steal focus on the chooser screen.
+  /**
+   * Focus the search when a list appears — on a device with a real keyboard.
+   *
+   * On a phone, focusing an input summons the on-screen keyboard, and the
+   * keyboard covers roughly the bottom half of the screen. The sheet is
+   * bottom-anchored, so the grid of manufacturers the shopper just asked for
+   * opened underneath it: they tapped "Je connais ma voiture" and got a
+   * keyboard they had not asked for, hiding the answer. Dismissing it meant
+   * tapping "done" before they could even look.
+   *
+   * `pointer: fine` is the honest test — it asks whether the device has a
+   * precise pointer (mouse, trackpad, stylus) rather than guessing from the
+   * screen width, so a small laptop window still gets the focus and a large
+   * tablet does not. A shopper on a phone who *wants* to type just taps the
+   * box, which is one tap and costs them nothing.
+   */
   useEffect(() => {
-    if (path === "know" && step !== "engine") searchRef.current?.focus();
+    if (path !== "know" || step === "engine") return;
+    const hasFinePointer =
+      typeof window !== "undefined" && window.matchMedia?.("(pointer: fine)").matches;
+    if (hasFinePointer) searchRef.current?.focus();
   }, [path, step]);
 
   const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -159,31 +176,36 @@ export default function VehiclePicker({
         )
       : [];
 
-  // Ranked by how many parts we actually hold for each — the fitment table's
-  // own count, not a popularity figure nobody measured. A make we cannot serve
-  // does not get to sit at the top of the list.
-  const ranked = [...makes].sort(
-    (a, b) => b.partCount - a.partCount || a.name.localeCompare(b.name, "fr")
-  );
   /**
-   * …but only when the ranking says something.
+   * One list of every make, in alphabetical order.
    *
-   * Measured against the catalogue as it stands, it does not: seven of the ten
-   * makes cover 52 parts each and the other three cover 51, 50 and 46, because
-   * most of what the shop stocks is generic servicing kit that fits nearly
-   * everything. A "best-stocked" panel over seven tied numbers would be an
-   * alphabetical tie-break wearing the costume of a recommendation, which is
-   * the sort of thing this project does not do.
+   * It used to be two: a "Marques les mieux fournies" panel of the top six by
+   * parts held, then "Autres marques" for the rest. The ranking was real —
+   * counted off the fitment table, gated so it only appeared when the sixth
+   * make genuinely outstocked the seventh — and it was still the wrong shape
+   * for this screen. Nobody opens this dialog to browse manufacturers. They
+   * open it holding one specific car, and the only question is "where is
+   * mine?" — which a coverage ranking actively obstructs, because you cannot
+   * guess which of two panels your make landed in without reading both. The
+   * shop's own verdict on the heading was blunter: "the title is bad".
    *
-   * So the block asks the data for permission: it appears only if the sixth
-   * make genuinely holds more than the seventh — a real cut, not a tie. Today
-   * that is false and the picker shows one honest alphabetical list. It turns
-   * itself on if the catalogue ever specialises.
+   * Alphabetical answers the real question, and the part count stays on every
+   * tile, so how well we cover a make is still on screen — it just no longer
+   * decides where the make sits.
    */
-  const showRanked =
-    !q && makes.length > 6 && ranked[5].partCount > ranked[6].partCount;
-  const bestStocked = showRanked ? ranked.slice(0, 6) : [];
-  const restOfMakes = showRanked ? ranked.slice(6) : filteredMakes;
+  const sortedMakes = [...filteredMakes].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
+  /**
+   * A search box only where there is something to search.
+   *
+   * On the make step it always earns its place — it looks past the makes to
+   * the models, so it is how "clio" finds a Renault. On the model step it is
+   * filtering a list the shop can usually count on one hand: BMW has two
+   * models, and a full-width input above two rows is a control that costs a
+   * quarter of a phone screen to save nobody a scroll. Eight is roughly where
+   * a list stops fitting above the fold on a phone.
+   */
+  const showSearch = step === "make" || (step === "model" && (make?.models.length ?? 0) >= 8);
 
   function pickModel(mk: Make, mo: Model) {
     setMake(mk);
@@ -306,7 +328,7 @@ export default function VehiclePicker({
 
         {/* Search sits outside the scroll area so it stays put while a long
             list of makes moves under it. */}
-        {path === "know" && step !== "engine" && (
+        {path === "know" && showSearch && (
           <div className="shrink-0 p-3 border-b border-gray-100">
             <div className="relative">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true">
@@ -402,54 +424,37 @@ export default function VehiclePicker({
               <NoMatch onHelp={() => setPath("help")} />
             ) : (
               <div className="flex flex-col gap-5">
-                {/* The makes we can serve best, said as a fact about the
-                    catalogue rather than as a claim about popularity. */}
-                {showRanked && (
+                {sortedMakes.length > 0 && (
                   <section>
-                    <SectionHead title={t("vp.bestStocked")} hint={t("vp.bestStockedHint")} />
-                    <ul className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {bestStocked.map((m) => (
+                    {/* One row per make on a phone, two from 420px, three on a
+                        desktop dialog. The two-column grid this replaced put
+                        a 30px logo, a make name and a part count into a 165px
+                        cell, which truncated "Volkswagen" on every phone the
+                        shop's customers actually use. A full-width row has
+                        room for all three and is a bigger tap target. */}
+                    <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-2">
+                      {sortedMakes.map((m) => (
                         <li key={m.id}>
                           <button
                             type="button"
                             onClick={() => { setMake(m); setStep("model"); setFilter(""); }}
-                            className="w-full h-full flex flex-col items-center justify-start gap-1.5 p-2.5 rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50"
+                            className="w-full text-start ps-2 pe-3 py-2 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 active:bg-navy-50 flex items-center gap-2.5"
                           >
-                            <MakeMark make={m} />
-                            <span className="w-full truncate text-xs font-semibold text-navy-950 text-center">
-                              {m.name}
-                            </span>
-                            <span className="w-full truncate text-xs text-gray-500 text-center tabular-nums">
-                              {partsLabel(t, m.partCount)}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-
-                {restOfMakes.length > 0 && (
-                  <section>
-                    <SectionHead title={t(showRanked ? "vp.otherMakes" : "vp.allMakes")} />
-                    <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {restOfMakes.map((m) => (
-                        <li key={m.id}>
-                          <button
-                            type="button"
-                            onClick={() => { setMake(m); setStep("model"); setFilter(""); }}
-                            className="w-full text-start ps-2 pe-2.5 py-1.5 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 flex items-center gap-2"
-                          >
-                            <MakeMark make={m} size={30} />
+                            <MakeMark make={m} size={36} />
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-semibold text-navy-950">{m.name}</span>
+                              <span className="block truncate text-[15px] font-semibold text-navy-950 leading-tight">
+                                {m.name}
+                              </span>
                               {/* What we can actually do for this make. A make
                                   we hold nothing for says so rather than
                                   looking identical to one we cover. */}
-                              <span className="block truncate text-xs text-gray-500 tabular-nums">
+                              <span className="block truncate text-xs text-gray-500 tabular-nums mt-0.5">
                                 {m.partCount > 0 ? partsLabel(t, m.partCount) : t("vp.noParts")}
                               </span>
                             </span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-300 rtl:rotate-180" aria-hidden="true">
+                              <path d="m9 5 7 7-7 7" />
+                            </svg>
                           </button>
                         </li>
                       ))}
@@ -492,7 +497,11 @@ export default function VehiclePicker({
             filteredModels.length === 0 ? (
               <NoMatch onHelp={() => setPath("help")} />
             ) : (
-              <ul className="flex flex-col gap-2">
+              // Two lines rather than name-left / years-right: "Golf VII
+              // Sportsvan" and "2014–2020" fought for one 320px row and the
+              // name lost, so a shopper picked between two truncated models
+              // that looked identical.
+              <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
                 {filteredModels.map((m) => {
                   const years = yearsOf(m);
                   return (
@@ -500,10 +509,19 @@ export default function VehiclePicker({
                       <button
                         type="button"
                         onClick={() => { setModel(m); setStep("engine"); }}
-                        className="w-full text-start px-3.5 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 flex items-center justify-between gap-3 text-sm"
+                        className="w-full h-full text-start px-3.5 py-2 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 active:bg-navy-50 flex items-center gap-2.5"
                       >
-                        <span className="min-w-0 truncate font-semibold text-navy-950">{m.name}</span>
-                        <span className="shrink-0 text-xs text-gray-600 tabular-nums">{years ?? ""}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[15px] font-semibold text-navy-950 leading-tight">
+                            {m.name}
+                          </span>
+                          {years && (
+                            <span className="block text-xs text-gray-500 tabular-nums mt-0.5">{years}</span>
+                          )}
+                        </span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-300 rtl:rotate-180" aria-hidden="true">
+                          <path d="m9 5 7 7-7 7" />
+                        </svg>
                       </button>
                     </li>
                   );
@@ -513,21 +531,25 @@ export default function VehiclePicker({
           )}
 
           {path === "know" && !loading && step === "engine" && model && (
-            <ul className="flex flex-col gap-2">
-              {model.engines.map((e) => (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    onClick={() => pickEngine(e)}
-                    className="w-full text-start px-3.5 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 flex items-center justify-between gap-3 text-sm"
-                  >
-                    <span className="min-w-0 truncate font-semibold text-navy-950">{e.name}</span>
-                    <span className="shrink-0 text-xs text-gray-600">
-                      {[e.fuel, e.powerHp ? `${e.powerHp} ch` : null].filter(Boolean).join(" · ")}
-                    </span>
-                  </button>
-                </li>
-              ))}
+            <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
+              {model.engines.map((e) => {
+                // Only what the catalogue actually records for this engine.
+                const spec = [e.fuel, e.powerHp ? `${e.powerHp} ch` : null].filter(Boolean).join(" · ");
+                return (
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      onClick={() => pickEngine(e)}
+                      className="w-full h-full text-start px-3.5 py-2 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 active:bg-navy-50 flex flex-col justify-center"
+                    >
+                      <span className="block truncate text-[15px] font-semibold text-navy-950 leading-tight">
+                        {e.name}
+                      </span>
+                      {spec && <span className="block truncate text-xs text-gray-500 mt-0.5">{spec}</span>}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
 
