@@ -11,6 +11,11 @@ export default function NotFoundBand({
   phone: string | null;
 }) {
   const { t } = useLocale();
+  // The copy and the icon both name WhatsApp. They may only do that when the
+  // link actually goes there — with no number set, contactLink falls back to
+  // the store section, and this band was promising a channel behind a
+  // WhatsApp logo that led to an anchor on this same page.
+  const isWhatsApp = contactUrl.includes("wa.me");
 
   return (
     <section className="bg-gold-500">
@@ -19,7 +24,9 @@ export default function NotFoundBand({
           <h2 className="font-heading font-extrabold uppercase text-xl sm:text-3xl text-navy-950 tracking-tight">
             {t("notfound.title")}
           </h2>
-          <p className="text-navy-900/80 text-sm mt-1">{t("notfound.subtitle")}</p>
+          <p className="text-navy-900/80 text-sm mt-1">
+            {t(isWhatsApp ? "notfound.subtitle" : "notfound.subtitleNoWa")}
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 shrink-0">
           <a
@@ -27,9 +34,11 @@ export default function NotFoundBand({
             {...(contactUrl.startsWith("/") ? {} : { target: "_blank", rel: "noreferrer" })}
             className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-sm tracking-wide"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.65 0-3.19-.47-4.5-1.28l-.32-.19-3.01.79.8-2.93-.21-.31A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z" />
-            </svg>
+            {isWhatsApp && (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.07L2 22l5.06-1.33A9.94 9.94 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.65 0-3.19-.47-4.5-1.28l-.32-.19-3.01.79.8-2.93-.21-.31A7.94 7.94 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z" />
+              </svg>
+            )}
             <span dir="ltr">{phone ?? t("nav.contact")}</span>
           </a>
           <a

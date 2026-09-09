@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { IconSearch, IconWhatsApp } from "./icons";
-import { contactLink } from "@/lib/contact-link";
+import { contactLink, contactLinkProps } from "@/lib/contact-link";
 
 export type Faq = { q: string; a: string; cat: string };
 
@@ -37,6 +37,7 @@ export default function HelpCenter({ faqs, whatsapp, orderRef }: { faqs: Faq[]; 
   const message = orderRef
     ? `Bonjour, j'ai besoin d'aide concernant ma commande ${orderRef}.`
     : "Bonjour, je n'ai pas trouvé la réponse à ma question.";
+  const helpHref = contactLink({ whatsapp, email: null }, message);
 
   return (
     <div className="flex flex-col gap-4">
@@ -109,13 +110,22 @@ export default function HelpCenter({ faqs, whatsapp, orderRef }: { faqs: Faq[]; 
           Vous n&apos;avez pas trouvé la réponse ?
         </h2>
         <p className="text-sm text-slate-500 mt-1 mb-4">Une vraie personne vous répond.</p>
+        {/* The label named WhatsApp whether or not the shop had given us a
+            number, and the target was hardcoded — so with none set, a green
+            "Écrire sur WhatsApp" button opened this same site's store section
+            in a new tab. It now says where it actually goes. */}
         <a
-          href={contactLink({ whatsapp, email: null }, message)}
-          target="_blank"
-          rel="noreferrer"
+          href={helpHref}
+          {...contactLinkProps(helpHref)}
           className="inline-flex items-center gap-2 min-h-tap px-6 rounded-xl bg-green-700 hover:bg-green-800 text-white font-display font-bold uppercase text-xs tracking-wide transition-colors"
         >
-          <IconWhatsApp /> Écrire sur WhatsApp
+          {whatsapp ? (
+            <>
+              <IconWhatsApp /> Écrire sur WhatsApp
+            </>
+          ) : (
+            "Nous contacter"
+          )}
         </a>
       </section>
     </div>

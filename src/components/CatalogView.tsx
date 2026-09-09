@@ -8,7 +8,7 @@ import ProductGrid from "./ProductGrid";
 import CatalogControls from "./CatalogControls";
 import TrackEvent from "./TrackEvent";
 import type { CardProduct } from "./ProductCard";
-import { contactLink } from "@/lib/contact-link";
+import { contactLink, contactLinkProps } from "@/lib/contact-link";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import CategoryVehicleBar from "./CategoryVehicleBar";
 import { useState } from "react";
@@ -285,17 +285,20 @@ function NoFitState({
 }
 
 function EmptyState({ whatsapp }: { whatsapp: string | null }) {
+  const emptyHref = contactLink({ whatsapp, email: null });
   return (
     <div className="text-center py-16 px-4 border border-dashed border-gray-300 rounded-xl">
       <p className="text-3xl mb-3">🔧</p>
       <p className="text-gray-600 font-medium mb-4">Aucune référence en ligne pour cette catégorie</p>
+      {/* Same fix as FamiliesFooter and HelpCenter: the target was hardcoded,
+          so with no WhatsApp number set this opened the site's own store
+          section in a new tab, under a label naming WhatsApp. */}
       <a
-        href={contactLink({ whatsapp, email: null })}
-        target="_blank"
-        rel="noreferrer"
+        href={emptyHref}
+        {...contactLinkProps(emptyHref)}
         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-700 text-white text-sm font-semibold"
       >
-        Envoyez-la sur WhatsApp, on la retrouve
+        {whatsapp ? "Envoyez-la sur WhatsApp, on la retrouve" : "Demandez-nous, on la retrouve"}
       </a>
     </div>
   );
