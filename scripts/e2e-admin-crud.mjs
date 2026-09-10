@@ -328,9 +328,18 @@ try {
 
     check("no emoji in the way out", !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(block),
           (block.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu) ?? []).join(" "));
-    for (const label of ["Nous contacter", "Choisir ou changer de véhicule", "Chercher par référence", "Envoyer une photo"]) {
+    for (const label of ["Choisir ou changer de véhicule", "Chercher par référence", "Envoyer une photo"]) {
       check(`« ${label} » is offered`, block.includes(label));
     }
+    // "Ask us for this part" is offered by whichever channel the shop has
+    // configured, so the wording is not fixed: WhatsApp when there is a
+    // number, email when there is an address, and the neutral one when there
+    // is neither. This asserted the neutral wording alone and so failed the
+    // moment a shop e-mail existed — which is a correct site and a wrong
+    // test. What matters is that a way to ask is offered at all.
+    const askRoutes = ["Demander cette pièce sur WhatsApp", "Demander cette pièce par email", "Nous contacter"];
+    check("a way to ask us for the part is offered", askRoutes.some((l) => block.includes(l)),
+          askRoutes.find((l) => block.includes(l)) ?? "none of the three");
     check("the routes are drawn, not typed", (await shop.locator("main svg").count()) >= 4,
           `${await shop.locator("main svg").count()} icons`);
     await shop.close();

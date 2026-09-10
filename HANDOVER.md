@@ -15,7 +15,7 @@ worth reading first — what is not.
 ```bash
 npm install                 # postinstall runs `prisma generate`
 cp .env.example .env        # then fill in the values below
-npm run db:migrate          # 15 migrations
+npm run db:migrate          # 16 migrations
 npm run db:seed             # catalogue, vehicles, demo customer, admin
 npm run dev                 # http://localhost:3000
 ```
@@ -31,6 +31,7 @@ gets "command not found" on every platform. `npx prisma …` works too.
 | `DATABASE_URL` | Pooled connection — hostname carries `-pooler` on Neon, port 6543 + `?pgbouncer=true` on Supabase. |
 | `DATABASE_URL_UNPOOLED` | Direct connection. Used only by `prisma migrate`. Required wherever `DATABASE_URL` is pooled — **Vercel included**; see below. |
 | `SESSION_SECRET` | Signs the session cookie. Long and random. |
+| `EMAIL_FROM` + `RESEND_API_KEY` *or* `SMTP_*` | Optional. Without them the shop takes orders and tells nobody — see §3. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical origin, for sitemap/OG/canonicals. Falls back to `VERCEL_URL`. |
 
 **Seeded logins.** These are development defaults committed in `prisma/seed.ts`
@@ -73,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-23 Playwright suites, ~900 checks, driving real browsers against a real
+25 Playwright suites, ~960 checks, driving real browsers against a real
 database. They are the main safety net and they have caught more real bugs
 than they have cost.
 
@@ -113,8 +114,8 @@ stock), and clean up after themselves.
 src/app/(site)/     storefront          src/lib/data/    all database reads
 src/app/admin/      admin               src/lib/         session, search, money,
 src/app/actions/    server actions                       rate limits, shipping…
-src/app/api/        images, part icons  prisma/          schema, 15 migrations
-src/components/     UI                  scripts/         the 22 e2e suites
+src/app/api/        images, part icons  prisma/          schema, 16 migrations
+src/components/     UI                  scripts/         the 25 e2e suites
 ```
 
 **26 Prisma models.** The ones worth knowing: `Product`, `Category` (two levels
@@ -226,6 +227,44 @@ others' numbers move under the shopper's finger. `Checkbox.tsx` draws the
 square; the row underneath it is a plain `<Link>`, so the filter still works
 with JavaScript off.
 
+**The shop sends mail, or says plainly that it does not.** `src/lib/email.ts`
+picks a transport from the environment: `RESEND_API_KEY` talks to Resend over
+plain `fetch` (no package to install), or `SMTP_*` uses nodemailer, imported
+lazily so only shops that choose that path need `npm i nodemailer`. With
+neither set, `sendMail` logs one line and returns `{ ok: false, skipped }`,
+and `/admin/parametres` says so in as many words with the variables named.
+
+**Sending is best-effort and may never fail a checkout.** An order already in
+the database with its stock claimed is not undone, delayed, or hidden because
+a mail server is unreachable. `notifyOrderPlaced` catches everything;
+`e2e-emails.mjs` kills the mail server and asserts the order still completes
+(it does, in ~120ms). It is awaited rather than left floating, because a
+promise still in flight when a serverless function returns is a promise that
+gets killed.
+
+**The printable order document is a "Reçu" until the shop has a matricule
+fiscal.** In Tunisia an invoice carries the seller's tax number; printing
+"Facture" without one is a false claim on a piece of paper somebody may file
+for their accounts. Fill `shop_tax_id` in /admin/parametres and the same
+document becomes a facture with the matricule on it. It is one document, used
+by the customer as their record and by the shop as the note in the box — two
+that can disagree is worse than one. `/commande/[ref]/recu`.
+
+**Printing hides chrome by `data-print-hide`, not by tag name.** The first
+version of the print stylesheet said `header, footer, nav { display: none }`,
+which also hid the receipt's own `<header>` and `<footer>` — the shop name,
+the document title, the reference and the payment note all vanished from the
+printout. Marking the chrome is the version that cannot reach into a page's
+content.
+
+**A review requires a delivered order for that exact part, and a human before
+it is public.** `verified` is set by the server from the order history and can
+never be sent by the form; `published` defaults to false and `/admin/avis` is
+the queue. The product page and the `aggregateRating` in its structured data
+both filter on `published`, so an unmoderated review cannot move the number a
+search engine quotes. A unique index on `(productId, userId)` is what actually
+stops a doubled submit.
+
 **A part with no photo is drawn, not illustrated with something else.** Every
 seeded product points at the hero artwork — a photograph of engine oil. So a
 brake disc's page showed a bottle of oil. `/api/part-icon/[slug]` serves the
@@ -264,6 +303,12 @@ Working and covered by tests:
 - Admin: products with photos, categories with pictures, brands with logos,
   vehicles, stock, orders, customers, banners, CSV import, quality checks,
   analytics, settings.
+- Order e-mail: confirmation to the customer, alert to the shop, a line when
+  the status moves. Off until a transport is configured, and the admin says so.
+- A printable receipt (or facture, with a matricule fiscal) for every order,
+  shared by the customer and the packing bench.
+- Reviews: written only by customers who took delivery of that part, published
+  only after the shop reads them, moderated at /admin/avis.
 - Security: nonce CSP, HSTS, nosniff, frame-deny, permissions policy, bcrypt,
   `__Host-` session cookie, rate limits on login/signup/checkout/lookup,
   honeypot and timing checks on public forms, ownership checks on order access.
@@ -295,6 +340,8 @@ working upload form and an honest stand-in until it is used:
 | Category pictures | 0 of 144 | Catalogue | the family line drawing |
 | Parts-brand logos | 0 of 19 | Catalogue → Marques | the brand's name |
 | Vehicle-make logos | 0 of 10 | Catalogue → Véhicules | the make's initials |
+| Part references | 0 of 55 | Stock → a product → Références | reference search finds nothing |
+| Customer reviews | 0 | arrive from delivered orders | the section is simply absent |
 
 Category pictures are the cheapest win of the four: sixteen images put a real
 photograph on every row of the phone menu and the desktop flyout, which is the
@@ -309,14 +356,22 @@ handful of parts. Vehicle coverage is 10 makes / 22 models / 25 engines, which
 is narrow for Tunisia. Fitment data itself is good: 1,159 rows covering 52 of
 55 products.
 
-### 5.3 The home page is long on a phone
+### 5.3 The catalogue has no part references — 0 of 55
+
+Every product has an empty `oemRefs`, and `PartReference` holds nothing. The
+"J'ai la référence" search — how a mechanic, or anyone holding the old part,
+actually shops — therefore finds nothing. **The admin form already takes them**
+(Stock → a product → "Références OEM" / "Références aftermarket", comma
+separated); this is data entry, not code.
+
+### 5.4 The home page is long on a phone
 
 About 7,000px, roughly eight screens. The top-seller row swipes and the vehicle
 shortcuts show 6 of 12 on a phone, which took roughly 1,300px out of it.
 Cutting further means removing content rather than rearranging it, which is a
 merchandising decision, not an engineering one.
 
-### 5.4 Smaller things
+### 5.5 Smaller things
 
 - **Lint has 14 pre-existing errors**, nearly all the newer
   `react-hooks/set-state-in-effect` rule firing on forms that clear themselves
