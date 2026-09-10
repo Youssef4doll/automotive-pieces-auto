@@ -22,10 +22,15 @@
  */
 import { chromium } from "playwright";
 import { createServer } from "node:http";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const PORT = Number(process.env.MAIL_STUB_PORT || 8788);
+// Set MAIL_DUMP_DIR to keep every message the stand-in receives as .html and
+// .txt files — the way to look at what a customer will actually see, since
+// nothing here is rendered by a browser otherwise.
+const DUMP = process.env.MAIL_DUMP_DIR || "";
 const prisma = new PrismaClient();
 
 let pass = 0;
@@ -48,7 +53,15 @@ const stub = createServer((req, res) => {
   req.on("data", (c) => (body += c));
   req.on("end", () => {
     try {
-      inbox.push(JSON.parse(body));
+      const mail = JSON.parse(body);
+      inbox.push(mail);
+      if (DUMP) {
+        mkdirSync(DUMP, { recursive: true });
+        const slug = String(mail.subject || "mail").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60);
+        const stem = `${DUMP}/${String(inbox.length).padStart(2, "0")}-${slug}`;
+        writeFileSync(`${stem}.html`, mail.html || "");
+        writeFileSync(`${stem}.txt`, mail.text || "");
+      }
     } catch {
       /* ignore malformed */
     }
@@ -135,7 +148,11 @@ check("every message carries a plain-text part", [toCustomer, toShop].every((m) 
 const body = `${toCustomer?.html} ${toCustomer?.text}`;
 check("the confirmation lists what was actually bought", /KAMOKA|Filtre/i.test(body), (body.match(/Filtre [^<\n]{0,30}/) || [])[0]);
 check("and the total that was actually charged", /\d+,\d{2}\sDT/.test(body), (body.match(/Total[\s\S]{0,60}?(\d+,\d{2}\sDT)/) || [])[1]);
-check("it links the customer to their own order", body.includes(`/compte/commandes/${order.ref}`));
+// A guest's order is attached to no account, so /compte/commandes would be a
+// sign-in form followed by a 404. The confirmation page is the one that
+// recognises the browser the order was placed in.
+check("it links a guest to the confirmation page, not to an account they do not have",
+  body.includes(`/commande/confirmation/${order.ref}`) && !body.includes(`/compte/commandes/`));
 
 // The house rule, in the one place it is hardest to walk back.
 check(
@@ -144,6 +161,38 @@ check(
   "no dd/mm/yyyy anywhere"
 );
 check("it invents no tracking number", !/suivi\s*:?\s*[A-Z0-9]{8,}/i.test(body));
+
+// The order date is a fact and belongs in the message; it must be the only
+// time in it. The progress strip shows the steps and which one the order is
+// on — a time against "Expédiée" or "Livrée" would be a promise nobody made.
+const html = toCustomer?.html || "";
+check("it states when the order was placed", /Date de commande[\s\S]{0,200}?\d{1,2} \S+\.? \d{4} · \d{2}:\d{2}/.test(html));
+check("and that is the only time anywhere in it", (html.match(/\b\d{2}:\d{2}\b/g) || []).length === 1,
+  `${(html.match(/\b\d{2}:\d{2}\b/g) || []).length} time(s)`);
+check("the progress strip names the real steps", ["Reçue", "Confirmée", "Préparée", "Expédiée", "Livrée"].every((s) => html.includes(s)));
+check("the shop's logo is in it, served from the site", /\/images\/email\/logo-white\.png/.test(html));
+// A line whose product has no photo of its own is shown without one. The
+// catalogue's placeholder artwork is not a picture of what was ordered.
+check("no placeholder artwork is passed off as a photo of a part", !html.includes("parts-lineup.png"));
+check("the plain-text part says the same things", /Numéro de commande/.test(toCustomer?.text || "") && /Total :/.test(toCustomer?.text || ""));
+
+console.log("\n[1b] AN ACCOUNT HOLDER IS LINKED TO THEIR ORDER PAGE");
+{
+  const me = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+  await me.goto(`${BASE}/compte`);
+  await me.fill('input[name="email"]', "karim.bensalah@example.com");
+  await me.fill('input[name="password"]', "client1234");
+  await me.getByRole("button", { name: "Se connecter", exact: true }).click();
+  await me.waitForTimeout(2500);
+
+  const before = inbox.length;
+  const mine = await placeOrder(me, { email: "karim.bensalah@example.com", name: "Karim Ben Salah", phone: "20777888" });
+  await waitForMail(before + 2);
+  const m = inbox.slice(before).find((x) => x.to?.includes("karim.bensalah@example.com"));
+  check("the account holder is mailed", !!m, m?.subject);
+  check("and sent to the order in their account", (m?.html || "").includes(`/compte/commandes/${mine.ref}`));
+  await me.context().close();
+}
 
 console.log("\n[2] A GUEST WITH NO E-MAIL GETS NO MESSAGE, AND THE SHOP STILL DOES");
 {

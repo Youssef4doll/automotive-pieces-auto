@@ -32,7 +32,7 @@ gets "command not found" on every platform. `npx prisma …` works too.
 | `DATABASE_URL_UNPOOLED` | Direct connection. Used only by `prisma migrate`. Required wherever `DATABASE_URL` is pooled — **Vercel included**; see below. |
 | `SESSION_SECRET` | Signs the session cookie. Long and random. |
 | `EMAIL_FROM` + `RESEND_API_KEY` *or* `SMTP_*` | Optional. Without them the shop takes orders and tells nobody — see §3. |
-| `NEXT_PUBLIC_SITE_URL` | Canonical origin, for sitemap/OG/canonicals. Falls back to `VERCEL_URL`. |
+| `NEXT_PUBLIC_SITE_URL` | Canonical origin, for sitemap/OG/canonicals — and for every link and picture in the order emails. Set it to the real domain. Falls back to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL` (a per-deployment address, possibly behind deployment protection, where a mail client asking for the logo gets a sign-in page). |
 
 **Seeded logins.** These are development defaults committed in `prisma/seed.ts`
 and printed when it runs. **Change the admin password before any real

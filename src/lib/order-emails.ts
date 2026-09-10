@@ -36,6 +36,8 @@ async function shopFor(): Promise<ShopForEmail> {
     // a placeholder can never end up as a recipient or in a signature.
     email: contact.email,
     phone: contact.phone,
+    address: contact.address,
+    hours: contact.hours,
     deliveryGrandTunis: settings.delivery_grand_tunis,
     deliveryRegions: settings.delivery_regions,
   };
@@ -45,7 +47,10 @@ async function loadOrder(orderId: string): Promise<OrderForEmail | null> {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     select: {
+      id: true,
       ref: true,
+      userId: true,
+      createdAt: true,
       customerName: true,
       phone: true,
       email: true,
@@ -57,7 +62,7 @@ async function loadOrder(orderId: string): Promise<OrderForEmail | null> {
       shippingFee: true,
       total: true,
       notes: true,
-      items: { select: { name: true, sku: true, qty: true, unitPrice: true, lineTotal: true } },
+      items: { select: { name: true, sku: true, imageUrl: true, qty: true, unitPrice: true, lineTotal: true } },
     },
   });
   if (!order) return null;
@@ -94,17 +99,14 @@ export async function notifyOrderPlaced(orderId: string): Promise<void> {
   }
 }
 
-/** One line to the customer when the order moves. Silent for PENDING (the
- *  confirmation already said it) and for an order with no email on it. */
+/** A message to the customer when the order moves, restating what it holds.
+ *  Silent for PENDING (the confirmation already said it) and for an order
+ *  with no email on it. The whole order is loaded, not just the reference:
+ *  the message shows the progress strip and the lines, so a customer with
+ *  three orders open knows which one moved without opening anything. */
 export async function notifyOrderStatus(orderId: string, status: string): Promise<void> {
   try {
-    const [order, shop] = await Promise.all([
-      prisma.order.findUnique({
-        where: { id: orderId },
-        select: { ref: true, customerName: true, email: true },
-      }),
-      shopFor(),
-    ]);
+    const [order, shop] = await Promise.all([loadOrder(orderId), shopFor()]);
     if (!order) return;
 
     const mail = orderStatusMail(order, status, shop);
