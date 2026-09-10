@@ -27,6 +27,12 @@ import {
  * order is a support call at best.
  */
 
+/** The shop as it signs its messages, from settings. Shared with the
+ *  password-reset mail so every message the shop sends has the same footer. */
+export async function loadShopForEmail(): Promise<ShopForEmail> {
+  return shopFor();
+}
+
 async function shopFor(): Promise<ShopForEmail> {
   const settings = await getSettings();
   const contact = publicContact(settings);

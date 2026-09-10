@@ -151,8 +151,11 @@ function logo(width: number) {
  * footer with the shop's real details. `preheader` is the line inbox lists
  * show under the subject; without one they show the first words of the body.
  */
-function shell(opts: { title: string; preheader: string; kicker: string; shop: ShopForEmail; body: string }) {
+function shell(opts: { title: string; preheader: string; kicker: string; shop: ShopForEmail; body: string; reason?: string }) {
   const { title, preheader, kicker, shop, body } = opts;
+  // Why this landed in their inbox — the line under the card. An order's
+  // messages say an order; anything else must say what it actually was.
+  const reason = opts.reason ?? "qu'une commande a été passée sur %HOST% avec cette adresse";
   const contact = [shop.phone, shop.email].filter(Boolean).map((s) => esc(s!)).join(" &nbsp;·&nbsp; ");
   const place = [shop.address, shop.hours].filter(Boolean).map((s) => esc(s!)).join(" &nbsp;·&nbsp; ");
   const host = siteUrl().replace(/^https?:\/\//, "");
@@ -176,13 +179,14 @@ function shell(opts: { title: string; preheader: string; kicker: string; shop: S
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
       <td align="left" valign="middle">${logo(96)}</td>
       <td align="right" valign="middle" style="font-family:${FONT};font-size:12px;line-height:1.7;color:#c7d0e3;">
-        ${contact || esc(shop.name)}${place ? `<br><span style="color:#8f9bb8;">${place}</span>` : ""}
+        <span style="color:${GOLD};">&#8212;</span>&nbsp; <span style="color:#ffffff;">Votre véhicule mérite le meilleur</span>
+        ${contact ? `<br>${contact}` : ""}${place ? `<br><span style="color:#8f9bb8;">${place}</span>` : ""}
       </td>
     </tr></table>
   </td></tr>
 </table>
 <p style="max-width:600px;margin:14px auto 0;font-family:${FONT};font-size:11px;line-height:1.6;color:${FAINT};text-align:center;">
-  Vous recevez cet e-mail parce qu'une commande a été passée sur ${esc(host)} avec cette adresse.
+  Vous recevez cet e-mail parce ${reason.replace("%HOST%", esc(host))}.
   Pour toute question, répondez simplement à ce message.
 </p>
 </td></tr></table>
@@ -190,10 +194,10 @@ function shell(opts: { title: string; preheader: string; kicker: string; shop: S
 }
 
 /** Big check mark, headline, one line under it — on the pale band. */
-function hero(opts: { headline: string; sub: string; tone?: "green" | "navy" | "red"; picture?: boolean }) {
+function hero(opts: { headline: string; sub: string; tone?: "green" | "navy" | "red"; picture?: boolean; glyph?: string }) {
   const tone = opts.tone ?? "green";
   const badge = tone === "green" ? GREEN : tone === "red" ? RED : NAVY;
-  const glyph = tone === "red" ? "&#10005;" : "&#10003;";
+  const glyph = opts.glyph ?? (tone === "red" ? "&#10005;" : "&#10003;");
   return `
 <tr><td style="background:${PALE};padding:28px 28px ${opts.picture ? "0" : "26px"};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -257,6 +261,13 @@ const STEP_LABEL: Record<string, string> = { ...ORDER_STATUS_LABEL, PENDING: "Re
 function progress(status: string) {
   const at = ORDER_STATUS_FLOW.indexOf(status as (typeof ORDER_STATUS_FLOW)[number]);
   if (at < 0) return "";
+  const last = ORDER_STATUS_FLOW.length - 1;
+  // The connector between two circles is green once the later of the two has
+  // been reached. Drawn as a 2px cell either side of each circle, so the
+  // strip is one table row and needs no absolute positioning, which mail
+  // clients do not have.
+  const connector = (on: boolean, hidden: boolean) =>
+    `<td valign="top" style="padding-top:14px;"><div style="height:2px;line-height:2px;font-size:2px;background:${hidden ? "transparent" : on ? GREEN : LINE};">&nbsp;</div></td>`;
   const cells = ORDER_STATUS_FLOW.map((s, i) => {
     const done = i < at;
     const now = i === at;
@@ -264,11 +275,17 @@ function progress(status: string) {
     const fg = done || now ? "#ffffff" : FAINT;
     const border = done || now ? bg : LINE;
     const glyph = done || now ? "&#10003;" : String(i + 1);
-    return `<td width="20%" align="center" valign="top" style="padding:0 2px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
-        <td width="30" height="30" align="center" valign="middle" style="width:30px;height:30px;border-radius:15px;background:${bg};border:1px solid ${border};color:${fg};font-family:${FONT};font-size:13px;font-weight:bold;line-height:30px;">${glyph}</td>
+    return `<td width="20%" align="center" valign="top">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        ${connector(i <= at && i > 0, i === 0)}
+        <td width="30" align="center" valign="top">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td width="30" height="30" align="center" valign="middle" style="width:30px;height:30px;border-radius:15px;background:${bg};border:1px solid ${border};color:${fg};font-family:${FONT};font-size:13px;font-weight:bold;line-height:30px;">${glyph}</td>
+          </tr></table>
+        </td>
+        ${connector(i < at, i === last)}
       </tr></table>
-      <div style="margin-top:7px;font-family:${FONT};font-size:11px;line-height:1.3;color:${now ? NAVY : done ? INK : FAINT};font-weight:${now ? "bold" : "normal"};">${esc(STEP_LABEL[s])}</div>
+      <div style="margin-top:8px;padding:0 2px;font-family:${FONT};font-size:11px;line-height:1.3;color:${now ? NAVY : done ? INK : FAINT};font-weight:${now || done ? "bold" : "normal"};">${esc(STEP_LABEL[s])}</div>
     </td>`;
   }).join("");
   return row(
@@ -280,11 +297,40 @@ function progress(status: string) {
   );
 }
 
-function sectionTitle(text: string, aside?: string) {
+/** One of the small line icons in /public/images/email, on a pale disc. */
+function icon(name: "truck" | "cash" | "headset" | "shield", size = 44) {
+  const img = Math.round(size * 0.55);
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td width="${size}" height="${size}" align="center" valign="middle" style="width:${size}px;height:${size}px;border-radius:${size / 2}px;background:${PALE};">
+      <img src="${siteUrl()}/images/email/icon-${name}.png" width="${img}" height="${img}" alt="" style="display:block;width:${img}px;height:${img}px;border:0;">
+    </td>
+  </tr></table>`;
+}
+
+/** The pale note under the lines: what happens next, and where to look meanwhile. */
+function nextStepsNote(order: OrderForEmail) {
+  const meanwhile = order.userId
+    ? "En attendant, vous pouvez suivre son évolution depuis votre espace client."
+    : "En attendant, conservez cet e-mail : il tient lieu de récapitulatif de commande.";
+  return row(
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PALE};border-radius:10px;"><tr>
+      <td width="44" valign="middle" style="padding:14px 0 14px 16px;">${icon("truck", 40)}</td>
+      <td valign="middle" style="padding:14px 16px 14px 12px;font-family:${FONT};font-size:13px;line-height:1.6;color:${BODY};">
+        Vous recevrez un e-mail dès que votre commande sera expédiée.<br>${meanwhile}
+      </td>
+    </tr></table>`,
+    "padding:22px 28px 0;"
+  );
+}
+
+function sectionTitle(text: string, aside?: string, asideHref?: string) {
+  const side = asideHref
+    ? `<a href="${esc(asideHref)}" style="font-family:${FONT};font-size:12px;font-weight:bold;color:${NAVY};text-decoration:none;white-space:nowrap;">${aside} &rarr;</a>`
+    : aside ?? "";
   return row(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
       <td style="font-family:${FONT};font-size:15px;font-weight:bold;color:${NAVY};">${text}</td>
-      ${aside ? `<td align="right" style="font-family:${FONT};font-size:12px;color:${MUTED};">${aside}</td>` : ""}
+      ${side ? `<td align="right" valign="middle" style="font-family:${FONT};font-size:12px;color:${MUTED};">${side}</td>` : ""}
     </tr></table>`,
     "padding:26px 28px 10px;"
   );
@@ -359,23 +405,30 @@ function logistics(order: OrderForEmail, shop: ShopForEmail) {
   );
 }
 
-/** Three short facts a customer wants restated. Only what is true for this order. */
+/** Three short facts a customer wants restated, each with its icon. Only
+ *  what is true for this order: the payment method it was placed with, the
+ *  delivery window for its own region, the way to reach the shop that exists. */
 function assurances(order: OrderForEmail, shop: ShopForEmail) {
-  const facts: [string, string][] = [
+  const window = deliveryWindow(order, shop);
+  const facts: [string, string, "cash" | "truck" | "headset"][] = [
     order.paymentMethod === "COD"
-      ? ["Rien à payer maintenant", "Vous réglez à la réception, en espèces."]
-      : ["Paiement", esc(paymentLabel(order.paymentMethod))],
-    // The window is already in the box above; this slot tells the customer
-    // what the message is for, which matters most to a guest — for them it is
-    // the only record of the order they can open anywhere.
-    ["Ce message vaut récapitulatif", "Conservez-le : il reprend tout ce qui a été commandé."],
-    shop.phone ? ["Une question ?", `Appelez le ${esc(shop.phone)}`] : ["Une question ?", "Répondez à cet e-mail."],
+      ? ["Paiement à la livraison", "Vous payez à la réception, en espèces.", "cash"]
+      : ["Paiement", esc(paymentLabel(order.paymentMethod)), "cash"],
+    order.deliveryMethod === "PICKUP"
+      ? ["Retrait en magasin", "Nous vous prévenons dès que c'est prêt.", "truck"]
+      : ["Livraison rapide", `Délai indicatif : ${esc(window ?? "—")}`, "truck"],
+    shop.phone ? ["Support client", `Appelez le ${esc(shop.phone)}`, "headset"] : ["Support client", "Répondez à cet e-mail.", "headset"],
   ];
   const cells = facts
     .map(
-      ([title, line], i) => `<td width="33%" valign="top" style="padding:0 10px;${i > 0 ? `border-left:1px solid ${LINE};` : ""}">
-      <div style="font-family:${FONT};font-size:13px;font-weight:bold;color:${NAVY};">${title}</div>
-      <div style="margin-top:3px;font-family:${FONT};font-size:12px;line-height:1.5;color:${MUTED};">${line}</div>
+      ([title, line, name]) => `<td width="33%" valign="top" style="padding:0 6px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="top" style="padding-right:10px;">${icon(name, 40)}</td>
+        <td valign="top">
+          <div style="font-family:${FONT};font-size:13px;font-weight:bold;color:${NAVY};line-height:1.3;">${title}</div>
+          <div style="margin-top:3px;font-family:${FONT};font-size:12px;line-height:1.5;color:${MUTED};">${line}</div>
+        </td>
+      </tr></table>
     </td>`
     )
     .join("");
@@ -433,10 +486,11 @@ export function orderConfirmationMail(order: OrderForEmail, shop: ShopForEmail):
     refAndDate(order),
     button("Suivre ma commande", url),
     progress("PENDING"),
-    sectionTitle("Détails de votre commande", `${count} article${count > 1 ? "s" : ""}`),
+    sectionTitle("Détails de votre commande", "Voir le récapitulatif complet", url),
     items(order),
     totals(order),
     logistics(order, shop),
+    nextStepsNote(order),
     assurances(order, shop),
     signoff(shop),
   ].join("");
@@ -598,7 +652,6 @@ export function orderStatusMail(order: OrderForEmail, status: string, shop: Shop
 
   const url = orderUrl(order);
   const window = deliveryWindow(order, shop);
-  const count = order.items.reduce((n, i) => n + i.qty, 0);
   const line = copy.line(order, window);
 
   const body = [
@@ -606,10 +659,11 @@ export function orderStatusMail(order: OrderForEmail, status: string, shop: Shop
     refAndDate(order),
     button("Voir ma commande", url),
     status === "CANCELLED" ? "" : progress(status),
-    sectionTitle("Rappel de votre commande", `${count} article${count > 1 ? "s" : ""}`),
+    sectionTitle("Rappel de votre commande", "Voir le récapitulatif complet", url),
     items(order),
     totals(order),
     status === "CANCELLED" ? "" : logistics(order, shop),
+    status === "CANCELLED" ? "" : assurances(order, shop),
     signoff(shop),
   ].join("");
 
@@ -637,6 +691,68 @@ export function orderStatusMail(order: OrderForEmail, status: string, shop: Shop
       kicker: `Commande ${order.ref}`,
       shop,
       body,
+    }),
+    text,
+    replyTo: shop.email ?? undefined,
+  };
+}
+
+/* ------------------------------------------------- forgot my password ---- */
+
+/**
+ * The one message that is not about an order. Short on purpose: a button, how
+ * long it works, what to do if it was not you. The link is repeated as text
+ * for the mail clients that strip buttons of their href.
+ */
+export function passwordResetMail(user: { name: string; email: string }, url: string, shop: ShopForEmail): Mail {
+  const firstName = user.name.trim().split(/\s+/)[0] || user.name;
+  const body = [
+    hero({
+      tone: "navy",
+      glyph: "&#128273;",
+      headline: "Réinitialiser votre mot de passe",
+      sub: `Bonjour ${esc(firstName)}. Une demande de nouveau mot de passe a été faite pour ce compte — par vous, normalement.`,
+    }),
+    button("Choisir un nouveau mot de passe", url),
+    row(
+      `<p style="margin:0;font-family:${FONT};font-size:14px;line-height:1.6;color:${BODY};">
+        Ce lien est valable <strong>une heure</strong> et ne sert qu'une fois. Si vous n'avez rien demandé, ignorez
+        simplement ce message : votre mot de passe reste inchangé et personne n'a accédé à votre compte.
+      </p>`,
+      "padding:22px 28px 0;"
+    ),
+    row(
+      `<p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.6;color:${MUTED};word-break:break-all;">
+        Si le bouton ne réagit pas, copiez cette adresse dans votre navigateur :<br>
+        <a href="${esc(url)}" style="color:${NAVY};">${esc(url)}</a>
+      </p>`,
+      "padding:14px 28px 0;"
+    ),
+    signoff(shop),
+  ].join("");
+
+  const text = [
+    `Réinitialiser votre mot de passe — ${shop.name}`,
+    ``,
+    `Bonjour ${firstName}. Une demande de nouveau mot de passe a été faite pour ce compte.`,
+    ``,
+    `Choisir un nouveau mot de passe : ${url}`,
+    ``,
+    `Ce lien est valable une heure et ne sert qu'une fois. Si vous n'avez rien demandé, ignorez ce message : votre mot de passe reste inchangé.`,
+    ``,
+    `L'équipe ${shop.name}`,
+  ].join("\n");
+
+  return {
+    to: user.email,
+    subject: `Réinitialisation de votre mot de passe — ${shop.name}`,
+    html: shell({
+      title: "Réinitialiser votre mot de passe",
+      preheader: "Valable une heure, une seule fois.",
+      kicker: "Compte client",
+      shop,
+      body,
+      reason: "qu'un nouveau mot de passe a été demandé sur %HOST% pour le compte lié à cette adresse",
     }),
     text,
     replyTo: shop.email ?? undefined,
