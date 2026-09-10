@@ -41,7 +41,7 @@ type Family = {
  * out against its ancestor's padding box, so padding on the wrapper would move
  * neither of them. Each branch states its own p-3, and they have to match.
  */
-function FamilyThumb({ slug, imageUrl }: { slug: string; imageUrl?: string | null }) {
+export function FamilyThumb({ slug, imageUrl }: { slug: string; imageUrl?: string | null }) {
   return (
     <span className="relative block w-full aspect-square rounded-lg overflow-hidden bg-gray-50">
       {imageUrl ? (

@@ -18,14 +18,48 @@ export default function AuthForms() {
 
   return (
     <div className="grid lg:grid-cols-2 min-h-[640px]">
-      <div className="hidden lg:flex flex-col justify-between bg-navy-950 text-white p-10 xl:p-14">
-        <Image src="/images/logo-white.png" alt="Automotive Pièces Auto" width={160} height={53} className="h-11 w-auto" />
+      {/* `relative overflow-hidden` for the light behind the panel below. */}
+      <div className="hidden lg:flex flex-col justify-between bg-navy-950 text-white p-10 xl:p-14 relative overflow-hidden">
+        {/* One soft warm light from the top-left, in the brand's gold. The
+            panel was a flat navy rectangle the width of half a monitor, which
+            is a lot of one colour; this gives it a light source without
+            adding an image to download. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-32 -start-32 w-[520px] h-[520px] rounded-full opacity-[0.13]"
+          style={{ background: "radial-gradient(circle, #fbc000 0%, transparent 68%)" }}
+        />
 
-        <div>
-          <h1 className="font-heading font-extrabold uppercase text-2xl sm:text-3xl xl:text-4xl leading-[1.1] sm:leading-[1.05] tracking-tight max-w-[9ch]">
+        {/* self-start is load-bearing, not decoration.
+
+            This is a direct child of a `flex flex-col` container, whose
+            default align-items resolves to stretch — which pulled the logo to
+            the full width of the panel while `h-11` held its height at 44px.
+            It rendered 688×44: an aspect of 15.6 on artwork that is 3.0, so
+            the wordmark was smeared across five times its natural width. The
+            header's copy of the same logo was unaffected because that flex
+            row sets items-center. object-contain is the belt to this braces:
+            even if something stretches the box again, the artwork inside it
+            keeps its proportions rather than distorting. */}
+        <Image
+          src="/images/logo-white.png"
+          alt="Automotive Pièces Auto"
+          width={160}
+          height={53}
+          className="relative self-start h-11 w-auto object-contain"
+        />
+
+        <div className="relative">
+          {/* 9ch broke the headline into five stubby lines ("VOS /
+              COMMANDES, / SUIVIES / DE BOUT / EN BOUT"). 16ch lets it fall
+              into three, which is a shape rather than a stack. */}
+          <h1 className="font-heading font-extrabold uppercase text-3xl xl:text-[2.6rem] leading-[1.05] tracking-tight max-w-[16ch]">
             {t("auth.headline")}
           </h1>
-          <div className="flex flex-col gap-3.5 mt-8">
+          {/* A short gold rule under the headline, the same one the hero
+              uses, so this page belongs to the same site. */}
+          <div className="w-14 h-1 bg-gold-500 rounded-full mt-5 mb-7" />
+          <div className="flex flex-col gap-3.5">
             {PERK_KEYS.map((k) => (
               <div key={k} className="flex gap-3 items-start">
                 <span className="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center text-[11px] font-bold">
@@ -37,7 +71,7 @@ export default function AuthForms() {
           </div>
         </div>
 
-        <p className="text-xs text-white/45">{t("auth.stat")}</p>
+        <p className="relative text-xs text-white/45">{t("auth.stat")}</p>
       </div>
 
       <div className="flex flex-col">
