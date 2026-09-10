@@ -333,3 +333,53 @@ body {
     color: inherit !important;
   }
 }
+
+/* ------------------------------------------------------- price slider --
+   Two native range inputs stacked on one track, for the catalogue's price
+   band. The inputs themselves ignore the pointer so the one on top does not
+   swallow every drag; only their thumbs take it. The filled part of the track
+   between the thumbs is drawn by the component, since a native track cannot
+   be coloured between two values. */
+.dual-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+  outline: none;
+}
+.dual-range::-webkit-slider-runnable-track {
+  background: transparent;
+}
+.dual-range::-moz-range-track {
+  background: transparent;
+}
+.dual-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2.5px solid var(--color-gold-500);
+  box-shadow: 0 1px 3px rgba(8, 22, 51, 0.25);
+  cursor: pointer;
+}
+.dual-range::-moz-range-thumb {
+  pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2.5px solid var(--color-gold-500);
+  box-shadow: 0 1px 3px rgba(8, 22, 51, 0.25);
+  cursor: pointer;
+}
+.dual-range:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-navy-900);
+  outline-offset: 2px;
+}
+.dual-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--color-navy-900);
+  outline-offset: 2px;
+}

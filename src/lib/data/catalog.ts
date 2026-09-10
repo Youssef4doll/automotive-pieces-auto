@@ -144,6 +144,11 @@ export async function getProductsForCategory(
     /** OR'd together — a checkbox filter, not a single choice. */
     brandSlugs?: string[];
     sort?: "popularity" | "price-asc" | "price-desc";
+    /** Price band in DT, inclusive on both ends. */
+    minPrice?: number;
+    maxPrice?: number;
+    /** Only what can be bought right now. */
+    inStockOnly?: boolean;
   } = {}
 ) {
   let categoryIds = [categoryId];
@@ -163,6 +168,15 @@ export async function getProductsForCategory(
       categoryId: { in: categoryIds },
       active: true,
       ...(opts.brandSlugs?.length ? { brand: { slug: { in: opts.brandSlugs } } } : {}),
+      ...(opts.minPrice !== undefined || opts.maxPrice !== undefined
+        ? {
+            priceSell: {
+              ...(opts.minPrice !== undefined ? { gte: opts.minPrice } : {}),
+              ...(opts.maxPrice !== undefined ? { lte: opts.maxPrice } : {}),
+            },
+          }
+        : {}),
+      ...(opts.inStockOnly ? { stockQty: { gt: 0 } } : {}),
     },
     include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
     orderBy,
@@ -190,6 +204,37 @@ export async function getProductsForCategory(
   ];
   return ranked.map(serializeProduct);
 }
+
+/**
+ * The numbers the filter sidebar is drawn from: how many parts the category
+ * holds, how many can be bought now, and the cheapest and dearest of them.
+ *
+ * Always for the whole category, never for the current selection. The price
+ * slider's ends and the "En stock" count must not move when a brand is ticked
+ * — a control whose scale changes under the shopper's finger is a control they
+ * stop trusting. Rounded outwards so a 12,90 DT part is not excluded by a
+ * slider whose ends read 13 and 13.
+ */
+export async function getCategoryFacets(categoryId: string, includeDescendants = true) {
+  let categoryIds = [categoryId];
+  if (includeDescendants) {
+    const children = await prisma.category.findMany({ where: { parentId: categoryId }, select: { id: true } });
+    categoryIds = [categoryId, ...children.map((c) => c.id)];
+  }
+  const where = { categoryId: { in: categoryIds }, active: true };
+  const [agg, inStock] = await Promise.all([
+    prisma.product.aggregate({ where, _min: { priceSell: true }, _max: { priceSell: true }, _count: { _all: true } }),
+    prisma.product.count({ where: { ...where, stockQty: { gt: 0 } } }),
+  ]);
+  return {
+    total: agg._count._all,
+    inStock,
+    priceMin: agg._min.priceSell ? Math.floor(toNumber(agg._min.priceSell)) : 0,
+    priceMax: agg._max.priceSell ? Math.ceil(toNumber(agg._max.priceSell)) : 0,
+  };
+}
+
+export type CategoryFacets = Awaited<ReturnType<typeof getCategoryFacets>>;
 
 export async function getBrandsForCategory(categoryId: string, includeDescendants = true) {
   let categoryIds = [categoryId];

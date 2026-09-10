@@ -26,9 +26,16 @@ export default function ProductGrid({
    * the page, and hiding half of them behind a gesture would be wrong.
    */
   scrollOnPhone = false,
+  layout = "grid",
+  delivery,
 }: {
   products: CardProduct[];
   scrollOnPhone?: boolean;
+  /** A list of rows instead of a grid of cards — the catalogue's toggle.
+   *  Phones always get the grid; see CatalogControls. */
+  layout?: "grid" | "list";
+  /** The shop's delivery window, printed on each card. */
+  delivery?: string | null;
 }) {
   const vehicle = useVehicle((s) => s.vehicle);
 
@@ -54,7 +61,7 @@ export default function ProductGrid({
             // that is wider than the screen feeds its own width back into
             // itself. The page zoomed out to 1122px before this was px.
             <div key={p.id} className="w-[180px] sm:w-auto shrink-0">
-              <ProductCard product={p} />
+              <ProductCard product={p} delivery={delivery} />
             </div>
           ))}
         </div>
@@ -62,10 +69,20 @@ export default function ProductGrid({
     );
   }
 
+  if (layout === "list") {
+    return (
+      <div className="flex flex-col gap-3">
+        {ordered.map((p) => (
+          <ProductCard key={p.id} product={p} layout="list" delivery={delivery} />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
       {ordered.map((p) => (
-        <ProductCard key={p.id} product={p} />
+        <ProductCard key={p.id} product={p} delivery={delivery} />
       ))}
     </div>
   );
