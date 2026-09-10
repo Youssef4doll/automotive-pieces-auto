@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { revalidateCatalog } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { updateSettings, type SettingsMap } from "@/lib/settings";
@@ -278,6 +279,9 @@ async function syncReferences(productId: string, type: "OEM" | "AFTERMARKET", te
 // and the search results, so a price or stock edit has to invalidate the whole
 // storefront tree — revalidating "/" alone left the listings stale.
 function revalidateProductSurfaces() {
+  // The menu carries a part count per family, so a product coming or going
+  // changes it as surely as a category rename does.
+  revalidateCatalog();
   revalidatePath("/admin/stock");
   revalidatePath("/", "layout");
 }

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
 // Site-wide settings the admin can edit from /admin/parametres.
@@ -22,7 +23,32 @@ export const DEFAULT_SETTINGS = {
 
 export type SettingsMap = typeof DEFAULT_SETTINGS;
 
-export async function getSettings(): Promise<SettingsMap> {
+/**
+ * Read once per request, however many components ask.
+ *
+ * The layout asks, the header asks, the footer asks, and most pages ask again
+ * for themselves — thirteen identical reads of a twenty-row table to render
+ * the home page, measured. React's cache() collapses them into one for the
+ * duration of a render, which on a database a few thousand kilometres away is
+ * twelve network round trips a visitor no longer waits for.
+ */
+/**
+ * Read once per request, however many components ask.
+ *
+ * The layout asks, the header asks, the footer asks, and most pages ask again
+ * for themselves — thirteen identical reads of a twenty-row table to render
+ * the home page, measured. React's cache() collapses them into one for the
+ * duration of a render.
+ *
+ * Deliberately NOT cached across requests, unlike the category menu next door.
+ * It was, briefly, and the end-to-end suite caught what that costs: anything
+ * that writes this table without going through updateSettings — a seed, a
+ * migration, a fix-up in psql, a test — is then invisible for the length of
+ * the cache. One query against twenty rows is not worth a window in which the
+ * shop's own phone number can be wrong, and the expensive read on these pages
+ * is the category tree, which is cached properly.
+ */
+export const getSettings = cache(async (): Promise<SettingsMap> => {
   const rows = await prisma.setting.findMany();
   const map = { ...DEFAULT_SETTINGS };
   for (const row of rows) {
@@ -31,7 +57,7 @@ export async function getSettings(): Promise<SettingsMap> {
     }
   }
   return map;
-}
+})
 
 export async function updateSettings(patch: Partial<SettingsMap>) {
   // Only keys the application actually reads. The caller is already an

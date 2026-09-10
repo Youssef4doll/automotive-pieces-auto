@@ -1,5 +1,8 @@
 import "server-only";
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { CATALOG_TAG, CATALOG_TTL } from "@/lib/cache";
 import { toNumber } from "@/lib/money";
 import { normalizeReference } from "@/lib/reference";
 import { parseQuery, rankProducts } from "@/lib/search";
@@ -26,7 +29,7 @@ import { parseQuery, rankProducts } from "@/lib/search";
  * marked as not yet visible to customers, so the answer to "did that work?" is
  * on the screen where the question gets asked.
  */
-export async function getMegaMenu(includeEmpty = false) {
+const readMegaMenu = unstable_cache(async (includeEmpty = false) => {
   const families = await prisma.category.findMany({
     where: { parentId: null },
     orderBy: { order: "asc" },
@@ -55,10 +58,15 @@ export async function getMegaMenu(includeEmpty = false) {
         productCount: f._count.products + f.children.reduce((n, c) => n + c._count.products, 0),
       }))
   );
-}
+}, ["mega-menu"], { tags: [CATALOG_TAG], revalidate: CATALOG_TTL });
+
+// Rendered by the header and the footer on every route, and by the home page's
+// own category board — three reads of the same tree per page before this, and
+// none at all now on a request that finds the tag warm.
+export const getMegaMenu = cache(readMegaMenu)
 
 /** The full tree, empty branches included — for the admin, never the storefront. */
-export async function getFullCategoryTree() {
+export const getFullCategoryTree = cache(async () => {
   return prisma.category.findMany({
     where: { parentId: null },
     orderBy: { order: "asc" },
@@ -67,9 +75,9 @@ export async function getFullCategoryTree() {
       _count: { select: { products: true } },
     },
   });
-}
+})
 
-export async function getCategoryBySlug(slug: string) {
+export const getCategoryBySlug = cache(async (slug: string) => {
   return prisma.category.findUnique({
     where: { slug },
     include: {
@@ -79,7 +87,7 @@ export async function getCategoryBySlug(slug: string) {
       children: { orderBy: { order: "asc" }, include: { _count: { select: { products: true } } } },
     },
   });
-}
+})
 
 /**
  * Include this in any product query whose result reaches the storefront: it is
@@ -215,7 +223,7 @@ export async function getProductsForCategory(
  * stop trusting. Rounded outwards so a 12,90 DT part is not excluded by a
  * slider whose ends read 13 and 13.
  */
-export async function getCategoryFacets(categoryId: string, includeDescendants = true) {
+export const getCategoryFacets = cache(async (categoryId: string, includeDescendants = true) => {
   let categoryIds = [categoryId];
   if (includeDescendants) {
     const children = await prisma.category.findMany({ where: { parentId: categoryId }, select: { id: true } });
@@ -232,11 +240,11 @@ export async function getCategoryFacets(categoryId: string, includeDescendants =
     priceMin: agg._min.priceSell ? Math.floor(toNumber(agg._min.priceSell)) : 0,
     priceMax: agg._max.priceSell ? Math.ceil(toNumber(agg._max.priceSell)) : 0,
   };
-}
+})
 
 export type CategoryFacets = Awaited<ReturnType<typeof getCategoryFacets>>;
 
-export async function getBrandsForCategory(categoryId: string, includeDescendants = true) {
+export const getBrandsForCategory = cache(async (categoryId: string, includeDescendants = true) => {
   let categoryIds = [categoryId];
   if (includeDescendants) {
     const children = await prisma.category.findMany({ where: { parentId: categoryId }, select: { id: true } });
@@ -254,7 +262,7 @@ export async function getBrandsForCategory(categoryId: string, includeDescendant
     else counts.set(p.brand.slug, { name: p.brand.name, slug: p.brand.slug, count: 1 });
   }
   return [...counts.values()].sort((a, b) => b.count - a.count);
-}
+})
 
 /**
  * Only used by the public product page, so it only ever returns a product the
@@ -264,7 +272,7 @@ export async function getBrandsForCategory(categoryId: string, includeDescendant
  * gone when the checkout refused the order. The admin edits it through
  * /admin/stock, which reads the row directly.
  */
-export async function getProductBySlug(slug: string) {
+export const getProductBySlug = cache(async (slug: string) => {
   const product = await prisma.product.findFirst({
     where: { slug, active: true },
     include: {
@@ -284,7 +292,7 @@ export async function getProductBySlug(slug: string) {
   if (!product) return null;
   const gallery = product.images.map((i) => ({ src: `/api/images/${i.id}`, alt: i.alt }));
   return { ...serializeProduct(product), gallery, packContents: await resolvePackContents(product.specs) };
-}
+})
 
 /**
  * A pack sells several parts as one line. `specs.packContents` holds their
@@ -307,16 +315,16 @@ async function resolvePackContents(specs: unknown) {
     .map((p) => ({ name: p.name, slug: p.slug, price: toNumber(p.priceSell) }));
 }
 
-export async function getRelatedProducts(categoryId: string, excludeId: string, take = 4) {
+export const getRelatedProducts = cache(async (categoryId: string, excludeId: string, take = 4) => {
   const products = await prisma.product.findMany({
     where: { categoryId, active: true, id: { not: excludeId } },
     include: { brand: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
     take,
   });
   return products.map(serializeProduct);
-}
+})
 
-export async function getTopSellers(take = 8) {
+export const getTopSellers = cache(async (take = 8) => {
   // Every top seller is fetched and then cut down, rather than cut down by the
   // database: `take` on the query would hand back whichever rows came first,
   // and on the home page that meant "les pièces les plus commandées" could be
@@ -331,7 +339,7 @@ export async function getTopSellers(take = 8) {
     ...products.filter((p) => p.stockQty <= 0),
   ];
   return ranked.slice(0, take).map(serializeProduct);
-}
+})
 
 /**
  * The shop's search.
@@ -340,7 +348,7 @@ export async function getTopSellers(take = 8) {
  * puts them back in rank order, which Postgres cannot do for us once the rows
  * come back through Prisma's `in` filter.
  */
-export async function searchProducts(query: string, take = 40) {
+export const searchProducts = cache(async (query: string, take = 40) => {
   const parsed = parseQuery(query);
   if (!parsed.folded) return [];
 
@@ -359,9 +367,9 @@ export async function searchProducts(query: string, take = 40) {
       return p ? { ...serializeProduct(p), matchTier: h.tier } : null;
     })
     .filter((p): p is NonNullable<typeof p> => p !== null);
-}
+})
 
-export async function findProductByReference(query: string) {
+export const findProductByReference = cache(async (query: string) => {
   const q = query.trim();
   if (!q) return null;
   const product = await prisma.product.findFirst({
@@ -375,11 +383,11 @@ export async function findProductByReference(query: string) {
     include: { category: true, ...primaryImageSelect },
   });
   return product;
-}
+})
 
-export async function getPartsBrands() {
+export const getPartsBrands = cache(async () => {
   return prisma.brand.findMany({ where: { isPartsBrand: true }, orderBy: { name: "asc" } });
-}
+})
 
 /**
  * Every make the shop covers, with how deeply it covers each one.
@@ -400,7 +408,7 @@ export async function getPartsBrands() {
  * and the rest are internal and would triple the payload of a request every
  * shopper makes.
  */
-export async function getVehicleMakes() {
+export const getVehicleMakes = cache(async () => {
   const [makes, fitments] = await Promise.all([
     prisma.vehicleMake.findMany({
       orderBy: { name: "asc" },
@@ -440,7 +448,7 @@ export async function getVehicleMakes() {
   }
 
   return makes.map((m) => ({ ...m, partCount: productsByMake.get(m.id)?.size ?? 0 }));
-}
+})
 
 /**
  * Banners for one surface of the home page.
@@ -449,13 +457,13 @@ export async function getVehicleMakes() {
  * Both are edited from /admin/promotions and neither is faked: an empty
  * placement renders nothing at all rather than a placeholder.
  */
-export async function getActivePromotions(placement: "HERO" | "CAMPAIGN" = "HERO") {
+export const getActivePromotions = cache(async (placement: "HERO" | "CAMPAIGN" = "HERO") => {
   return prisma.promotion.findMany({
     where: { active: true, placement },
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     select: { id: true, title: true, imageUrl: true, href: true, kind: true },
   });
-}
+})
 
 /**
  * The subcategories the shop stocks most deeply.
@@ -465,7 +473,7 @@ export async function getActivePromotions(placement: "HERO" | "CAMPAIGN" = "HERO
  * figure nobody has measured, and derived rather than hand-listed so the
  * chips cannot rot when the taxonomy moves.
  */
-export async function getTopSubcategories(take = 3) {
+export const getTopSubcategories = cache(async (take = 3) => {
   const rows = await prisma.category.findMany({
     where: { parentId: { not: null }, products: { some: { active: true } } },
     select: {
@@ -482,7 +490,7 @@ export async function getTopSubcategories(take = 3) {
       label: c.name,
       href: c.parent ? `/catalogue/${c.parent.slug}/${c.slug}` : `/catalogue/${c.slug}`,
     }));
-}
+})
 
 /**
  * The product a retired address used to point at.
@@ -493,11 +501,11 @@ export async function getTopSubcategories(take = 3) {
  * permanently, so a correction to a product name never costs the shop the
  * traffic it had already earned.
  */
-export async function getProductSlugRedirect(oldSlug: string) {
+export const getProductSlugRedirect = cache(async (oldSlug: string) => {
   const row = await prisma.productSlugHistory.findUnique({
     where: { slug: oldSlug },
     select: { product: { select: { slug: true, active: true } } },
   });
   if (!row?.product?.active) return null;
   return row.product.slug;
-}
+})

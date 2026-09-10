@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { revalidateCatalog } from "@/lib/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
@@ -20,6 +21,7 @@ export type CatalogFormState = { error?: string; ok?: string } | undefined;
 // menu and the footer are rendered from the layout), so a change to either
 // has to invalidate the layout tree, not just one page.
 function revalidateStorefront() {
+  revalidateCatalog();
   revalidatePath("/", "layout");
   revalidatePath("/admin/catalogue");
   revalidatePath("/admin/catalogue/marques");

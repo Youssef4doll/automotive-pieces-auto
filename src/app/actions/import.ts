@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateCatalog } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
@@ -200,6 +201,7 @@ export async function applyImport(batchId: string): Promise<ImportState> {
     console.error("[import] search reindex failed; products are live but unsearchable", e);
   }
 
+  revalidateCatalog();
   revalidatePath("/admin/import");
   revalidatePath("/admin/stock");
   revalidatePath("/admin/qualite");
@@ -237,6 +239,7 @@ export async function rollbackImport(batchId: string): Promise<ImportState> {
   }
 
   await prisma.importBatch.update({ where: { id: batch.id }, data: { status: "ROLLED_BACK" } });
+  revalidateCatalog();
   revalidatePath("/admin/import");
   revalidatePath("/admin/stock");
   revalidatePath("/", "layout");
