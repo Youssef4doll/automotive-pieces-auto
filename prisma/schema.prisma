@@ -50,26 +50,25 @@ enum CustomerSegment {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  name         String
-  phone        String?
-  role         Role      @default(CUSTOMER)
-  segment      CustomerSegment @default(NEW)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  orders       Order[]
-  reviews      Review[]
+  id             String              @id @default(cuid())
+  email          String              @unique
+  passwordHash   String
+  name           String
+  phone          String?
+  role           Role                @default(CUSTOMER)
+  segment        CustomerSegment     @default(NEW)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  orders         Order[]
+  reviews        Review[]
   profileChanges UserProfileChange[]
+  carts          Cart[]
 
   @@index([role])
-  carts     Cart[]
 }
 
 /**
  * Every edit to a customer's own details, kept as a record.
- *
  * An order already stores the name it was placed under, so history never
  * silently rewrites itself when somebody corrects their name. This is the
  * other half: who the account used to be, when it changed, and whether the
@@ -94,27 +93,27 @@ model UserProfileChange {
 }
 
 model Brand {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  slug      String    @unique
-  logoUrl   String?
-  isPartsBrand Boolean @default(true) // parts brand (Kamoka, Bosch..) vs vehicle make brand
-  products  Product[]
+  id           String    @id @default(cuid())
+  name         String    @unique
+  slug         String    @unique
+  logoUrl      String?
+  isPartsBrand Boolean   @default(true) // parts brand (Kamoka, Bosch..) vs vehicle make brand
+  products     Product[]
 }
 
 model Category {
-  id           String     @id @default(cuid())
-  name         String
-  slug         String     @unique
-  order        Int        @default(0)
-  parentId     String?
-  parent       Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children     Category[] @relation("CategoryTree")
-  products     Product[]
+  id       String     @id @default(cuid())
+  name     String
+  slug     String     @unique
+  order    Int        @default(0)
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
   /// Uploaded from /admin/catalogue, served from /api/images/[id] like every
   /// other picture on the site. Lets a shopper see what a family holds before
   /// tapping into it, instead of judging sixteen categories by name alone.
-  imageUrl     String?
+  imageUrl String?
 }
 
 model VehicleMake {
@@ -126,17 +125,17 @@ model VehicleMake {
 }
 
 model VehicleModel {
-  id        String         @id @default(cuid())
-  makeId    String
-  make      VehicleMake    @relation(fields: [makeId], references: [id], onDelete: Cascade)
-  name      String
+  id       String          @id @default(cuid())
+  makeId   String
+  make     VehicleMake     @relation(fields: [makeId], references: [id], onDelete: Cascade)
+  name     String
   /// URL form of the name, unique within the make. Someone searching for
   /// "plaquettes clio 4" should land on a page about that car, and a page
   /// needs an address — /pieces/renault/clio-iv.
-  slug      String         @default("")
-  yearFrom  Int?
-  yearTo    Int?
-  engines   VehicleEngine[]
+  slug     String          @default("")
+  yearFrom Int?
+  yearTo   Int?
+  engines  VehicleEngine[]
 
   @@unique([makeId, name])
   @@unique([makeId, slug])
@@ -144,21 +143,21 @@ model VehicleModel {
 }
 
 model VehicleEngine {
-  id        String        @id @default(cuid())
-  modelId   String
-  model     VehicleModel  @relation(fields: [modelId], references: [id], onDelete: Cascade)
-  name      String        // e.g. "1.5 dCi"
-  fuel      String?       // essence / diesel
-  powerHp   Int?
+  id             String           @id @default(cuid())
+  modelId        String
+  model          VehicleModel     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  name           String // e.g. "1.5 dCi"
+  fuel           String? // essence / diesel
+  powerHp        Int?
   // The engine code (K9K, CDTI, TDI…) is what distinguishes two engines a
   // catalogue calls by the same commercial name, and it is what supplier
   // fitment data is keyed on. Without it, imported compatibility cannot be
   // matched reliably.
-  engineCode String?
+  engineCode     String?
   displacementCc Int?
-  yearFrom  Int?
-  yearTo    Int?
-  fitments  ProductFitment[]
+  yearFrom       Int?
+  yearTo         Int?
+  fitments       ProductFitment[]
 
   @@unique([modelId, name])
   @@index([modelId])
@@ -166,39 +165,39 @@ model VehicleEngine {
 }
 
 model Product {
-  id            String   @id @default(cuid())
-  sku           String   @unique // reference stamped on the part
-  name          String
-  slug          String   @unique
-  brandId       String?
-  brand         Brand?   @relation(fields: [brandId], references: [id])
-  categoryId    String
-  category      Category @relation(fields: [categoryId], references: [id])
-  description   String   @default("")
-  imageUrl      String   @default("/images/parts-lineup.png")
-  oemRefs       String[] @default([])
-  specs         Json     @default("{}")
-  priceBuy      Decimal  @default(0) @db.Decimal(10, 2)  // prix d'achat
-  priceSell     Decimal  @db.Decimal(10, 2)               // prix de vente
-  compareAtPrice Decimal? @db.Decimal(10, 2)              // struck-through reference price
-  currency      String   @default("TND")
-  stockQty      Int      @default(0)
-  lowStockThreshold Int  @default(5)
-  isTopSeller   Boolean  @default(false)
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(cuid())
+  sku               String   @unique // reference stamped on the part
+  name              String
+  slug              String   @unique
+  brandId           String?
+  brand             Brand?   @relation(fields: [brandId], references: [id])
+  categoryId        String
+  category          Category @relation(fields: [categoryId], references: [id])
+  description       String   @default("")
+  imageUrl          String   @default("/images/parts-lineup.png")
+  oemRefs           String[] @default([])
+  specs             Json     @default("{}")
+  priceBuy          Decimal  @default(0) @db.Decimal(10, 2) // prix d'achat
+  priceSell         Decimal  @db.Decimal(10, 2) // prix de vente
+  compareAtPrice    Decimal? @db.Decimal(10, 2) // struck-through reference price
+  currency          String   @default("TND")
+  stockQty          Int      @default(0)
+  lowStockThreshold Int      @default(5)
+  isTopSeller       Boolean  @default(false)
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   /// Everything a shopper might type to reach this part, in one accent-free
   /// lower-case blob: name, brand, category, family, SKU and every reference.
   /// Rebuilt in SQL by reindexProducts(), never written by hand — see
   /// src/lib/search. A trigram index on it is what makes a misspelled query
   /// still find the part, and what keeps that possible at 50 000 rows.
-  searchText    String   @default("")
+  searchText     String   @default("")
   /// The SKU with every separator stripped: "BR-4820" → "BR4820". Part
   /// numbers are written down differently by everyone, so they are matched in
   /// this space and never literally. Derived, like searchText.
-  skuNormalized String   @default("")
+  skuNormalized  String   @default("")
   /// Every OEM number in the same stripped form, so "77 01 234 567" finds the
   /// part someone typed as "7701234567".
   refsNormalized String[] @default([])
@@ -211,14 +210,14 @@ model Product {
   /// reversible and its products are traceable to their source file.
   importBatchId String?
 
-  fitments      ProductFitment[]
-  oldSlugs      ProductSlugHistory[]
-  references    PartReference[]
-  cartItems     CartItem[]
-  orderItems    OrderItem[]
-  reviews       Review[]
-  stockMoves    StockMovement[]
-  images        ProductImage[]
+  fitments   ProductFitment[]
+  oldSlugs   ProductSlugHistory[]
+  references PartReference[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[]
+  stockMoves StockMovement[]
+  images     ProductImage[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -241,7 +240,6 @@ enum Side {
 // the shop's pictures with it. Bytes are served by /api/images/[id].
 /**
  * Addresses a product used to live at.
- *
  * Renaming a part rewrites its slug, which is right — /produit/plaquette-avant
  * should not stay frozen at a typo forever. But the old address is already in
  * Google's index, in WhatsApp messages between the shop and its customers, and
@@ -273,17 +271,17 @@ model ProductImage {
 }
 
 model ProductFitment {
-  id        String        @id @default(cuid())
-  productId String
-  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  engineId  String
-  engine    VehicleEngine @relation(fields: [engineId], references: [id], onDelete: Cascade)
+  id         String            @id @default(cuid())
+  productId  String
+  product    Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  engineId   String
+  engine     VehicleEngine     @relation(fields: [engineId], references: [id], onDelete: Cascade)
   // How much we actually trust this row. VERIFIED comes from a supplier
   // catalogue or a confirmed delivery; DERIVED was inferred from a shared
   // reference. The storefront must never present the two as equally certain.
   confidence FitmentConfidence @default(VERIFIED)
-  note      String?           // e.g. "châssis à partir de 2016"
-  source    String?           // supplier catalogue, manual, customer confirmation
+  note       String? // e.g. "châssis à partir de 2016"
+  source     String? // supplier catalogue, manual, customer confirmation
 
   @@unique([productId, engineId])
   @@index([engineId])
@@ -295,9 +293,9 @@ enum FitmentConfidence {
 }
 
 enum ReferenceType {
-  OEM        // constructor's own number, stamped on the original part
+  OEM // constructor's own number, stamped on the original part
   AFTERMARKET // the manufacturer's own catalogue number
-  EQUIVALENT  // a competing brand's number for the same part
+  EQUIVALENT // a competing brand's number for the same part
 }
 
 /// The lookup key of the parts trade: a mechanic reads the number off the old
@@ -308,9 +306,9 @@ model PartReference {
   productId  String
   product    Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   type       ReferenceType
-  brand      String?       // whose number this is (Renault, TRW, Bosch…)
-  raw        String        // exactly as printed, for display
-  normalized String        // uppercase alphanumerics only, for matching
+  brand      String? // whose number this is (Renault, TRW, Bosch…)
+  raw        String // exactly as printed, for display
+  normalized String // uppercase alphanumerics only, for matching
   createdAt  DateTime      @default(now())
 
   @@unique([productId, type, normalized])
@@ -364,7 +362,7 @@ model CartItem {
 }
 
 enum ImportStatus {
-  DRAFT      // uploaded and parsed, not yet applied
+  DRAFT // uploaded and parsed, not yet applied
   APPLIED
   ROLLED_BACK
   FAILED
@@ -374,21 +372,21 @@ enum ImportStatus {
 /// batch are tagged with its id, so a bad supplier file can be undone instead
 /// of hand-corrected across thousands of products.
 model ImportBatch {
-  id          String       @id @default(cuid())
-  filename    String
-  status      ImportStatus @default(DRAFT)
-  rowCount    Int          @default(0)
-  createdCount Int         @default(0)
-  updatedCount Int         @default(0)
-  skippedCount Int         @default(0)
-  errorCount   Int         @default(0)
+  id           String       @id @default(cuid())
+  filename     String
+  status       ImportStatus @default(DRAFT)
+  rowCount     Int          @default(0)
+  createdCount Int          @default(0)
+  updatedCount Int          @default(0)
+  skippedCount Int          @default(0)
+  errorCount   Int          @default(0)
   /// Parsed rows plus per-row validation verdicts, kept so the preview and the
   /// apply step operate on exactly the same data.
-  payload     Json         @default("[]")
-  report      Json         @default("{}")
-  createdById String?
-  createdAt   DateTime     @default(now())
-  appliedAt   DateTime?
+  payload      Json         @default("[]")
+  report       Json         @default("{}")
+  createdById  String?
+  createdAt    DateTime     @default(now())
+  appliedAt    DateTime?
 
   @@index([status, createdAt])
 }
@@ -397,8 +395,8 @@ model StockMovement {
   id        String   @id @default(cuid())
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  change    Int      // positive = restock, negative = sold/adjusted
-  reason    String   // "order", "restock", "adjustment"
+  change    Int // positive = restock, negative = sold/adjusted
+  reason    String // "order", "restock", "adjustment"
   note      String?
   createdAt DateTime @default(now())
 
@@ -419,7 +417,7 @@ model Order {
   paymentMethod  PaymentMethod  @default(COD)
   status         OrderStatus    @default(PENDING)
   subtotal       Decimal        @db.Decimal(10, 2)
-  shippingFee    Decimal        @db.Decimal(10, 2) @default(0)
+  shippingFee    Decimal        @default(0) @db.Decimal(10, 2)
   total          Decimal        @db.Decimal(10, 2)
   notes          String?
   // First-touch marketing attribution, carried from the visitor's first
@@ -433,8 +431,8 @@ model Order {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  items          OrderItem[]
-  history        OrderStatusEvent[]
+  items   OrderItem[]
+  history OrderStatusEvent[]
 
   @@index([status])
   @@index([userId])
@@ -447,8 +445,8 @@ model OrderItem {
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String?
   product   Product? @relation(fields: [productId], references: [id])
-  name      String   // snapshot
-  sku       String   // snapshot
+  name      String // snapshot
+  sku       String // snapshot
   imageUrl  String   @default("/images/parts-lineup.png")
   unitPrice Decimal  @db.Decimal(10, 2)
   qty       Int
@@ -469,18 +467,31 @@ model OrderStatusEvent {
 }
 
 model Review {
-  id          String   @id @default(cuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  authorName  String
-  rating      Int
-  comment     String
-  verified    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  authorName String
+  rating     Int
+  comment    String
+  /// The author actually bought this part: there is a DELIVERED order of
+  /// theirs containing it. Set by the server from the order history, never
+  /// from anything the form sends.
+  verified   Boolean  @default(false)
+  /// Moderation. A review is written by a member of the public, so it is not
+  /// on the storefront until somebody at the shop has read it — the product
+  /// page and the rating average both filter on this. Default false: the
+  /// failure mode of a missed moderation queue is a review nobody sees, not
+  /// abuse published under the shop's name.
+  published  Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
+  /// One review per customer per part. Without it, the "leave a review" form
+  /// is a submit button somebody can lean on.
+  @@unique([productId, userId])
   @@index([productId])
+  @@index([published])
 }
 
 model Setting {

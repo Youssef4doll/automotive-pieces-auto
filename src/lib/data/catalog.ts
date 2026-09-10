@@ -226,7 +226,11 @@ export async function getProductBySlug(slug: string) {
       brand: true,
       category: { include: { parent: true } },
       fitments: { include: { engine: { include: { model: { include: { make: true } } } } } },
-      reviews: { orderBy: { createdAt: "desc" }, take: 10 },
+      // Published only. An unmoderated review is written by a member of the
+      // public and has not been read by anybody at the shop yet — it must not
+      // reach the storefront, and it must not move the rating average that
+      // goes into the structured data either.
+      reviews: { where: { published: true }, orderBy: { createdAt: "desc" }, take: 10 },
       // The product page shows a gallery, so it needs every photo, not just
       // the primary one the listings use.
       images: { orderBy: { order: "asc" }, select: { id: true, alt: true } },

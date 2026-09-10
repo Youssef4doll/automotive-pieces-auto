@@ -14,6 +14,9 @@ import { pageMeta, clampDescription } from "@/lib/seo";
 import { productSchema, breadcrumbSchema } from "@/lib/schema";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { toNumber } from "@/lib/money";
+import { getCurrentUser } from "@/lib/session";
+import { hasPurchased } from "@/app/actions/reviews";
+import ReviewForm from "@/components/ReviewForm";
 
 export async function generateMetadata({
   params,
@@ -108,6 +111,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   // Only real ratings are declared. With no reviews the field is absent
   // entirely rather than defaulted to five stars.
+  // Who may write one: a signed-in customer with a delivered order containing
+  // this exact part, who has not already reviewed it. Checked again inside
+  // submitReview — this only decides whether to render the form.
+  const viewer = await getCurrentUser();
+  const canReview =
+    viewer !== null &&
+    !product.reviews.some((r) => r.userId === viewer.id) &&
+    (await hasPurchased(viewer.id, product.id));
+
   const reviewCount = product.reviews.length;
   const ratingAverage =
     reviewCount > 0 ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : null;
@@ -295,18 +307,37 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         )}
       </section>
 
-      {product.reviews.length > 0 && (
+      {/* Reviews, and the way to leave one.
+
+          The section renders when there is either something to read or
+          somebody entitled to write — never as an empty "0 avis" panel, which
+          reads as a shop nobody buys from. */}
+      {(product.reviews.length > 0 || canReview) && (
         <section className="mt-10">
           <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Avis clients</h2>
-          <div className="grid sm:grid-cols-3 gap-4">
-            {product.reviews.map((r) => (
-              <div key={r.id} className="p-4 rounded-xl border border-gray-200 bg-white">
-                <div className="flex text-gold-500 text-sm mb-1.5">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</div>
-                <p className="text-sm text-gray-700 mb-2">&ldquo;{r.comment}&rdquo;</p>
-                <p className="text-xs font-semibold text-navy-900">{r.authorName}</p>
-              </div>
-            ))}
-          </div>
+
+          {product.reviews.length > 0 && (
+            <div className="grid sm:grid-cols-3 gap-4">
+              {product.reviews.map((r) => (
+                <div key={r.id} className="p-4 rounded-xl border border-gray-200 bg-white">
+                  <div className="flex text-gold-500 text-sm mb-1.5">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</div>
+                  <p className="text-sm text-gray-700 mb-2">&ldquo;{r.comment}&rdquo;</p>
+                  <p className="text-xs font-semibold text-navy-900">
+                    {r.authorName}
+                    {/* Said because it is true and checked, not as a badge:
+                        only a delivered order of this exact part sets it. */}
+                    {r.verified && <span className="ms-2 font-normal text-green-700">Achat vérifié</span>}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {canReview && (
+            <div className={product.reviews.length > 0 ? "mt-4" : ""}>
+              <ReviewForm productId={product.id} />
+            </div>
+          )}
         </section>
       )}
 
