@@ -106,6 +106,9 @@ export const LIMITS = {
   loginPerIp: { limit: 60, windowMs: 10 * 60_000 },
   /** Account creation, which costs a bcrypt hash each time. */
   signup: { limit: 20, windowMs: 60 * 60_000 },
+  /** "Forgot my password": each request sends an e-mail, and the form would
+   *  otherwise let anyone flood a customer's inbox from our address. */
+  passwordReset: { limit: 5, windowMs: 15 * 60_000 },
   /** Order placement — a shared address may carry many genuine shoppers. */
   checkout: { limit: 40, windowMs: 10 * 60_000 },
   /** Newsletter, the classic spam target; the honeypot does the real work. */

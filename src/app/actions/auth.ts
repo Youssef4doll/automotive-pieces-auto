@@ -108,7 +108,10 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   // A correct password clears the account's budget: a customer who fumbled
   // their password twice and then got it right starts clean.
   clear(accountKey);
-  await createSession({ userId: user.id, role: user.role });
+  // The checkbox is on by default in the form; a form without the field at
+  // all (there is none today) would get the short session, which is the safe
+  // way round.
+  await createSession({ userId: user.id, role: user.role }, { remember: formData.get("remember") === "on" });
   redirect(user.role === "ADMIN" ? "/admin" : "/compte");
 }
 

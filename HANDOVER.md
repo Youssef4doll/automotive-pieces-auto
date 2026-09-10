@@ -213,12 +213,17 @@ count on the tile itself. `grid-template-columns: repeat(auto-fill,
 minmax(…, 1fr))`, not `auto-fit`: a family with two subcategories should leave
 the rest of its row empty rather than stretching two tiles to fill it.
 
-**The category page's brand filter is checkboxes, OR'd together — not a
-single choice.** It used to be `?brand=slug`, one brand at a time; picking a
-second replaced the first. `src/lib/catalog-filters.ts` turns that into a
-`?brand=a,b` set with `parseBrandParam`/`toggleBrand`/`filterHref`, shared by
-the desktop sidebar, the phone's chip row, and the "remove this filter" chip
-above the grid so the three cannot drift into different querystring shapes.
+**The category page's filters are one URL, built in one place.** Brands are
+checkboxes, OR'd together — it used to be `?brand=slug`, one at a time, and
+picking a second replaced the first. `src/lib/catalog-filters.ts` holds the
+whole filter state (`brands`, `sort`, `min`, `max`, `stock`) as a
+`CatalogFilters` object: `parseFilters` reads it off `searchParams`,
+`filterHref(basePath, filters)` writes it back, and every control — the
+desktop sidebar, the phone's chip row, the "remove this filter" chips, the
+sort select, the price slider — goes through it, so changing one filter can
+never drop another. The price slider's ends and the "en stock" count come from
+`getCategoryFacets`, for the whole category, so the scale never moves under
+the shopper's finger.
 `getProductsForCategory`'s `brandSlugs` filters with `{ slug: { in: [...] } }`
 — a genuine OR, so ticking Bosch and Valeo shows both, not neither. The
 per-brand counts shown beside each checkbox are the whole category's, never
@@ -293,7 +298,14 @@ one would otherwise overwrite.
 Working and covered by tests:
 
 - Catalogue with two-level categories, brands, vehicle fitment, fuzzy search
-  (pg_trgm + unaccent), reference lookup, search suggestions.
+  (pg_trgm + unaccent), reference lookup, search suggestions. Category pages
+  filter by brand (several, OR'd), price band, in-stock, and type, all in the
+  URL (`?brand=a,b&min=20&max=120&stock=1&sort=price-asc`) so a filtered page
+  can be shared and works with JavaScript off; grid or list view.
+- Sign-in / sign-up with "Se souvenir de moi" (off: the session cookie dies
+  with the browser) and a real "Mot de passe oublié ?": a one-hour, single-use
+  link by e-mail, hashed at rest. Needs the mail transport; without one the
+  page says so and shows the shop's contact details instead of a dead form.
 - Vehicle picker: "I know my car" / "I don't know which it is", saved to a
   garage, used to filter compatibility across the site.
 - Cart, guest checkout, cash on delivery, order tracking with per-step

@@ -63,6 +63,7 @@ model User {
   reviews        Review[]
   profileChanges UserProfileChange[]
   carts          Cart[]
+  passwordResets PasswordResetToken[]
 
   @@index([role])
 }
@@ -90,6 +91,26 @@ model UserProfileChange {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/**
+ * A "forgot my password" link, one row per request.
+ *
+ * Only the SHA-256 of the token is stored: the table leaking must not hand
+ * anyone a working link. The token itself exists once, in the e-mail. A row is
+ * spent by `usedAt` rather than deleted so the request leaves a trace, and it
+ * expires an hour after it was made whether or not it was ever opened.
+ */
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Brand {

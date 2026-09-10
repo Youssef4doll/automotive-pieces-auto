@@ -235,7 +235,56 @@ console.log("\n[3] MOVING THE ORDER ON TELLS THE CUSTOMER");
   await admin.context().close();
 }
 
-console.log("\n[4] THE MAIL SERVER GOING DOWN DOES NOT COST THE SHOP AN ORDER");
+console.log("\n[4] FORGOT MY PASSWORD: A LINK BY E-MAIL, ONE HOUR, ONE USE");
+{
+  const RESET_EMAIL = "karim.bensalah@example.com";
+  const before = await prisma.user.findUnique({ where: { email: RESET_EMAIL }, select: { id: true, passwordHash: true } });
+  const pg = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+
+  await pg.goto(`${BASE}/compte`, { waitUntil: "domcontentloaded" });
+  check("the sign-in form offers a way out of a forgotten password",
+    (await pg.locator('a[href="/compte/mot-de-passe-oublie"]').count()) > 0);
+
+  // An address with no account first. It must get exactly the screen a real
+  // one gets, and no mail: the difference would tell anyone who is a customer.
+  await pg.goto(`${BASE}/compte/mot-de-passe-oublie`, { waitUntil: "domcontentloaded" });
+  const n0 = inbox.length;
+  await pg.fill('input[name="email"]', "personne-inconnue@example.tn");
+  await pg.click('button:has-text("Envoyer le lien")');
+  await pg.waitForTimeout(2000);
+  check("an unknown address gets the same answer as a known one", /envoyé/i.test(await pg.locator("main").innerText()));
+  check("and no e-mail goes anywhere", inbox.length === n0, `${inbox.length - n0} message(s)`);
+
+  await pg.goto(`${BASE}/compte/mot-de-passe-oublie`, { waitUntil: "domcontentloaded" });
+  await pg.fill('input[name="email"]', RESET_EMAIL);
+  await pg.click('button:has-text("Envoyer le lien")');
+  await waitForMail(n0 + 1);
+  const resetMail = inbox.slice(n0).find((m) => m.to?.includes(RESET_EMAIL));
+  check("the account holder is mailed a reset link", !!resetMail, resetMail?.subject);
+  const link = (resetMail?.text || "").match(/https?:\/\/\S+\/compte\/reinitialiser\/\S+/)?.[0];
+  check("the link points at the reset page", !!link, link);
+  const token = link ? link.split("/").pop() : "";
+  check("the token itself is not in the database, only its hash",
+    !!token && !(await prisma.passwordResetToken.findFirst({ where: { tokenHash: token } })));
+
+  await pg.goto(link, { waitUntil: "domcontentloaded" });
+  await pg.fill('input[name="password"]', "nouveau-mdp-1234");
+  await pg.fill('input[name="confirm"]', "nouveau-mdp-1234");
+  await pg.click('button:has-text("Enregistrer le nouveau mot de passe")');
+  await pg.waitForTimeout(2500);
+  check("choosing a new password signs the customer in", /\/compte(\/|$)/.test(pg.url()) && !/reinitialiser/.test(pg.url()), pg.url());
+  const after = await prisma.user.findUnique({ where: { email: RESET_EMAIL }, select: { passwordHash: true } });
+  check("the stored password changed", after.passwordHash !== before.passwordHash);
+
+  await pg.goto(link, { waitUntil: "domcontentloaded" });
+  check("the same link does not work twice", /plus valable/i.test(await pg.locator("main").innerText()));
+  await pg.context().close();
+
+  // The seeded password goes back so every other suite can still sign in.
+  await prisma.user.update({ where: { email: RESET_EMAIL }, data: { passwordHash: before.passwordHash } });
+}
+
+console.log("\n[5] THE MAIL SERVER GOING DOWN DOES NOT COST THE SHOP AN ORDER");
 {
   await new Promise((r) => stub.close(r));
   const before = inbox.length;

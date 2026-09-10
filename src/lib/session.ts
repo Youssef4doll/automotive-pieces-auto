@@ -36,6 +36,9 @@ const SECRET = readSecret();
  */
 const COOKIE_NAME = IS_PROD ? "__Host-apa_session" : "apa_session";
 const MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
+/** Without "se souvenir de moi": the cookie dies with the browser, and the
+ *  token inside it a day later as a backstop for browsers that restore tabs. */
+const SHORT_AGE_SECONDS = 24 * 60 * 60;
 
 /**
  * Never select the whole user row. `passwordHash` has no business leaving the
@@ -56,15 +59,21 @@ export type SessionPayload = {
   role: "CUSTOMER" | "ADMIN";
 };
 
-export async function createSession(payload: SessionPayload) {
-  const token = jwt.sign(payload, SECRET, { expiresIn: MAX_AGE_SECONDS });
+/**
+ * `remember` is the sign-in form's "Se souvenir de moi". On: thirty days, the
+ * way it always was. Off — a shared or borrowed phone — a session cookie with
+ * no Max-Age, which the browser drops when it closes.
+ */
+export async function createSession(payload: SessionPayload, opts: { remember?: boolean } = {}) {
+  const remember = opts.remember ?? true;
+  const token = jwt.sign(payload, SECRET, { expiresIn: remember ? MAX_AGE_SECONDS : SHORT_AGE_SECONDS });
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: MAX_AGE_SECONDS,
+    ...(remember ? { maxAge: MAX_AGE_SECONDS } : {}),
   });
 }
 
