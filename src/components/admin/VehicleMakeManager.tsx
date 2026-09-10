@@ -135,7 +135,7 @@ function MakeRow({ make, open, onToggle }: { make: AdminMake; open: boolean; onT
             className="w-36 min-h-tap-compact px-2 rounded-lg border border-transparent hover:border-navy-900/15 focus:border-gold-500 font-heading font-bold uppercase text-navy-950 text-sm outline-none"
           />
           {name !== make.name && (
-            <button disabled={namePending} className="min-h-tap-compact px-2.5 rounded-lg bg-navy-900 text-white text-[12px] font-display font-bold uppercase disabled:opacity-60">
+            <button disabled={namePending} className="min-h-tap-compact px-2.5 rounded-lg bg-navy-900 text-white text-[11px] font-display font-bold uppercase disabled:opacity-60">
               {namePending ? "…" : "OK"}
             </button>
           )}
@@ -154,7 +154,7 @@ function MakeRow({ make, open, onToggle }: { make: AdminMake; open: boolean; onT
             accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
             onChange={onPick}
             title="Logo de la marque — SVG conseillé, ou JPEG, PNG, WebP, AVIF"
-            className="text-xs max-w-52 file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[12px]"
+            className="text-xs max-w-52 file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[11px]"
           />
           <button
             disabled={logoPending}
@@ -228,7 +228,7 @@ function NewModelForm({ makeId }: { makeId: string }) {
       <Small label="À" width="w-20">
         <input name="yearTo" inputMode="numeric" value={v.yearTo} onChange={(e) => setV({ ...v, yearTo: e.target.value })} placeholder="2019" className={INPUT} />
       </Small>
-      <button disabled={pending} className="min-h-tap-compact px-3 rounded-lg bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-[12px] tracking-wide disabled:opacity-60">
+      <button disabled={pending} className="min-h-tap-compact px-3 rounded-lg bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-[11px] tracking-wide disabled:opacity-60">
         {pending ? "…" : "Ajouter"}
       </button>
       <Feedback state={state} />
@@ -265,7 +265,7 @@ function ModelRow({ model, makeId }: { model: AdminModel; makeId: string }) {
             <input name="yearTo" inputMode="numeric" value={v.yearTo} onChange={(e) => setV({ ...v, yearTo: e.target.value })} className={INPUT} />
           </Small>
           {dirty && (
-            <button disabled={pending} className="min-h-tap-compact px-3 rounded-lg bg-navy-900 text-white text-[12px] font-display font-bold uppercase disabled:opacity-60">
+            <button disabled={pending} className="min-h-tap-compact px-3 rounded-lg bg-navy-900 text-white text-[11px] font-display font-bold uppercase disabled:opacity-60">
               {pending ? "…" : "Enregistrer"}
             </button>
           )}
@@ -336,7 +336,7 @@ function NewEngineForm({ modelId }: { modelId: string }) {
       <Small label="Ch" width="w-16">
         <input name="powerHp" inputMode="numeric" value={v.powerHp} onChange={(e) => setV({ ...v, powerHp: e.target.value })} placeholder="90" className={INPUT} />
       </Small>
-      <button disabled={pending} className="min-h-tap-compact px-3 rounded-lg bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-[12px] tracking-wide disabled:opacity-60">
+      <button disabled={pending} className="min-h-tap-compact px-3 rounded-lg bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-[11px] tracking-wide disabled:opacity-60">
         {pending ? "…" : "Ajouter"}
       </button>
       <Feedback state={state} />
@@ -385,7 +385,7 @@ function EngineRow({ engine, modelId }: { engine: AdminEngine; modelId: string }
             <input name="powerHp" inputMode="numeric" value={v.powerHp} onChange={(e) => setV({ ...v, powerHp: e.target.value })} className={INPUT} />
           </Small>
           {dirty && (
-            <button disabled={pending} className="min-h-tap-compact px-3 rounded-lg bg-navy-900 text-white text-[12px] font-display font-bold uppercase disabled:opacity-60">
+            <button disabled={pending} className="min-h-tap-compact px-3 rounded-lg bg-navy-900 text-white text-[11px] font-display font-bold uppercase disabled:opacity-60">
               {pending ? "…" : "Enregistrer"}
             </button>
           )}
@@ -417,7 +417,7 @@ const INPUT =
 function Small({ label, width, children }: { label: string; width: string; children: React.ReactNode }) {
   return (
     <label className={`flex flex-col gap-1 ${width}`}>
-      <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/40">{label}</span>
+      <span className="text-[10px] font-display font-bold uppercase tracking-wide text-navy-900/40">{label}</span>
       {children}
     </label>
   );

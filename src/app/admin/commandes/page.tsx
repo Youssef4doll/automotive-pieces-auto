@@ -60,11 +60,11 @@ export default async function AdminOrdersPage({
         <table className="w-full text-sm">
           <thead className="bg-navy-950 text-white/70">
             <tr>
-              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Réf.</th>
-              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Client</th>
-              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Date</th>
-              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Statut</th>
-              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Total</th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Réf.</th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Client</th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Date</th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Statut</th>
+              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-navy-900/8">

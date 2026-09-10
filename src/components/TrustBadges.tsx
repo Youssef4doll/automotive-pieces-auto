@@ -18,7 +18,7 @@ export default function TrustBadges() {
               <div className="font-display font-bold uppercase tracking-wide text-sm text-navy-950">
                 <T k={`trust.title${n}`} />
               </div>
-              <div className="text-[14px] text-gray-500">
+              <div className="text-[13px] text-gray-500">
                 <T k={`trust.sub${n}`} />
               </div>
             </div>

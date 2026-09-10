@@ -54,7 +54,7 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="min-h-tap-compact px-3 rounded-lg border border-gray-300 text-navy-900 text-[14px] font-semibold hover:border-navy-900"
+            className="min-h-tap-compact px-3 rounded-lg border border-gray-300 text-navy-900 text-[13px] font-semibold hover:border-navy-900"
           >
             Modifier
           </button>
@@ -62,7 +62,7 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
       </div>
 
       {state?.ok && !editing && (
-        <p role="status" className="mb-4 text-[14px] text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+        <p role="status" className="mb-4 text-[13px] text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
           {state.ok}
         </p>
       )}
@@ -81,7 +81,7 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
           </Field>
 
           {state?.error && (
-            <p role="alert" className="sm:col-span-2 text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p role="alert" className="sm:col-span-2 text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {state.error}
               <span className="block text-red-600/80 mt-0.5">Rien n&apos;a été perdu — corrigez et réessayez.</span>
             </p>
@@ -119,7 +119,7 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
           </p>
         ) : confirming ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[14px] text-red-700">Supprimer définitivement ce compte&nbsp;?</span>
+            <span className="text-[13px] text-red-700">Supprimer définitivement ce compte&nbsp;?</span>
             <button
               type="button"
               disabled={deleting}
@@ -151,7 +151,7 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
             Supprimer ce compte
           </button>
         )}
-        {delState?.error && <p role="alert" className="mt-2 text-[14px] text-red-700">{delState.error}</p>}
+        {delState?.error && <p role="alert" className="mt-2 text-[13px] text-red-700">{delState.error}</p>}
       </div>
     </section>
   );
@@ -163,7 +163,7 @@ const INPUT =
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5 min-w-0">
-      <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45">{label}</span>
+      <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">{label}</span>
       {children}
     </label>
   );
@@ -172,7 +172,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Read({ label, value, dir }: { label: string; value: string; dir?: "ltr" }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45">{label}</dt>
+      <dt className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">{label}</dt>
       <dd className="text-sm text-navy-950 mt-0.5 break-words" dir={dir}>{value}</dd>
     </div>
   );

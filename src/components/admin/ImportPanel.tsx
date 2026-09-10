@@ -212,7 +212,7 @@ function PreviewTable({
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm table-fixed min-w-[640px]">
-          <thead className="text-[12px] uppercase text-gray-600">
+          <thead className="text-[11px] uppercase text-gray-600">
             <tr>
               <th className="text-start px-4 py-2 w-14">Ligne</th>
               <th className="text-start px-2 py-2 w-28">Réf.</th>

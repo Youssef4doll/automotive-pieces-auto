@@ -46,7 +46,7 @@ export default function SubcategoryTile({
         size={size}
         className="ring-1 ring-gray-100 group-hover:ring-gold-500 transition-colors"
       />
-      <span className="line-clamp-2 text-[14px] font-semibold text-navy-800 leading-snug group-hover:text-red-600 [overflow-wrap:anywhere]">
+      <span className="line-clamp-2 text-[13px] font-semibold text-navy-800 leading-snug group-hover:text-red-600 [overflow-wrap:anywhere]">
         {name}
       </span>
     </Link>

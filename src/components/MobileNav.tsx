@@ -92,7 +92,7 @@ export default function MobileNav({
                   <path d="m15 5-7 7 7 7" />
                 </svg>
               </button>
-              <h2 className="flex-1 min-w-0 truncate font-heading font-extrabold uppercase tracking-tight text-[16px]">
+              <h2 className="flex-1 min-w-0 truncate font-heading font-extrabold uppercase tracking-tight text-[15px]">
                 {openFamily.name}
               </h2>
             </>
@@ -127,7 +127,7 @@ export default function MobileNav({
               >
                 <CategoryThumb slug={openFamily.slug} imageUrl={openFamily.imageUrl} size={40} className="bg-white" />
                 <span className="flex-1 min-w-0">
-                  <span className="block font-display font-bold uppercase text-[14px] tracking-wide text-navy-950">
+                  <span className="block font-display font-bold uppercase text-[13px] tracking-wide text-navy-950">
                     {t("mnav.viewAll")}
                   </span>
                   <span className="block text-xs text-gray-600 mt-0.5">
@@ -170,7 +170,7 @@ export default function MobileNav({
                     <circle cx="7.5" cy="13.5" r=".8" />
                     <circle cx="16.5" cy="13.5" r=".8" />
                   </svg>
-                  <span className="flex-1 min-w-0 font-display font-bold uppercase text-[14px] tracking-wide">
+                  <span className="flex-1 min-w-0 font-display font-bold uppercase text-[13px] tracking-wide">
                     {t("nav.byVehicle")}
                   </span>
                   <Chevron />
@@ -191,7 +191,7 @@ export default function MobileNav({
                     >
                       <CategoryThumb slug={family.slug} imageUrl={family.imageUrl} size={40} />
                       <span className="flex-1 min-w-0">
-                        <span className="block font-display font-bold uppercase text-[14px] tracking-wide text-navy-950 leading-snug">
+                        <span className="block font-display font-bold uppercase text-[13px] tracking-wide text-navy-950 leading-snug">
                           {family.name}
                         </span>
                         <span className="block text-xs text-gray-500 mt-0.5">

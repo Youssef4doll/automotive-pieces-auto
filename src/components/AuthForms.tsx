@@ -46,11 +46,7 @@ export default function AuthForms() {
   const [signupState, signupAction, signupPending] = useActionState<AuthState, FormData>(signup, undefined);
 
   return (
-    // 780px, not 640: the left column is three blocks pushed apart by
-    // justify-between, and at the shop's type scale the middle one is tall
-    // enough that a 640px column ran the feature list into the sign-up line
-    // underneath it.
-    <div className="grid min-h-[780px] lg:grid-cols-2">
+    <div className="grid min-h-[700px] lg:grid-cols-2">
       {/* ------------------------------------------------ the shop ---------- */}
       <div className="relative hidden overflow-hidden bg-navy-950 p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
         {/* The shop front, dimmed under navy so the type stays readable. The

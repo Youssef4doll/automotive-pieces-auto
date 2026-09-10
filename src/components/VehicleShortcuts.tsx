@@ -87,15 +87,15 @@ export default async function VehicleShortcuts({ take = 12 }: { take?: number })
               {/* 12px, not 11: the project's legibility floor, and a make
                   name set below it is the small print this card exists to get
                   away from. */}
-              <span className="block text-[13px] font-display font-bold uppercase tracking-wide text-navy-900/50 truncate">
+              <span className="block text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/50 truncate">
                 {v.makeName}
               </span>
               {/* Wrapped to two lines rather than cut. "Série 3 (E90)" is the
                   answer to "is this my car?", and half of it is not. */}
-              <span className="block text-[16px] md:text-base font-semibold text-navy-950 leading-tight line-clamp-2 [overflow-wrap:anywhere]">
+              <span className="block text-[15px] md:text-base font-semibold text-navy-950 leading-tight line-clamp-2 [overflow-wrap:anywhere]">
                 {v.modelName}
               </span>
-              <span className="block text-[13px] text-navy-900/50 leading-none">
+              <span className="block text-[12px] text-navy-900/50 leading-none">
                 {v.productCount} pièce{v.productCount > 1 ? "s" : ""}
               </span>
             </span>

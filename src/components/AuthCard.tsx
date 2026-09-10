@@ -24,7 +24,7 @@ export default function AuthCard({
       <div className="w-full max-w-[480px]">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-navy-900/50">{eyebrow}</p>
         <h1 className="mt-1.5 font-heading text-[1.9rem] font-extrabold leading-tight text-navy-950 sm:text-[2.2rem]">{title}</h1>
-        {sub && <p className="mt-2 text-[16px] text-gray-600">{sub}</p>}
+        {sub && <p className="mt-2 text-[15px] text-gray-600">{sub}</p>}
         <div className="mt-6 rounded-2xl border border-navy-900/10 bg-white p-5 shadow-[0_18px_50px_-24px_rgba(8,22,51,0.35)] sm:p-6">
           {children}
         </div>

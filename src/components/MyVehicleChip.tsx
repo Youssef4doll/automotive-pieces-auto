@@ -19,7 +19,7 @@ export default function MyVehicleChip() {
       >
         <span className="text-gray-500">{t("finder.myVehicle")}:</span>
         <span className="font-bold text-navy-900">{label ?? t("finder.notSet")}</span>
-        <span className="px-2.5 py-1 rounded-full bg-navy-900 text-white text-[12px] font-semibold">
+        <span className="px-2.5 py-1 rounded-full bg-navy-900 text-white text-[11px] font-semibold">
           {t("finder.changeVehicle")}
         </span>
       </button>

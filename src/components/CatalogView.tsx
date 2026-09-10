@@ -153,7 +153,7 @@ export default function CatalogView({
                   <h1 className="font-heading text-[1.7rem] font-extrabold leading-[1.1] tracking-tight text-navy-950 sm:text-3xl lg:text-[2.25rem]">
                     {title}
                   </h1>
-                  {intro && <p className="mt-1.5 text-sm text-gray-600 sm:text-[16px]">{intro}</p>}
+                  {intro && <p className="mt-1.5 text-sm text-gray-600 sm:text-[15px]">{intro}</p>}
                 </div>
               </div>
 
@@ -454,7 +454,7 @@ function FilterPanel({
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <details open className="group py-3.5 first:pt-0 last:pb-0">
-      <summary className="flex min-h-tap-compact cursor-pointer select-none list-none items-center justify-between text-[14px] font-bold text-navy-950 [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-tap-compact cursor-pointer select-none list-none items-center justify-between text-[13px] font-bold text-navy-950 [&::-webkit-details-marker]:hidden">
         {title}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 transition-transform group-open:rotate-180" aria-hidden="true">
           <path d="m6 9 6 6 6-6" />

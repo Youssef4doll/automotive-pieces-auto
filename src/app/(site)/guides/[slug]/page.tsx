@@ -77,7 +77,7 @@ export default async function GuidePage({ params }: { params: Params }) {
               {s.heading}
             </h2>
             {s.body.map((paragraph) => (
-              <p key={paragraph.slice(0, 32)} className="text-[16px] leading-relaxed text-gray-700 mb-3">
+              <p key={paragraph.slice(0, 32)} className="text-[15px] leading-relaxed text-gray-700 mb-3">
                 {paragraph}
               </p>
             ))}

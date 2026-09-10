@@ -89,7 +89,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="px-5 pt-5 pb-4 sm:px-6 border-b border-slate-100 flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-[12px] font-display font-bold uppercase tracking-[0.14em] text-slate-400">Total</p>
+              <p className="text-[11px] font-display font-bold uppercase tracking-[0.14em] text-slate-400">Total</p>
               <p className="text-2xl font-heading font-extrabold text-navy-950 mt-1 tabular-nums">
                 {formatTNDfr(toNumber(order.total))}
               </p>
@@ -101,7 +101,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
           </div>
 
           <div className="px-5 py-5 sm:px-6">
-            <h2 className="text-[12px] font-display font-bold uppercase tracking-[0.14em] text-slate-400 mb-3">Statut</h2>
+            <h2 className="text-[11px] font-display font-bold uppercase tracking-[0.14em] text-slate-400 mb-3">Statut</h2>
             <OrderTracker
               status={order.status}
               placedAt={order.createdAt.toISOString()}

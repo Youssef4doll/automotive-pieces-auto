@@ -63,11 +63,11 @@ export default async function AbandonedCartsPage() {
           <table className="w-full text-sm table-fixed min-w-[720px]">
             <thead className="bg-navy-950 text-white/70">
               <tr>
-                <th className="text-start px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider w-44">Client</th>
-                <th className="text-start px-3 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Contenu</th>
-                <th className="text-end px-3 py-3 font-display font-bold uppercase text-[12px] tracking-wider w-24">Valeur</th>
-                <th className="text-start px-3 py-3 font-display font-bold uppercase text-[12px] tracking-wider w-28">Depuis</th>
-                <th className="text-end px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider w-28">Relancer</th>
+                <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider w-44">Client</th>
+                <th className="text-start px-3 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Contenu</th>
+                <th className="text-end px-3 py-3 font-display font-bold uppercase text-[11px] tracking-wider w-24">Valeur</th>
+                <th className="text-start px-3 py-3 font-display font-bold uppercase text-[11px] tracking-wider w-28">Depuis</th>
+                <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider w-28">Relancer</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-navy-900/8">

@@ -69,7 +69,7 @@ export default function BrandManager({ brands }: { brands: AdminBrand[] }) {
               <span className="flex-1 min-w-0">
                 <span className="font-heading font-bold uppercase text-navy-950">{b.name}</span>
                 <span className="text-xs text-gray-600"> /{b.slug} · {b.productCount} prod.</span>
-                {!b.isPartsBrand && <span className="ms-2 text-[12px] text-gray-500">(marque véhicule)</span>}
+                {!b.isPartsBrand && <span className="ms-2 text-[11px] text-gray-500">(marque véhicule)</span>}
               </span>
               <div className="flex items-center gap-1 shrink-0">
                 <button
@@ -150,11 +150,11 @@ function BrandForm({
     <form action={onSubmit} className="flex flex-wrap items-end gap-2 bg-white border border-gray-200 rounded-lg p-3">
       {brand && <input type="hidden" name="id" value={brand.id} />}
       <label className="flex flex-col gap-1 flex-1 min-w-36">
-        <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45">Nom</span>
+        <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">Nom</span>
         <input name="name" required defaultValue={brand?.name} placeholder="Ex. Bosch" className={input} />
       </label>
       <label className="flex flex-col gap-1 flex-1 min-w-36">
-        <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45">Lien (auto si vide)</span>
+        <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">Lien (auto si vide)</span>
         <input name="slug" defaultValue={brand?.slug} placeholder="bosch" className={input} />
       </label>
 
@@ -172,15 +172,15 @@ function BrandForm({
           )}
         </span>
         <label className="flex flex-col gap-1 flex-1 min-w-36">
-          <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45">Logo</span>
+          <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">Logo</span>
           <input
             name="file"
             type="file"
             accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
             onChange={onPickFile}
-            className="w-full text-xs file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[12px]"
+            className="w-full text-xs file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[11px]"
           />
-          <span className="text-[11.5px] text-navy-900/40 leading-tight">
+          <span className="text-[10.5px] text-navy-900/40 leading-tight">
             SVG conseillé (net à toutes les tailles) · JPEG, PNG, WebP, AVIF acceptés
           </span>
         </label>
@@ -204,7 +204,7 @@ function BrandForm({
           path to show here, so the box is left empty and labelled rather than
           reading as "this brand has no logo". */}
       <label className="flex flex-col gap-1 flex-1 min-w-36">
-        <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45">
+        <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">
           …ou un chemin d&rsquo;image du site
         </span>
         <input
@@ -214,7 +214,7 @@ function BrandForm({
           className={input}
         />
         {uploaded && (
-          <span className="text-[11.5px] text-navy-900/40 leading-tight">
+          <span className="text-[10.5px] text-navy-900/40 leading-tight">
             Logo téléversé — laissez vide pour le conserver.
           </span>
         )}

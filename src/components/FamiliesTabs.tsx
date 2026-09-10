@@ -166,14 +166,14 @@ export default function FamiliesTabs({
                       rather than truncated at the first word. `anywhere` is the
                       backstop for the single words that are wider than the tile
                       on a 320px screen. */}
-                  <span className="w-full min-w-0 line-clamp-2 [overflow-wrap:anywhere] font-display font-bold uppercase tracking-wide text-[13px] sm:text-[14px] text-navy-950 leading-tight">
+                  <span className="w-full min-w-0 line-clamp-2 [overflow-wrap:anywhere] font-display font-bold uppercase tracking-wide text-[12px] sm:text-[13px] text-navy-950 leading-tight">
                     {f.name}
                   </span>
                   {/* What is behind the tile, counted from the catalogue.
                       "3 sous-catégories" described our filing system; "48
                       pièces" answers the question the shopper is actually
                       asking, which is whether it is worth opening. */}
-                  <span className="text-[13px] text-navy-900/50 leading-none">
+                  <span className="text-[12px] text-navy-900/50 leading-none">
                     {typeof f.productCount === "number" ? (
                       <>
                         {f.productCount} <T k={f.productCount === 1 ? "families.part" : "families.parts"} />
@@ -190,7 +190,7 @@ export default function FamiliesTabs({
                       but it is not on the shopper's board — this says which,
                       so the tile is not mistaken for a live one. */}
                   {hidden && (
-                    <span className="text-[11.5px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
+                    <span className="text-[10.5px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
                       Masquée · vide
                     </span>
                   )}
@@ -238,7 +238,7 @@ export default function FamiliesTabs({
                     </div>
                     <Link
                       href={`/catalogue/${f.slug}`}
-                      className="inline-flex items-center gap-1.5 min-h-tap-compact mt-2 text-[14px] font-semibold text-navy-900 hover:text-red-600"
+                      className="inline-flex items-center gap-1.5 min-h-tap-compact mt-2 text-[13px] font-semibold text-navy-900 hover:text-red-600"
                     >
                       <T k="families.seeAll" /> {f.name}
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -264,7 +264,7 @@ export default function FamiliesTabs({
                 className="flex items-center gap-3 p-4 rounded-xl border border-navy-900/10 bg-white hover:border-red-500 hover:bg-[#fff8f8] hover:-translate-y-0.5 transition min-h-[76px]"
               >
                 <div className="flex-1 min-w-0 flex flex-col gap-1">
-                  <span className="font-bold text-[15.5px] text-navy-950 leading-tight">{t(sy.key)}</span>
+                  <span className="font-bold text-[14.5px] text-navy-950 leading-tight">{t(sy.key)}</span>
                   <span className="text-xs text-navy-900/50">{fam?.name ?? ""}</span>
                 </div>
                 <span className="shrink-0 w-7 h-7 rounded-full border border-navy-900/10 flex items-center justify-center text-red-500">

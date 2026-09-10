@@ -79,7 +79,7 @@ export default async function AdminDashboard() {
                     title={formatTND(d.revenue)}
                   />
                 </div>
-                <span className="text-[11px] text-navy-900/40 capitalize">{d.label}</span>
+                <span className="text-[10px] text-navy-900/40 capitalize">{d.label}</span>
               </div>
             ))}
           </div>

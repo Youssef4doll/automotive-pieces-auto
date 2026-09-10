@@ -137,7 +137,7 @@ export default function CheckoutForm({
               Aucun compte nécessaire. Remplissez le formulaire ci-dessous et c&apos;est commandé —
               paiement à la livraison.
             </p>
-            <p className="inline-flex items-center gap-1.5 mt-2.5 text-[14px] font-semibold text-green-700">
+            <p className="inline-flex items-center gap-1.5 mt-2.5 text-[13px] font-semibold text-green-700">
               ✓ C&apos;est le chemin le plus rapide
             </p>
           </div>

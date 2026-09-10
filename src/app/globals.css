@@ -65,34 +65,6 @@
   --font-display: var(--font-barlow-condensed);
   --font-heading: var(--font-archivo);
 
-  /* ---------------------------------------------------------------
-     TYPE SCALE
-
-     One step up from Tailwind's defaults, across the board: 12/14/16 becomes
-     13/15/17 and every heading follows. The shop is read on 1080p and 1440p
-     monitors at arm's length and on phones held in a workshop, and the
-     default scale measured small in both — the owner's own comparison was
-     the same page at 133% zoom, which is a browser setting no visitor will
-     ever apply for us.
-
-     Sizes only. The line heights are ratios in Tailwind's default theme
-     (`calc(1 / 0.75)` and friends), so leading follows on its own, and the
-     spacing scale is deliberately untouched: growing padding and gaps as
-     well is what turns a readable page into one that overflows a 320px
-     phone. Breakpoints and container widths are rem-based off the ROOT font
-     size, not these tokens, so both are unaffected.
-     --------------------------------------------------------------- */
-  --text-xs: 0.8125rem;   /* 13px, was 12 */
-  --text-sm: 0.9375rem;   /* 15px, was 14 */
-  --text-base: 1.0625rem; /* 17px, was 16 */
-  --text-lg: 1.1875rem;   /* 19px, was 18 */
-  --text-xl: 1.3125rem;   /* 21px, was 20 */
-  --text-2xl: 1.625rem;   /* 26px, was 24 */
-  --text-3xl: 2rem;       /* 32px, was 30 */
-  --text-4xl: 2.4375rem;  /* 39px, was 36 */
-  --text-5xl: 3.25rem;    /* 52px, was 48 */
-  --text-6xl: 4rem;       /* 64px, was 60 */
-
   /* Expose the tap/gutter tokens to Tailwind so components can use
      h-tap-primary / min-h-tap / px-gutter instead of magic numbers. */
   --spacing-tap-primary: var(--tap-primary);

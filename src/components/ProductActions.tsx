@@ -61,7 +61,7 @@ export default function ProductActions({
             </svg>
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-heading font-extrabold uppercase text-green-800 text-sm sm:text-[16px] tracking-tight leading-tight">
+            <p className="font-heading font-extrabold uppercase text-green-800 text-sm sm:text-[15px] tracking-tight leading-tight">
               {t("compat.fitsYourCar")}
             </p>
             <p className="text-xs text-green-700/75 mt-0.5 truncate">{vehicleLabel(vehicle)}</p>
@@ -80,7 +80,7 @@ export default function ProductActions({
             !
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-heading font-extrabold uppercase text-amber-800 text-sm sm:text-[16px] tracking-tight leading-tight">
+            <p className="font-heading font-extrabold uppercase text-amber-800 text-sm sm:text-[15px] tracking-tight leading-tight">
               {t("compat.doesntMatch")}
             </p>
             <p className="text-xs text-amber-700/75 mt-0.5 truncate">{vehicleLabel(vehicle)}</p>

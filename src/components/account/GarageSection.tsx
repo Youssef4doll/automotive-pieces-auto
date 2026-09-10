@@ -96,7 +96,7 @@ export default function GarageSection({ compact = false }: { compact?: boolean }
                     </div>
 
                     {isActive ? (
-                      <p className="inline-flex items-center gap-1.5 mt-3 text-[12px] font-bold uppercase tracking-wide text-green-700">
+                      <p className="inline-flex items-center gap-1.5 mt-3 text-[11px] font-bold uppercase tracking-wide text-green-700">
                         <IconCheck className="w-3.5 h-3.5" /> Véhicule actif
                       </p>
                     ) : (

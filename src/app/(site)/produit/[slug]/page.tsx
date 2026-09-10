@@ -278,9 +278,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <table className="w-full table-fixed text-sm">
               <thead className="bg-navy-950 text-white/70">
                 <tr>
-                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Marque</th>
-                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Modèle</th>
-                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Motorisation</th>
+                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Marque</th>
+                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Modèle</th>
+                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Motorisation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

@@ -86,10 +86,10 @@ export default async function QualityPage({
         <table className="w-full text-sm table-fixed min-w-[680px]">
           <thead className="bg-navy-950 text-white/70">
             <tr>
-              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Produit</th>
-              <th className="text-start px-3 py-3 font-display font-bold uppercase text-[12px] tracking-wider w-24">Score</th>
-              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Ce qui manque</th>
-              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider w-24"></th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Produit</th>
+              <th className="text-start px-3 py-3 font-display font-bold uppercase text-[11px] tracking-wider w-24">Score</th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Ce qui manque</th>
+              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider w-24"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-navy-900/8">
@@ -123,7 +123,7 @@ export default async function QualityPage({
                           <span
                             key={g.key}
                             title={g.why}
-                            className="text-[12px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600"
+                            className="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600"
                           >
                             {g.label}
                           </span>
