@@ -96,17 +96,17 @@ export default function ProductCard({
         </span>
       )}
       {badge === "discount" && (
-        <span className="absolute top-2 end-2 rounded bg-red-600 px-2 py-1 text-[12px] font-display font-bold uppercase text-white">
+        <span className="absolute top-2 end-2 rounded bg-red-600 px-2 py-1 text-[13px] font-display font-bold uppercase text-white">
           -{discount}%
         </span>
       )}
       {badge === "topSeller" && (
-        <span className="absolute top-2 end-2 rounded bg-navy-900 px-2 py-1 text-[12px] font-display font-bold uppercase text-white">
+        <span className="absolute top-2 end-2 rounded bg-navy-900 px-2 py-1 text-[13px] font-display font-bold uppercase text-white">
           {t("product.topSeller")}
         </span>
       )}
       {badge === "lowStock" && (
-        <span className="absolute top-2 end-2 rounded bg-red-600 px-2 py-1 text-[12px] font-display font-bold uppercase text-white">
+        <span className="absolute top-2 end-2 rounded bg-red-600 px-2 py-1 text-[13px] font-display font-bold uppercase text-white">
           {t("product.lowStock")}
         </span>
       )}
@@ -127,7 +127,7 @@ export default function ProductCard({
           stockQty: product.stockQty,
         })
       }
-      className="inline-flex w-full min-h-tap items-center justify-center gap-2 rounded-lg bg-gold-500 text-navy-950 font-display text-xs font-bold uppercase tracking-wide transition-transform hover:bg-gold-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-200 sm:text-[13px]"
+      className="inline-flex w-full min-h-tap items-center justify-center gap-2 rounded-lg bg-gold-500 text-navy-950 font-display text-xs font-bold uppercase tracking-wide transition-transform hover:bg-gold-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-200 sm:text-[14px]"
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
@@ -156,19 +156,19 @@ export default function ProductCard({
             // useful target on the card, and in heading-navy it was the one
             // thing on it that did not invite a click (e2e-loop guards this).
             // Sentence case keeps long reference-heavy names readable.
-            className="line-clamp-2 text-[15px] font-semibold leading-snug text-navy-700 underline-offset-2 decoration-1 hover:text-red-600 hover:underline"
+            className="line-clamp-2 text-[16px] font-semibold leading-snug text-navy-700 underline-offset-2 decoration-1 hover:text-red-600 hover:underline"
           >
             {product.name}
           </Link>
 
           {fit === "yes" && vehicle && (
-            <span className="text-[12px] text-gray-500">
+            <span className="text-[13px] text-gray-500">
               {t("cat.forYourCar")} {vehicleLabel(vehicle)}
             </span>
           )}
-          {fit === "no" && <span className="text-[12px] font-medium text-gray-500">{t("compat.doesntMatch")}</span>}
+          {fit === "no" && <span className="text-[13px] font-medium text-gray-500">{t("compat.doesntMatch")}</span>}
           {fit === "unverified" && (
-            <span className="text-[12px] font-medium text-amber-600">? {t("compat.unverified")}</span>
+            <span className="text-[13px] font-medium text-amber-600">? {t("compat.unverified")}</span>
           )}
         </div>
 

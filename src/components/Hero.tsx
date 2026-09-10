@@ -116,7 +116,13 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
                 autoComplete="off"
                 dir={scope === "ref" ? "ltr" : undefined}
                 placeholder={scope === "ref" ? "GDB1330 · 7701234567" : t("hero.searchPlaceholder")}
-                className={`flex-1 min-w-0 px-4 py-3.5 sm:py-4 bg-white text-navy-950 outline-none text-sm sm:text-base ${
+                // px-3 below sm, not px-4: on a touch device the iOS rule in
+                // globals.css forces every text input to 16px whatever the
+                // utility says, and at the shop's type scale "Pièce, marque ou
+                // référence…" then needs 203px inside a 202px box on a 390px
+                // phone. The eight pixels come out of the padding rather than
+                // out of the placeholder, which is the useful half.
+                className={`flex-1 min-w-0 px-3 sm:px-4 py-3.5 sm:py-4 bg-white text-navy-950 outline-none text-sm sm:text-base ${
                   scope === "ref" ? "font-mono" : ""
                 }`}
               />

@@ -47,10 +47,10 @@ export default async function AdminClientsPage({
         <table className="w-full text-sm">
           <thead className="bg-navy-950 text-white/70">
             <tr>
-              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Client</th>
-              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Segment</th>
-              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Commandes</th>
-              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[11px] tracking-wider">Valeur totale</th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Client</th>
+              <th className="text-start px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Segment</th>
+              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Commandes</th>
+              <th className="text-end px-4 py-3 font-display font-bold uppercase text-[12px] tracking-wider">Valeur totale</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-navy-900/8">

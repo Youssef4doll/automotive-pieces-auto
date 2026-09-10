@@ -33,7 +33,7 @@ export default function CategoryVehicleBar() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold uppercase tracking-wide text-navy-900/55">{t("cat.yourVehicle")}</p>
-            <p className="truncate font-heading text-[15px] font-extrabold leading-tight text-navy-950">{vehicleLabel(vehicle)}</p>
+            <p className="truncate font-heading text-[16px] font-extrabold leading-tight text-navy-950">{vehicleLabel(vehicle)}</p>
             <p className="mt-0.5 flex items-center gap-1 text-xs text-green-700">
               <IconCheck />
               {t("cat.compatibleShown")}
@@ -54,7 +54,7 @@ export default function CategoryVehicleBar() {
               <IconCar />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="font-heading text-[15px] font-extrabold leading-tight text-navy-950">{t("cat.tellUsCar")}</p>
+              <p className="font-heading text-[16px] font-extrabold leading-tight text-navy-950">{t("cat.tellUsCar")}</p>
               <p className="mt-0.5 text-xs text-gray-600">{t("cat.tellUsCarWhy")}</p>
             </div>
           </div>

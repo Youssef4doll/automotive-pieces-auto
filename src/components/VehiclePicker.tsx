@@ -306,7 +306,7 @@ export default function VehiclePicker({
         {/* Where they are in the three steps. Only on the "I know" path, where
             there are steps to be at. */}
         {path === "know" && (
-          <ol className="shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-2 border-b border-gray-100 text-[11px] font-display font-bold uppercase tracking-wide">
+          <ol className="shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-2 border-b border-gray-100 text-[12px] font-display font-bold uppercase tracking-wide">
             {(["make", "model", "engine"] as Step[]).map((s, i) => {
               const done = (s === "make" && make) || (s === "model" && model);
               const here = step === s;
@@ -369,7 +369,7 @@ export default function VehiclePicker({
                         >
                           <span className="min-w-0 truncate font-semibold text-navy-950">{vehicleLabel(v)}</span>
                           {active && (
-                            <span className="shrink-0 text-[10px] font-bold uppercase text-green-800">
+                            <span className="shrink-0 text-[11px] font-bold uppercase text-green-800">
                               {t("garage.active")}
                             </span>
                           )}
@@ -442,7 +442,7 @@ export default function VehiclePicker({
                           >
                             <MakeMark make={m} size={36} />
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[15px] font-semibold text-navy-950 leading-tight">
+                              <span className="block truncate text-[16px] font-semibold text-navy-950 leading-tight">
                                 {m.name}
                               </span>
                               {/* What we can actually do for this make. A make
@@ -512,7 +512,7 @@ export default function VehiclePicker({
                         className="w-full h-full text-start px-3.5 py-2 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 active:bg-navy-50 flex items-center gap-2.5"
                       >
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[15px] font-semibold text-navy-950 leading-tight">
+                          <span className="block truncate text-[16px] font-semibold text-navy-950 leading-tight">
                             {m.name}
                           </span>
                           {years && (
@@ -542,7 +542,7 @@ export default function VehiclePicker({
                       onClick={() => pickEngine(e)}
                       className="w-full h-full text-start px-3.5 py-2 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 active:bg-navy-50 flex flex-col justify-center"
                     >
-                      <span className="block truncate text-[15px] font-semibold text-navy-950 leading-tight">
+                      <span className="block truncate text-[16px] font-semibold text-navy-950 leading-tight">
                         {e.name}
                       </span>
                       {spec && <span className="block truncate text-xs text-gray-500 mt-0.5">{spec}</span>}
@@ -715,7 +715,7 @@ function BigChoice({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-semibold text-[15px] leading-tight">{title}</span>
+        <span className="block font-semibold text-[16px] leading-tight">{title}</span>
         <span className={`block text-xs mt-0.5 ${primary ? "text-white/70" : "text-gray-600"}`}>{hint}</span>
       </span>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className={`shrink-0 rtl:rotate-180 ${primary ? "text-white/70" : "text-gray-400"}`} aria-hidden="true">
@@ -733,7 +733,7 @@ function HelpCard({
       <div className="flex items-start gap-3 mb-3">
         <span className="shrink-0 grid place-items-center w-9 h-9 rounded-xl bg-gray-100 text-navy-900">{icon}</span>
         <div className="min-w-0">
-          <h3 className="font-semibold text-[15px] text-navy-950 leading-tight">{title}</h3>
+          <h3 className="font-semibold text-[16px] text-navy-950 leading-tight">{title}</h3>
           <p className="text-xs text-gray-600 mt-0.5">{hint}</p>
         </div>
       </div>

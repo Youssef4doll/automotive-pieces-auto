@@ -72,7 +72,7 @@ export default async function AdminClientDetail({ params }: { params: Promise<{ 
           <ul className="flex flex-col divide-y divide-navy-900/8 text-sm">
             {customer.profileChanges.map((c) => (
               <li key={c.id} className="py-2 flex flex-wrap items-baseline gap-x-2">
-                <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45 w-20 shrink-0">
+                <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45 w-20 shrink-0">
                   {FIELD_LABEL[c.field] ?? c.field}
                 </span>
                 <span className="text-gray-500 line-through break-all">{c.oldValue || "—"}</span>

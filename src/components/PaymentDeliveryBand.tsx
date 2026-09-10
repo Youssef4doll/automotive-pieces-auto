@@ -123,15 +123,15 @@ function Group({ titleKey, methods }: { titleKey: string; methods: Method[] }) {
             <span className="shrink-0 text-white/70">{m.icon}</span>
             <span className="min-w-0">
               <span className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[13px] font-semibold text-white/90 leading-tight">{m.label}</span>
+                <span className="text-[14px] font-semibold text-white/90 leading-tight">{m.label}</span>
                 {m.soon && (
-                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white/10 text-white/60">
+                  <span className="text-[11px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white/10 text-white/60">
                     <T k="footer.methodSoon" />
                   </span>
                 )}
               </span>
               {m.detail && (
-                <span className="block text-[11.5px] text-white/45 leading-tight mt-0.5">{m.detail}</span>
+                <span className="block text-[12.5px] text-white/45 leading-tight mt-0.5">{m.detail}</span>
               )}
             </span>
           </li>

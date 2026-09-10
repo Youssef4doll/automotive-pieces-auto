@@ -54,7 +54,7 @@ export function ProfileCard({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="shrink-0 inline-flex items-center gap-1.5 min-h-tap-compact px-3 rounded-lg border border-slate-300 text-navy-900 text-[13px] font-semibold hover:border-navy-900 transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 min-h-tap-compact px-3 rounded-lg border border-slate-300 text-navy-900 text-[14px] font-semibold hover:border-navy-900 transition-colors"
           >
             <PencilIcon /> Modifier
           </button>
@@ -62,7 +62,7 @@ export function ProfileCard({
       </div>
 
       {state?.ok && state.message && !editing && (
-        <p role="status" className="mb-4 text-[13px] text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+        <p role="status" className="mb-4 text-[14px] text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
           {state.message}
         </p>
       )}
@@ -83,14 +83,14 @@ export function ProfileCard({
           />
           {/* Not editable — it is the account's creation date, not a field. */}
           <div className="min-w-0">
-            <span className="block text-[11px] font-display font-bold uppercase tracking-wide text-slate-500 mb-1.5">
+            <span className="block text-[12px] font-display font-bold uppercase tracking-wide text-slate-500 mb-1.5">
               Client depuis
             </span>
             <span className="block text-sm text-navy-950">{memberSince}</span>
           </div>
 
           {state?.error && (
-            <p role="alert" className="sm:col-span-2 text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p role="alert" className="sm:col-span-2 text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {state.error}
             </p>
           )}
@@ -158,7 +158,7 @@ export function PasswordCard() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="shrink-0 inline-flex items-center gap-1.5 min-h-tap-compact px-3 rounded-lg border border-slate-300 text-navy-900 text-[13px] font-semibold hover:border-navy-900 transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 min-h-tap-compact px-3 rounded-lg border border-slate-300 text-navy-900 text-[14px] font-semibold hover:border-navy-900 transition-colors"
           >
             <PencilIcon /> Modifier
           </button>
@@ -166,7 +166,7 @@ export function PasswordCard() {
       </div>
 
       {state?.ok && state.message && !open && (
-        <p role="status" className="mt-4 text-[13px] text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+        <p role="status" className="mt-4 text-[14px] text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
           {state.message}
         </p>
       )}
@@ -187,7 +187,7 @@ export function PasswordCard() {
           <Input label="Confirmer" name="confirm" type="password" value={pw.confirm} onChange={set("confirm")} autoComplete="new-password" minLength={6} required />
 
           {state?.error && (
-            <p role="alert" className="sm:col-span-2 text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p role="alert" className="sm:col-span-2 text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {state.error}
             </p>
           )}
@@ -221,7 +221,7 @@ function Input({
 }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
   return (
     <label className={`min-w-0 block ${className}`}>
-      <span className="block text-[11px] font-display font-bold uppercase tracking-wide text-slate-500 mb-1.5">
+      <span className="block text-[12px] font-display font-bold uppercase tracking-wide text-slate-500 mb-1.5">
         {label}
       </span>
       {/* text-base, not text-sm: iOS zooms the whole page on focus for any
@@ -238,7 +238,7 @@ function Input({
 function ReadField({ label, value, dir }: { label: string; value: string; dir?: "ltr" }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] font-display font-bold uppercase tracking-wide text-slate-500">{label}</dt>
+      <dt className="text-[12px] font-display font-bold uppercase tracking-wide text-slate-500">{label}</dt>
       <dd className="text-sm text-navy-950 mt-0.5 break-words" dir={dir}>
         {value}
       </dd>

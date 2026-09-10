@@ -56,7 +56,7 @@ export default function UnmetDemand({ misses }: { misses: Miss[] }) {
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block text-sm text-navy-950 truncate">« {m.query} »</span>
-                <span className="block text-[11px] text-navy-900/40 truncate">
+                <span className="block text-[12px] text-navy-900/40 truncate">
                   {m.normalized} · vu le{" "}
                   {new Date(m.lastSeenAt).toLocaleDateString("fr-TN", { day: "numeric", month: "short" })}
                 </span>

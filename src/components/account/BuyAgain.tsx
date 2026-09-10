@@ -100,7 +100,7 @@ export default function BuyAgain({
                     >
                       {item.name}
                     </Link>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-[12px] text-slate-400 mt-0.5">
                       Acheté le {item.lastBought}
                       {item.timesBought > 1 ? ` · ${item.timesBought} fois` : ""}
                     </p>
@@ -108,7 +108,7 @@ export default function BuyAgain({
                 </div>
 
                 {fits && (
-                  <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-green-700 bg-green-50 border border-green-100 rounded-md px-2 py-1 self-start">
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-green-700 bg-green-50 border border-green-100 rounded-md px-2 py-1 self-start">
                     <IconCheck className="w-3.5 h-3.5" /> Compatible avec votre {vehicle!.makeName} {vehicle!.modelName}
                   </p>
                 )}

@@ -71,12 +71,12 @@ export default async function SearchPage({
               className="group flex flex-col items-center gap-2 p-2.5 sm:p-3 rounded-xl border border-navy-900/10 bg-white text-center transition hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5"
             >
               <FamilyThumb slug={f.slug} imageUrl={f.imageUrl} />
-              <span className="w-full min-w-0 line-clamp-2 [overflow-wrap:anywhere] font-display font-bold uppercase tracking-wide text-[12px] sm:text-[13px] text-navy-950 leading-tight">
+              <span className="w-full min-w-0 line-clamp-2 [overflow-wrap:anywhere] font-display font-bold uppercase tracking-wide text-[13px] sm:text-[14px] text-navy-950 leading-tight">
                 {f.name}
               </span>
               {/* Counted from the catalogue, the same number the home page
                   shows — never an estimate. */}
-              <span className="text-[12px] text-navy-900/50 leading-none">
+              <span className="text-[13px] text-navy-900/50 leading-none">
                 {f.productCount} pièce{f.productCount > 1 ? "s" : ""}
               </span>
             </Link>

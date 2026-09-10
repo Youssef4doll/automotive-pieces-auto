@@ -67,7 +67,7 @@ export default function ProductImageManager({
                 <Image src={`/api/images/${img.id}`} alt={img.alt} fill className="object-cover" sizes="160px" />
               </div>
               {i === 0 && (
-                <span className="absolute top-1 start-1 bg-navy-900 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
+                <span className="absolute top-1 start-1 bg-navy-900 text-white text-[11px] font-bold uppercase px-1.5 py-0.5 rounded">
                   Principale
                 </span>
               )}
@@ -76,7 +76,7 @@ export default function ProductImageManager({
                   type="button"
                   disabled={pending || i === 0}
                   onClick={() => run(() => setPrimaryImage(img.id))}
-                  className="flex-1 min-h-tap-compact text-[11px] font-semibold text-navy-900 disabled:opacity-30 hover:bg-gray-50"
+                  className="flex-1 min-h-tap-compact text-[12px] font-semibold text-navy-900 disabled:opacity-30 hover:bg-gray-50"
                 >
                   {i === 0 ? "—" : "Principale"}
                 </button>

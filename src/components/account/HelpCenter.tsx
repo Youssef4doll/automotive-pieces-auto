@@ -81,7 +81,7 @@ export default function HelpCenter({ faqs, whatsapp, orderRef }: { faqs: Faq[]; 
                   <summary className="flex items-start justify-between gap-3 cursor-pointer list-none px-3 min-h-tap py-3 text-sm font-semibold text-navy-950 rounded-lg hover:bg-slate-50">
                     <span>
                       {f.q}
-                      <span className="block text-[11px] font-normal uppercase tracking-wide text-slate-400 mt-0.5">
+                      <span className="block text-[12px] font-normal uppercase tracking-wide text-slate-400 mt-0.5">
                         {f.cat}
                       </span>
                     </span>

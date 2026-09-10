@@ -89,7 +89,7 @@ export default function OrderTracker({
           ))}
         </ol>
 
-        <div className="flex text-[11px] leading-tight" aria-hidden="true">
+        <div className="flex text-[12px] leading-tight" aria-hidden="true">
           {rows.map((r, i) => (
             <div key={r.key} className={`min-w-0 pe-1 ${i === rows.length - 1 ? "w-[70px] text-end pe-0" : "flex-1"}`}>
               <p className={labelClass(r.state)}>{r.label}</p>
@@ -135,9 +135,9 @@ function PhoneTimeline({ rows }: { rows: { key: string; label: string; state: St
               />
             )}
           </div>
-          <div className={`min-w-0 text-[13px] leading-tight ${i < rows.length - 1 ? "pb-2.5" : ""} pt-1`} aria-hidden="true">
+          <div className={`min-w-0 text-[14px] leading-tight ${i < rows.length - 1 ? "pb-2.5" : ""} pt-1`} aria-hidden="true">
             <p className={labelClass(r.state)}>{r.label}</p>
-            {r.at && r.state !== "todo" && <p className="text-[11px] text-slate-400 mt-0.5">{moment(r.at)}</p>}
+            {r.at && r.state !== "todo" && <p className="text-[12px] text-slate-400 mt-0.5">{moment(r.at)}</p>}
           </div>
         </li>
       ))}
@@ -162,7 +162,7 @@ function PhoneCompact({ rows }: { rows: { key: string; label: string; state: Sta
           </li>
         ))}
       </ol>
-      <p className="text-[11px] leading-tight" aria-hidden="true">
+      <p className="text-[12px] leading-tight" aria-hidden="true">
         <span className={labelClass(latest.state)}>{latest.label}</span>
         {latest.at && <span className="text-slate-400"> · {moment(latest.at)}</span>}
       </p>
@@ -186,7 +186,7 @@ function Dot({
   const size = compact ? "w-6 h-6" : "w-7 h-7";
   return (
     <span
-      className={`${size} rounded-full grid place-items-center text-[11px] font-bold shrink-0 transition-colors ${
+      className={`${size} rounded-full grid place-items-center text-[12px] font-bold shrink-0 transition-colors ${
         state === "done"
           ? "bg-green-700 text-white"
           : state === "current"

@@ -121,7 +121,7 @@ export default function FitmentEditor({
               >
                 <span className="flex-1 font-semibold text-sm text-navy-950">{make.name}</span>
                 {n > 0 && (
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                  <span className="text-[12px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
                     {n}
                   </span>
                 )}

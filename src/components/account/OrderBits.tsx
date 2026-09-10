@@ -49,7 +49,7 @@ export function StatusBadge({
   return (
     <span
       className={`inline-flex items-center font-bold rounded-full border whitespace-nowrap ${tone} ${
-        size === "sm" ? "text-[11px] px-2.5 py-1" : "text-xs px-3 py-1.5"
+        size === "sm" ? "text-[12px] px-2.5 py-1" : "text-xs px-3 py-1.5"
       }`}
     >
       {STATUS_LABEL[status] ?? status}

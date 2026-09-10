@@ -175,7 +175,7 @@ export default function AccountShell({
                       <Link
                         href={item.href}
                         aria-current={active ? "page" : undefined}
-                        className={`relative flex items-center gap-2 min-h-tap-compact px-3.5 rounded-full border text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                        className={`relative flex items-center gap-2 min-h-tap-compact px-3.5 rounded-full border text-[14px] font-semibold whitespace-nowrap transition-colors ${
                           active
                             ? "bg-navy-900 border-navy-900 text-white"
                             : "bg-white border-slate-200 text-slate-600"
@@ -185,7 +185,7 @@ export default function AccountShell({
                         {item.short}
                         {item.href === "/compte/commandes" && activeOrders ? (
                           <span
-                            className={`min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full text-[10px] font-bold tabular-nums ${
+                            className={`min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full text-[11px] font-bold tabular-nums ${
                               active ? "bg-white text-navy-900" : "bg-red-600 text-white"
                             }`}
                           >

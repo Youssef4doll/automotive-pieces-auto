@@ -216,7 +216,7 @@ function CategoryForm({
       {category && <input type="hidden" name="id" value={category.id} />}
       {parentId && <input type="hidden" name="parentId" value={parentId} />}
       <label className="flex flex-col gap-1 flex-1 min-w-40">
-        <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">Nom</span>
+        <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45">Nom</span>
         <input
           name="name"
           required
@@ -226,7 +226,7 @@ function CategoryForm({
         />
       </label>
       <label className="flex flex-col gap-1 flex-1 min-w-40">
-        <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">
+        <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45">
           Lien (auto si vide)
         </span>
         <input
@@ -244,7 +244,7 @@ function CategoryForm({
           )}
         </span>
         <label className="flex flex-col gap-1 flex-1 min-w-32">
-          <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">
+          <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/45">
             Image ou icône
           </span>
           <input
@@ -252,13 +252,13 @@ function CategoryForm({
             type="file"
             accept="image/jpeg,image/png,image/webp,image/avif,image/svg+xml"
             onChange={onPickFile}
-            className="w-full text-xs file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[11px]"
+            className="w-full text-xs file:me-2 file:min-h-tap-compact file:px-3 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-[12px]"
           />
           {/* SVG first because it is the right answer for this slot: the tile
               is drawn at a dozen sizes between a 32px admin row and a
               full-width phone card, and a vector is the only file that is
               correct at all of them. */}
-          <span className="text-[10.5px] text-navy-900/40 leading-tight">
+          <span className="text-[11.5px] text-navy-900/40 leading-tight">
             SVG conseillé (net à toutes les tailles) · JPEG, PNG, WebP, AVIF acceptés
           </span>
         </label>

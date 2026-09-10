@@ -124,7 +124,7 @@ export default function PromotionForm({
               onChange={onPick}
               className="w-full text-sm file:me-3 file:min-h-tap file:px-4 file:rounded-lg file:border-0 file:bg-navy-900 file:text-white file:font-display file:font-bold file:uppercase file:text-xs file:tracking-wide"
             />
-            <span className="text-[11px] text-navy-900/45">
+            <span className="text-[12px] text-navy-900/45">
               Format conseillé : 1600 × 686 px (21:9), recadré au centre. 4 Mo max, 500 Ko pour un SVG.
             </span>
           </label>
@@ -145,7 +145,7 @@ export default function PromotionForm({
                 "Choisissez une image". It says which case it is now, and the
                 action keeps the artwork when both inputs are left alone. */}
             {uploaded && (
-              <span className="text-[11px] text-navy-900/45">
+              <span className="text-[12px] text-navy-900/45">
                 Cette bannière utilise une image téléversée. Laissez les deux champs vides pour la conserver.
               </span>
             )}

@@ -123,7 +123,7 @@ export default function CatalogView({
           buying from it, and which car the shopper is buying for. Full-bleed
           so it reads as the top of a page rather than a box in one. */}
       <section className="w-full border-b border-navy-900/6 bg-[linear-gradient(180deg,#f2f5fa_0%,#ffffff_100%)]">
-        <div className="mx-auto w-full max-w-[90rem] px-4 pt-3 pb-5 lg:pt-4 lg:pb-7">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-3 pb-5 lg:pt-4 lg:pb-7">
           <Breadcrumbs
             items={[
               { name: "Accueil", path: "/" },
@@ -153,7 +153,7 @@ export default function CatalogView({
                   <h1 className="font-heading text-[1.7rem] font-extrabold leading-[1.1] tracking-tight text-navy-950 sm:text-3xl lg:text-[2.25rem]">
                     {title}
                   </h1>
-                  {intro && <p className="mt-1.5 text-sm text-gray-600 sm:text-[15px]">{intro}</p>}
+                  {intro && <p className="mt-1.5 text-sm text-gray-600 sm:text-[16px]">{intro}</p>}
                 </div>
               </div>
 
@@ -183,7 +183,7 @@ export default function CatalogView({
           flex item and defaults to min-width:auto — it would inflate to the
           min-content width of the horizontally scrolling filter chips below
           and push the whole page sideways. It has to opt out explicitly. */}
-      <div className="mx-auto w-full min-w-0 max-w-[90rem] px-4 py-5 lg:py-7">
+      <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-5 lg:py-7">
         {/* On phones the filters are one scrollable row each, so the products
             stay above the fold, plus a button that unfolds the full panel for
             the price band and the stock tick. */}
@@ -454,7 +454,7 @@ function FilterPanel({
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <details open className="group py-3.5 first:pt-0 last:pb-0">
-      <summary className="flex min-h-tap-compact cursor-pointer select-none list-none items-center justify-between text-[13px] font-bold text-navy-950 [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-tap-compact cursor-pointer select-none list-none items-center justify-between text-[14px] font-bold text-navy-950 [&::-webkit-details-marker]:hidden">
         {title}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 transition-transform group-open:rotate-180" aria-hidden="true">
           <path d="m6 9 6 6 6-6" />

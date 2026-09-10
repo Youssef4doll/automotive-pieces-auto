@@ -43,7 +43,7 @@ export default function MyGarage() {
                     <p className="text-xs text-gray-500 mt-0.5">{v.engineName}</p>
                   </div>
                   {active ? (
-                    <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
+                    <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold uppercase text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
                       ✓ {t("garage.active")}
                     </span>
                   ) : (

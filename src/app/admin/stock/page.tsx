@@ -179,14 +179,14 @@ export default async function AdminStockPage({
               <table className="w-full text-sm">
                 <thead className="bg-navy-950 text-white/70">
                   <tr>
-                    <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Produit</th>
-                    <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Sous-catégorie</th>
-                    <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Ajouté</th>
-                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Achat</th>
-                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Vente</th>
-                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Marge</th>
-                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Stock</th>
-                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Actions</th>
+                    <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Produit</th>
+                    <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Sous-catégorie</th>
+                    <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Ajouté</th>
+                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Achat</th>
+                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Vente</th>
+                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Marge</th>
+                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Stock</th>
+                    <th className="text-end px-4 py-2.5 font-display font-bold uppercase text-[12px] tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-navy-900/8">
@@ -209,7 +209,7 @@ export default async function AdminStockPage({
                             <div className="min-w-0">
                               <p className="font-medium">
                                 {p.name}
-                                {!p.active && <span className="ms-2 text-[11px] font-bold uppercase text-gray-500">hors ligne</span>}
+                                {!p.active && <span className="ms-2 text-[12px] font-bold uppercase text-gray-500">hors ligne</span>}
                               </p>
                               <p className="text-xs text-navy-900/40">
                                 {p.sku} {p.brand ? `· ${p.brand.name}` : ""}
@@ -249,7 +249,7 @@ export default async function AdminStockPage({
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/40 w-14 shrink-0">
+      <span className="text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/40 w-14 shrink-0">
         {label}
       </span>
       {children}

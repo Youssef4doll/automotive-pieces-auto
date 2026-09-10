@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useState, type ReactNode } from "react";
+import { useActionState, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
@@ -13,9 +13,14 @@ import FormShield from "@/components/FormShield";
  *
  * Two halves. The left one is the shop: its photo, its name, and four things
  * an account is actually for — each of which exists (order e-mails, the
- * garage, cash on delivery, a person to ask). The right one is the form, on a
- * card, with one tab open at a time so only ever one password field is on the
- * page.
+ * garage, cash on delivery, a person to ask). The right one is the form, with
+ * one tab open at a time so only ever one password field is on the page.
+ *
+ * The form's own type, colour and control sizes are the shop's originals and
+ * are deliberately left alone: the owner picked the red submit button, the
+ * condensed uppercase label and the plain placeholder inputs, and a redesign
+ * that quietly restyled them was the wrong kind of change. Only the two
+ * controls under the password are new, and they are drawn in the same idiom.
  *
  * No "continue with Google / Facebook": there is no OAuth behind this site,
  * and a button that opens nothing is worse than no button.
@@ -28,20 +33,24 @@ const FEATURES: { title: DictKey; sub: DictKey; icon: "truck" | "car" | "cash" |
   { title: "auth.f4", sub: "auth.f4s", icon: "headset" },
 ];
 
-const INPUT =
-  "w-full min-h-[50px] rounded-xl border border-gray-300 bg-white ps-11 pe-3 text-base text-navy-950 placeholder:text-gray-400 outline-none transition focus:border-gold-500 focus:ring-2 focus:ring-gold-500/30";
-const PRIMARY =
-  "inline-flex w-full min-h-[52px] items-center justify-center gap-2 rounded-xl bg-gold-500 text-navy-950 font-display text-sm font-bold uppercase tracking-wide transition hover:bg-gold-400 active:scale-[0.99] disabled:opacity-60";
+/** The shop's originals, kept verbatim so the two forms cannot drift apart. */
+const TAB = "flex-1 py-3 text-sm font-display font-bold uppercase tracking-wide";
+const INPUT = "px-3 py-3 border border-gray-300 rounded-lg text-sm outline-none focus:border-gold-500";
+const SUBMIT =
+  "py-3 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-display font-bold uppercase tracking-wide";
 
 export default function AuthForms() {
   const { t } = useLocale();
   const [tab, setTab] = useState<"login" | "signup">("login");
-  const [showPassword, setShowPassword] = useState(false);
   const [loginState, loginAction, loginPending] = useActionState<AuthState, FormData>(login, undefined);
   const [signupState, signupAction, signupPending] = useActionState<AuthState, FormData>(signup, undefined);
 
   return (
-    <div className="grid min-h-[720px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    // 780px, not 640: the left column is three blocks pushed apart by
+    // justify-between, and at the shop's type scale the middle one is tall
+    // enough that a 640px column ran the feature list into the sign-up line
+    // underneath it.
+    <div className="grid min-h-[780px] lg:grid-cols-2">
       {/* ------------------------------------------------ the shop ---------- */}
       <div className="relative hidden overflow-hidden bg-navy-950 p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
         {/* The shop front, dimmed under navy so the type stays readable. The
@@ -61,7 +70,7 @@ export default function AuthForms() {
 
         <div className="relative flex items-center gap-5">
           {/* self-start: this is a flex child, and a stretched logo was the
-              bug the last version of this page shipped with. */}
+              bug an earlier version of this page shipped with. */}
           <Image
             src="/images/logo-white.png"
             alt="Automotive Pièces Auto"
@@ -70,17 +79,17 @@ export default function AuthForms() {
             className="h-12 w-auto self-start object-contain"
           />
           <span aria-hidden="true" className="h-9 w-px bg-gold-500/70" />
-          <p className="max-w-[15ch] text-xs leading-snug text-white/75">{t("auth.tagline")}</p>
+          <p className="max-w-[15ch] text-sm leading-snug text-white/75">{t("auth.tagline")}</p>
         </div>
 
         <div className="relative max-w-md">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70">{t("auth.welcome")}</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/70">{t("auth.welcome")}</p>
           <h1 className="mt-3 font-heading text-[2.7rem] font-extrabold leading-[1.02] tracking-tight xl:text-[3.3rem]">
             Automotive
             <br />
             <span className="text-gold-500">Pièces Auto</span>
           </h1>
-          <p className="mt-5 max-w-[38ch] text-[15px] leading-relaxed text-white/80">{t("auth.intro")}</p>
+          <p className="mt-5 max-w-[38ch] text-base leading-relaxed text-white/80">{t("auth.intro")}</p>
 
           <ul className="mt-8 flex flex-col gap-3.5">
             {FEATURES.map((f) => (
@@ -89,8 +98,8 @@ export default function AuthForms() {
                   <FeatureIcon name={f.icon} />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[15px] font-semibold leading-tight">{t(f.title)}</span>
-                  <span className="block text-xs text-white/60">{t(f.sub)}</span>
+                  <span className="block text-base font-semibold leading-tight">{t(f.title)}</span>
+                  <span className="block text-sm text-white/60">{t(f.sub)}</span>
                 </span>
               </li>
             ))}
@@ -111,162 +120,100 @@ export default function AuthForms() {
       </div>
 
       {/* ------------------------------------------------ the form ---------- */}
-      <div className="relative flex flex-col overflow-hidden bg-[#f6f7fb]">
-        {/* A faint mark of the brand's hexagon, bottom right. */}
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 100 100"
-          className="pointer-events-none absolute -bottom-24 -end-16 h-[420px] w-[420px] text-gold-500/[0.09]"
-        >
-          <path d="M28 6h44l22 44-22 44H28L6 50z" fill="currentColor" />
-        </svg>
-
-        <div className="relative flex justify-end px-4 pt-4 sm:px-8">
-          <Link href="/" className="inline-flex min-h-tap items-center text-sm font-semibold text-navy-900 hover:text-red-600">
+      <div className="flex flex-col">
+        <div className="flex justify-end px-4 pt-4 sm:px-8">
+          <Link href="/" className="inline-flex min-h-tap items-center text-sm font-semibold text-gray-500 hover:text-red-600">
             {t("auth.backShop")}
           </Link>
         </div>
 
-        <div className="relative flex flex-1 items-center justify-center px-4 py-8 sm:px-8">
-          <div className="w-full max-w-[560px]">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-navy-900/50">
-              {tab === "login" ? t("auth.welcomeBack") : t("auth.newHere")}
-            </p>
-            <h2 className="mt-1.5 font-heading text-[2rem] font-extrabold leading-tight text-navy-950 sm:text-[2.4rem]">
-              {tab === "login" ? t("auth.loginTitle") : t("auth.signupTitle")}
-            </h2>
-            <p className="mt-2 text-[15px] text-gray-600">{tab === "login" ? t("auth.loginSub") : t("auth.signupSub")}</p>
-
-            <div className="mt-6 rounded-2xl border border-navy-900/10 bg-white p-5 shadow-[0_18px_50px_-24px_rgba(8,22,51,0.35)] sm:p-6">
-              <div className="grid grid-cols-2 gap-1 rounded-xl bg-[#eef1f7] p-1">
-                <TabButton active={tab === "login"} onClick={() => setTab("login")} icon="user">
-                  {t("account.login")}
-                </TabButton>
-                <TabButton active={tab === "signup"} onClick={() => setTab("signup")} icon="user-plus">
-                  {t("account.signup")}
-                </TabButton>
-              </div>
-
-              {tab === "login" ? (
-                <form action={loginAction} className="mt-5 flex flex-col gap-4">
-                  <Field label={t("account.email")} icon="mail">
-                    {(id) => (
-                      <input id={id} name="email" type="email" required autoComplete="email" placeholder={t("auth.emailPlaceholder")} className={INPUT} />
-                    )}
-                  </Field>
-                  <Field
-                    label={t("account.password")}
-                    icon="lock"
-                    trailing={<EyeButton shown={showPassword} onToggle={() => setShowPassword((v) => !v)} t={t} />}
-                  >
-                    {(id) => (
-                      <input
-                        id={id}
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        required
-                        autoComplete="current-password"
-                        placeholder={t("auth.passwordPlaceholder")}
-                        className={`${INPUT} pe-12`}
-                      />
-                    )}
-                  </Field>
-
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
-                    <label className="inline-flex min-h-tap-compact items-center gap-2 text-gray-700">
-                      <input type="checkbox" name="remember" defaultChecked className="h-4 w-4 rounded border-gray-300 accent-navy-900" />
-                      {t("auth.remember")}
-                    </label>
-                    <Link
-                      href="/compte/mot-de-passe-oublie"
-                      className="inline-flex min-h-tap-compact items-center font-medium text-navy-900 underline underline-offset-2 hover:text-red-600"
-                    >
-                      {t("auth.forgot")}
-                    </Link>
-                  </div>
-
-                  {loginState?.error && (
-                    <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                      {loginState.error}
-                    </p>
-                  )}
-                  <button type="submit" disabled={loginPending} className={PRIMARY}>
-                    {loginPending ? "…" : t("account.submitLogin")}
-                    <ArrowIcon />
-                  </button>
-                </form>
-              ) : (
-                <form action={signupAction} className="relative mt-5 flex flex-col gap-4">
-                  <FormShield />
-                  <Field label={t("account.name")} icon="user">
-                    {(id) => <input id={id} name="name" required autoComplete="name" className={INPUT} />}
-                  </Field>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label={t("account.email")} icon="mail">
-                      {(id) => (
-                        <input id={id} name="email" type="email" required autoComplete="email" placeholder={t("auth.emailPlaceholder")} className={INPUT} />
-                      )}
-                    </Field>
-                    <Field label={t("account.phone")} icon="phone">
-                      {(id) => <input id={id} name="phone" required dir="ltr" autoComplete="tel" inputMode="tel" className={INPUT} />}
-                    </Field>
-                  </div>
-                  <Field
-                    label={t("account.password")}
-                    icon="lock"
-                    trailing={<EyeButton shown={showPassword} onToggle={() => setShowPassword((v) => !v)} t={t} />}
-                  >
-                    {(id) => (
-                      <input
-                        id={id}
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        required
-                        minLength={6}
-                        autoComplete="new-password"
-                        className={`${INPUT} pe-12`}
-                      />
-                    )}
-                  </Field>
-
-                  {signupState?.error && (
-                    <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                      {signupState.error}
-                    </p>
-                  )}
-                  <button type="submit" disabled={signupPending} className={PRIMARY}>
-                    {signupPending ? "…" : t("account.submitSignup")}
-                    <ArrowIcon />
-                  </button>
-                </form>
-              )}
+        <div className="flex flex-1 items-center justify-center px-4 py-8">
+          <div className="w-full max-w-md">
+            <div className="mb-6 flex overflow-hidden rounded-lg border border-gray-200">
+              <button
+                type="button"
+                onClick={() => setTab("login")}
+                className={`${TAB} ${tab === "login" ? "bg-navy-900 text-white" : "bg-white text-gray-500"}`}
+              >
+                {t("account.login")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("signup")}
+                className={`${TAB} ${tab === "signup" ? "bg-navy-900 text-white" : "bg-white text-gray-500"}`}
+              >
+                {t("account.signup")}
+              </button>
             </div>
 
-            <p className="mt-5 text-center text-sm text-gray-600">
-              {tab === "login" ? (
-                <>
-                  {t("auth.noAccount")}{" "}
-                  <button
-                    type="button"
-                    onClick={() => setTab("signup")}
-                    className="font-semibold text-navy-900 underline underline-offset-2 hover:text-red-600"
+            {tab === "login" ? (
+              <form action={loginAction} className="flex flex-col gap-3">
+                <input name="email" type="email" required autoComplete="email" placeholder={t("account.email")} className={INPUT} />
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  placeholder={t("account.password")}
+                  className={INPUT}
+                />
+
+                {/* The two controls the old form did not have. Same type and
+                    colours as everything around them, on one line, so they
+                    read as part of the form rather than as a second design. */}
+                <div className="flex flex-wrap items-center justify-between gap-x-4 text-sm">
+                  <label className="inline-flex min-h-tap-compact items-center gap-2 text-gray-700">
+                    <input type="checkbox" name="remember" defaultChecked className="h-4 w-4 rounded border-gray-300 accent-navy-900" />
+                    {t("auth.remember")}
+                  </label>
+                  <Link
+                    href="/compte/mot-de-passe-oublie"
+                    className="inline-flex min-h-tap-compact items-center text-navy-900 underline hover:text-red-600"
                   >
-                    {t("auth.register")}
-                  </button>
-                </>
-              ) : (
-                <>
-                  {t("auth.haveAccount")}{" "}
-                  <button
-                    type="button"
-                    onClick={() => setTab("login")}
-                    className="font-semibold text-navy-900 underline underline-offset-2 hover:text-red-600"
-                  >
-                    {t("account.submitLogin")}
-                  </button>
-                </>
-              )}
-            </p>
+                    {t("auth.forgot")}
+                  </Link>
+                </div>
+
+                {loginState?.error && <p className="text-xs text-red-600">{loginState.error}</p>}
+                <button type="submit" disabled={loginPending} className={SUBMIT}>
+                  {loginPending ? "…" : t("account.submitLogin")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("signup")}
+                  className="inline-flex min-h-tap items-center justify-center text-xs text-navy-900 underline"
+                >
+                  {t("account.switchToSignup")}
+                </button>
+              </form>
+            ) : (
+              <form action={signupAction} className="relative flex flex-col gap-3">
+                <FormShield />
+                <input name="name" required autoComplete="name" placeholder={t("account.name")} className={INPUT} />
+                <input name="email" type="email" required autoComplete="email" placeholder={t("account.email")} className={INPUT} />
+                <input name="phone" required dir="ltr" autoComplete="tel" inputMode="tel" placeholder={t("account.phone")} className={INPUT} />
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  placeholder={t("account.password")}
+                  className={INPUT}
+                />
+                {signupState?.error && <p className="text-xs text-red-600">{signupState.error}</p>}
+                <button type="submit" disabled={signupPending} className={SUBMIT}>
+                  {signupPending ? "…" : t("account.submitSignup")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("login")}
+                  className="inline-flex min-h-tap items-center justify-center text-xs text-navy-900 underline"
+                >
+                  {t("account.switchToLogin")}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>
@@ -274,140 +221,18 @@ export default function AuthForms() {
   );
 }
 
-/* ------------------------------------------------------------ pieces ---- */
-
-function TabButton({
-  active,
-  onClick,
-  icon,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: "user" | "user-plus";
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex min-h-tap items-center justify-center gap-2 rounded-lg text-sm font-semibold transition ${
-        active ? "bg-navy-900 text-white shadow" : "text-navy-900/70 hover:text-navy-950"
-      }`}
-    >
-      <FieldIcon name={icon} />
-      {children}
-    </button>
-  );
-}
-
-/** A labelled input with a leading icon and, optionally, a trailing control.
- *  The input is rendered by the caller so its own attributes stay in one
- *  place; this only supplies the id the label points at. */
-function Field({
-  label,
-  icon,
-  trailing,
-  children,
-}: {
-  label: string;
-  icon: "mail" | "lock" | "user" | "phone";
-  trailing?: ReactNode;
-  children: (id: string) => ReactNode;
-}) {
-  const id = useId();
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-navy-950">
-        {label}
-      </label>
-      <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 start-0 flex w-11 items-center justify-center text-gray-400">
-          <FieldIcon name={icon} />
-        </span>
-        {children(id)}
-        {trailing && <span className="absolute inset-y-0 end-0 flex items-center pe-1.5">{trailing}</span>}
-      </div>
-    </div>
-  );
-}
-
-function EyeButton({ shown, onToggle, t }: { shown: boolean; onToggle: () => void; t: (k: DictKey) => string }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={shown}
-      aria-label={shown ? t("auth.hidePassword") : t("auth.showPassword")}
-      className="grid h-10 w-10 place-items-center rounded-lg text-gray-400 hover:text-navy-900"
-    >
-      {shown ? (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-          <path d="M1 1l22 22" />
-        </svg>
-      ) : (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
-function ArrowIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
-
-function FieldIcon({ name }: { name: "mail" | "lock" | "user" | "phone" | "user-plus" }) {
-  const common = { width: 17, height: 17, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.9, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
-  switch (name) {
-    case "mail":
-      return (
-        <svg {...common}>
-          <rect x="3" y="5" width="18" height="14" rx="2" />
-          <path d="m3 7 9 6 9-6" />
-        </svg>
-      );
-    case "lock":
-      return (
-        <svg {...common}>
-          <rect x="4" y="11" width="16" height="10" rx="2" />
-          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-        </svg>
-      );
-    case "phone":
-      return (
-        <svg {...common}>
-          <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.8 2Z" />
-        </svg>
-      );
-    case "user-plus":
-      return (
-        <svg {...common}>
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M19 8v6M22 11h-6" />
-        </svg>
-      );
-    default:
-      return (
-        <svg {...common}>
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
-      );
-  }
-}
-
 function FeatureIcon({ name }: { name: "truck" | "car" | "cash" | "headset" }) {
-  const common = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+  const common = {
+    width: 20,
+    height: 20,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
   switch (name) {
     case "truck":
       return (

@@ -137,7 +137,7 @@ function IconLogout() {
 function Field({ label, value, dir }: { label: string; value: string; dir?: "ltr" }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] font-display font-bold uppercase tracking-wide text-slate-500">{label}</dt>
+      <dt className="text-[12px] font-display font-bold uppercase tracking-wide text-slate-500">{label}</dt>
       <dd className="text-sm text-navy-950 mt-0.5 break-words" dir={dir}>
         {value}
       </dd>

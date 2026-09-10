@@ -81,7 +81,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
             {/* Every one of these is omitted rather than filled with a
                 placeholder — the same rule the storefront follows, and it
                 matters more here because this gets printed and kept. */}
-            <div className="text-[13px] text-slate-600 mt-1 leading-relaxed">
+            <div className="text-[14px] text-slate-600 mt-1 leading-relaxed">
               {contact.address && <p>{contact.address}</p>}
               {contact.phone && <p dir="ltr">{contact.phone}</p>}
               {contact.email && <p dir="ltr">{contact.email}</p>}
@@ -93,15 +93,15 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
             <p className="font-mono font-bold text-navy-900 mt-1" dir="ltr">
               {order.ref}
             </p>
-            <p className="text-[13px] text-slate-600 mt-1">{placed}</p>
-            <p className="text-[13px] text-slate-600">{ORDER_STATUS_LABEL[order.status]}</p>
+            <p className="text-[14px] text-slate-600 mt-1">{placed}</p>
+            <p className="text-[14px] text-slate-600">{ORDER_STATUS_LABEL[order.status]}</p>
           </div>
         </header>
 
         {/* ----------------------------------------------------- customer */}
         <section className="grid sm:grid-cols-2 gap-6 py-6 border-b border-slate-200">
           <div>
-            <h2 className="text-[11px] font-display font-bold uppercase tracking-wide text-slate-500 mb-1.5">
+            <h2 className="text-[12px] font-display font-bold uppercase tracking-wide text-slate-500 mb-1.5">
               Client
             </h2>
             <p className="text-sm font-semibold text-navy-950">{order.customerName}</p>
@@ -115,7 +115,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
             )}
           </div>
           <div>
-            <h2 className="text-[11px] font-display font-bold uppercase tracking-wide text-slate-500 mb-1.5">
+            <h2 className="text-[12px] font-display font-bold uppercase tracking-wide text-slate-500 mb-1.5">
               {order.deliveryMethod === "PICKUP" ? "Retrait" : "Livraison"}
             </h2>
             {order.deliveryMethod === "PICKUP" ? (
@@ -135,7 +135,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
         {/* -------------------------------------------------------- lines */}
         <table className="w-full text-sm mt-6">
           <thead>
-            <tr className="text-[11px] font-display font-bold uppercase tracking-wide text-slate-500">
+            <tr className="text-[12px] font-display font-bold uppercase tracking-wide text-slate-500">
               <th className="text-start pb-2">Désignation</th>
               <th className="text-end pb-2 w-16">Qté</th>
               <th className="text-end pb-2 w-28">P.U.</th>
@@ -147,7 +147,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
               <tr key={item.id} className="border-t border-slate-200">
                 <td className="py-2.5 pe-3">
                   <span className="block font-semibold text-navy-950">{item.name}</span>
-                  <span className="block text-[12px] text-slate-500" dir="ltr">
+                  <span className="block text-[13px] text-slate-500" dir="ltr">
                     {item.sku}
                   </span>
                 </td>
@@ -198,7 +198,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
         {/* Says what the document is, without claiming to be more. A cash-on-
             delivery order is not paid at the moment this is printed, and the
             paper must not imply that it is. */}
-        <footer className="mt-8 pt-4 border-t border-slate-200 text-[12px] text-slate-500 leading-relaxed">
+        <footer className="mt-8 pt-4 border-t border-slate-200 text-[13px] text-slate-500 leading-relaxed">
           {order.paymentMethod === "COD" ? (
             <p>
               Document récapitulatif de la commande {order.ref}. Le règlement s&apos;effectue en espèces à la

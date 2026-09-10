@@ -55,7 +55,7 @@ export default function MegaMenu({
               href={`/catalogue/${family.slug}`}
               onClick={onNavigate}
               onMouseEnter={() => setActive(i)}
-              className={`flex items-center gap-2.5 ps-3.5 pe-4 py-1.5 font-heading font-bold uppercase text-[12.5px] tracking-wide border-s-[3px] hover:text-red-600 ${
+              className={`flex items-center gap-2.5 ps-3.5 pe-4 py-1.5 font-heading font-bold uppercase text-[13.5px] tracking-wide border-s-[3px] hover:text-red-600 ${
                 i === active ? "bg-white border-red-500" : "border-transparent"
               }`}
             >
@@ -65,10 +65,10 @@ export default function MegaMenu({
                 {/* Parts, not subcategories — the same number the subcategory
                     links below carry, and the one that tells the shopper
                     whether the family is worth opening. */}
-                <span className="text-[11px] font-normal tabular-nums text-gray-600">
+                <span className="text-[12px] font-normal tabular-nums text-gray-600">
                   {family.count}
                 </span>
-                <span className="text-[9px] opacity-50 rtl:rotate-180">▶</span>
+                <span className="text-[10px] opacity-50 rtl:rotate-180">▶</span>
               </span>
             </Link>
           ))}
@@ -79,7 +79,7 @@ export default function MegaMenu({
               <Link
                 href={`/catalogue/${activeFamily.slug}`}
                 onClick={onNavigate}
-                className="inline-block font-heading font-extrabold uppercase text-[15px] tracking-wide border-b-2 border-gold-500 pb-1.5 hover:text-red-600"
+                className="inline-block font-heading font-extrabold uppercase text-[16px] tracking-wide border-b-2 border-gold-500 pb-1.5 hover:text-red-600"
               >
                 {activeFamily.name}
               </Link>
