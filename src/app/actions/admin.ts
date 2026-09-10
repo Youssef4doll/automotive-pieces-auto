@@ -9,6 +9,7 @@ import { OrderStatus } from "@prisma/client";
 import { normalizeReference, parseReferenceList } from "@/lib/reference";
 import { readImageFile, mediaAssetIdFromUrl, assetUrl, assetUrlVariants } from "@/lib/image-upload";
 import { reindexProducts, topSearchMisses } from "@/lib/search";
+import { notifyOrderStatus } from "@/lib/order-emails";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -25,6 +26,10 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       history: { create: { status } },
     },
   });
+  // Tell the customer their order moved. Best-effort by design — see
+  // lib/order-emails — so a mail failure never leaves the admin unable to
+  // advance an order.
+  await notifyOrderStatus(orderId, status);
   revalidatePath("/admin/commandes");
   revalidatePath(`/admin/commandes/${orderId}`);
   revalidatePath("/compte/commandes");

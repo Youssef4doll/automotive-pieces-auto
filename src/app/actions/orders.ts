@@ -10,6 +10,7 @@ import { toNumber } from "@/lib/money";
 import { computeSegment } from "@/lib/segment";
 import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
 import { rememberOrder, placedInThisBrowser } from "@/lib/order-access";
+import { notifyOrderPlaced } from "@/lib/order-emails";
 
 const itemSchema = z.object({
   // Prisma ids are cuids; bounding the string keeps a megabyte of junk out of
@@ -212,6 +213,13 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     // Lets this browser — and only this browser — reopen the confirmation
     // page for a guest order whose reference is otherwise guessable.
     await rememberOrder(result.id);
+    // Confirmation to the customer, alert to the shop. Same reasoning as the
+    // two lines above and then some: notifyOrderPlaced catches everything and
+    // resolves either way, so a mail server having a bad day cannot take down
+    // a checkout whose stock is already claimed. Awaited rather than left
+    // floating because a promise still in flight when the serverless function
+    // returns is a promise that gets killed.
+    await notifyOrderPlaced(result.id);
 
     return { ok: true, ref: result.ref };
   } catch (e) {
@@ -249,6 +257,10 @@ export async function getOrderByRef(ref: string) {
 
   const user = await getCurrentUser();
   if (user && order.userId === user.id) return order;
+  // An admin can already read every order through /admin; letting them through
+  // here too is what allows one printable document to serve the customer, the
+  // guest who has only the cookie, and the person packing the box.
+  if (user?.role === "ADMIN") return order;
   if (await placedInThisBrowser(order.id)) return order;
   return null;
 }

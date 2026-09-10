@@ -10,6 +10,11 @@ export const DEFAULT_SETTINGS = {
   shop_whatsapp: "21600000000",
   shop_email: "⚠ contact@à-completer.tn",
   shop_hours: "Lun–Sam · 8h30–18h30",
+  // Empty by default and never invented. With it filled in, the printable
+  // order document is a proper facture carrying the matricule; without it the
+  // same document is labelled "Reçu", because an invoice without a tax number
+  // is not an invoice in Tunisia and calling it one would be a lie on paper.
+  shop_tax_id: "",
   free_shipping_threshold: "150",
   delivery_grand_tunis: "24h",
   delivery_regions: "48–72h",

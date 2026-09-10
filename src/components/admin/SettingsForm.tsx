@@ -15,6 +15,12 @@ export default function SettingsForm({ settings }: { settings: SettingsMap }) {
       <Field label="Numéro WhatsApp (indicatif + numéro, sans +)" name="shop_whatsapp" defaultValue={settings.shop_whatsapp} dir="ltr" />
       <Field label="Email de contact" name="shop_email" defaultValue={settings.shop_email} dir="ltr" />
       <Field label="Horaires" name="shop_hours" defaultValue={settings.shop_hours} />
+      <Field
+        label="Matricule fiscal (facultatif — apparaît sur les factures)"
+        name="shop_tax_id"
+        defaultValue={settings.shop_tax_id}
+        dir="ltr"
+      />
       <div className="grid sm:grid-cols-3 gap-4">
         <Field label="Seuil livraison gratuite (DT)" name="free_shipping_threshold" defaultValue={settings.free_shipping_threshold} type="number" />
         <Field label="Délai Grand Tunis" name="delivery_grand_tunis" defaultValue={settings.delivery_grand_tunis} />
