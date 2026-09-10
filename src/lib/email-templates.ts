@@ -25,15 +25,28 @@ import type { Mail } from "@/lib/email";
  *    artwork is not presented as a picture of what was ordered.
  *
  * Written as nested tables with inline styles because that is what mail
- * clients render: Outlook has no flexbox, Gmail strips <style> blocks and
- * every <svg>, and a layout that relies on any of them arrives as a stack of
- * unstyled text. The icons are therefore type — a check mark, a step number —
- * inside coloured cells, not drawings.
+ * clients render: Outlook has no flexbox, none of them have <svg>, and a
+ * layout that relies on either arrives as a stack of unstyled text. The icons
+ * are therefore either type — a check mark, a step number — in a coloured
+ * cell, or a PNG.
  *
- * The two pictures come from /public/images/email/, cut down to email size
- * from the site's own artwork (a 6 KB logo, a 58 KB hero) rather than the
- * 0.5–1.7 MB originals the pages get through next/image. A mail client
- * fetches the file as-is.
+ * The one <style> block is progressive enhancement, never load-bearing. It
+ * carries the phone rules: a row of three table cells at 33% each does not
+ * become three readable columns at 360px, it becomes three columns of one
+ * word per line, so every such row is marked and stacks under 620px. Gmail,
+ * Apple Mail, iOS Mail, Outlook.com and Yahoo honour it; Outlook on Windows
+ * ignores it and renders the desktop width, which is what it has anyway.
+ * Nothing is hidden or positioned by it — strip the block and every message
+ * is still correct, just narrower on a phone.
+ *
+ * The webfont <link> is the same bargain: Apple Mail and iOS load Barlow and
+ * Archivo so the message is set in the site's own faces, Gmail drops it and
+ * everything lands on Arial. Each stack ends in Arial for that reason.
+ *
+ * The pictures come from /public/images/email/, cut down to email size from
+ * the site's own artwork (a 6 KB logo, a 58 KB hero, 3–4 KB icons) rather
+ * than the 0.5–1.7 MB originals the pages get through next/image. A mail
+ * client fetches the file as-is.
  */
 
 const NAVY = "#0f2352";
@@ -49,7 +62,19 @@ const LINE = "#e5e7eb";
 const PALE = "#eef3fb";
 const CANVAS = "#f1f3f7";
 
-const FONT = "Arial,Helvetica,'Segoe UI',sans-serif";
+/**
+ * The shop's own three faces, each with a real fallback.
+ *
+ * Apple Mail and iOS Mail honour the webfont link in the head, so on a
+ * Tunisian customer's iPhone the message is set in the same Barlow/Archivo
+ * the site uses. Gmail strips it and everything lands on Arial, which is why
+ * every stack ends there rather than in something exotic — a message must be
+ * designed to be right in Arial and better in Barlow, never the other way
+ * round.
+ */
+const FONT = "'Barlow',Arial,Helvetica,'Segoe UI',sans-serif";
+const FONT_HEAD = "'Archivo','Barlow',Arial,Helvetica,sans-serif";
+const FONT_DISPLAY = "'Barlow Condensed','Barlow',Arial,Helvetica,sans-serif";
 
 export type OrderForEmail = {
   id: string;
@@ -138,7 +163,7 @@ function deliveryLabel(order: OrderForEmail) {
 /* ------------------------------------------------------------- blocks ---- */
 
 function row(inner: string, style = "") {
-  return `<tr><td style="${style}">${inner}</td></tr>`;
+  return `<tr><td class="p" style="${style}">${inner}</td></tr>`;
 }
 
 function logo(width: number) {
@@ -162,7 +187,31 @@ function shell(opts: { title: string; preheader: string; kicker: string; shop: S
 
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="x-apple-disable-message-reformatting"><title>${esc(title)}</title></head>
+<meta name="x-apple-disable-message-reformatting"><title>${esc(title)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
+<style>
+  /* A phone is where most of these are opened, and a row of three table
+     cells at 33% each does not become three readable columns at 360px — it
+     becomes three columns of one word per line. Every such row carries
+     .sm-col, and here each cell becomes a full-width block, so the row
+     stacks. Gmail, Apple Mail, iOS Mail, Outlook.com and Yahoo all honour
+     this; Outlook on Windows ignores it and renders the desktop width, which
+     is what it has anyway.
+
+     !important throughout because these override inline styles, which is the
+     only way anything in an email can. */
+  @media only screen and (max-width:620px) {
+    td.p { padding-left:20px !important; padding-right:20px !important; }
+    td.sm-col { display:block !important; width:100% !important; max-width:100% !important;
+                padding:0 0 14px 0 !important; border-left:0 !important; text-align:left !important; }
+    td.sm-col:last-child { padding-bottom:0 !important; }
+    td.sm-hide { display:none !important; }
+    td.sm-stack { display:block !important; width:100% !important; text-align:left !important; padding:6px 0 0 0 !important; }
+    .sm-h1 { font-size:23px !important; line-height:1.2 !important; }
+    .sm-step { font-size:10px !important; }
+    .sm-hero { padding:22px 20px !important; }
+  }
+</style></head>
 <body style="margin:0;padding:0;background:${CANVAS};-webkit-text-size-adjust:100%;">
 <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${esc(preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${CANVAS};">
@@ -170,15 +219,16 @@ function shell(opts: { title: string; preheader: string; kicker: string; shop: S
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;font-family:${FONT};color:${INK};">
   <tr><td style="background:${NAVY};padding:18px 28px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td align="left" valign="middle">${logo(120)}</td>
-      <td align="right" valign="middle" style="font-family:${FONT};font-size:12px;line-height:1.4;letter-spacing:.4px;color:#c7d0e3;">${esc(kicker)}</td>
+      <td align="left" valign="middle">${logo(124)}</td>
+      <td align="right" valign="middle" style="font-family:${FONT_DISPLAY};font-size:14px;line-height:1.4;letter-spacing:1px;text-transform:uppercase;color:#c7d0e3;">${esc(kicker)}</td>
     </tr></table>
   </td></tr>
+  <tr><td style="background:${GOLD};height:3px;line-height:3px;font-size:3px;">&nbsp;</td></tr>
   ${body}
   <tr><td style="background:${NAVY_DEEP};padding:22px 28px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td align="left" valign="middle">${logo(96)}</td>
-      <td align="right" valign="middle" style="font-family:${FONT};font-size:12px;line-height:1.7;color:#c7d0e3;">
+      <td class="sm-col" align="left" valign="middle">${logo(96)}</td>
+      <td class="sm-col" align="right" valign="middle" style="font-family:${FONT};font-size:13px;line-height:1.7;color:#c7d0e3;">
         <span style="color:${GOLD};">&#8212;</span>&nbsp; <span style="color:#ffffff;">Votre véhicule mérite le meilleur</span>
         ${contact ? `<br>${contact}` : ""}${place ? `<br><span style="color:#8f9bb8;">${place}</span>` : ""}
       </td>
@@ -199,7 +249,7 @@ function hero(opts: { headline: string; sub: string; tone?: "green" | "navy" | "
   const badge = tone === "green" ? GREEN : tone === "red" ? RED : NAVY;
   const glyph = opts.glyph ?? (tone === "red" ? "&#10005;" : "&#10003;");
   return `
-<tr><td style="background:${PALE};padding:28px 28px ${opts.picture ? "0" : "26px"};">
+<tr><td class="sm-hero" style="background:${PALE};padding:28px 28px ${opts.picture ? "0" : "26px"};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
     <td width="46" valign="top">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -207,14 +257,14 @@ function hero(opts: { headline: string; sub: string; tone?: "green" | "navy" | "
       </tr></table>
     </td>
     <td valign="top" style="padding-left:16px;">
-      <h1 style="margin:0 0 6px;font-family:${FONT};font-size:26px;line-height:1.15;font-weight:800;color:${NAVY};">${opts.headline}</h1>
-      <p style="margin:0;font-family:${FONT};font-size:14px;line-height:1.6;color:${BODY};">${opts.sub}</p>
+      <h1 class="sm-h1" style="margin:0 0 6px;font-family:${FONT_HEAD};font-size:27px;line-height:1.12;font-weight:800;letter-spacing:-.3px;color:${NAVY};">${opts.headline}</h1>
+      <p style="margin:0;font-family:${FONT};font-size:15px;line-height:1.6;color:${BODY};">${opts.sub}</p>
     </td>
   </tr></table>
 </td></tr>
 ${
   opts.picture
-    ? `<tr><td style="background:${PALE};padding:14px 28px 0;line-height:0;font-size:0;">
+    ? `<tr><td class="sm-hero" style="background:${PALE};padding:14px 28px 0;line-height:0;font-size:0;">
   <img src="${siteUrl()}/images/email/hero-lineup.jpg" width="544" alt="" style="display:block;width:100%;max-width:544px;height:auto;border:0;">
 </td></tr>`
     : ""
@@ -224,13 +274,13 @@ ${
 /** "Numéro de commande" and "Date de commande", side by side. Both are facts on the order. */
 function refAndDate(order: OrderForEmail) {
   const card = (label: string, value: string) => `
-    <td width="48%" style="border:1px solid ${LINE};border-radius:10px;padding:12px 14px;">
-      <span style="font-family:${FONT};font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:${MUTED};">${label}</span><br>
-      <span style="font-family:${FONT};font-size:17px;line-height:1.5;font-weight:bold;color:${NAVY};">${value}</span>
+    <td class="sm-col" width="48%" valign="top" style="border:1px solid ${LINE};border-radius:10px;padding:12px 14px;">
+      <span style="font-family:${FONT_DISPLAY};font-size:13px;letter-spacing:1px;text-transform:uppercase;color:${MUTED};">${label}</span><br>
+      <span style="font-family:${FONT_HEAD};font-size:18px;line-height:1.5;font-weight:800;color:${NAVY};">${value}</span>
     </td>`;
   return row(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      ${card("Numéro de commande", esc(order.ref))}<td width="4%"></td>${card("Date de commande", esc(fmtWhen(order.createdAt)))}
+      ${card("Numéro de commande", esc(order.ref))}<td class="sm-hide" width="4%"></td>${card("Date de commande", esc(fmtWhen(order.createdAt)))}
     </tr></table>`,
     "padding:22px 28px 0;"
   );
@@ -242,7 +292,7 @@ function button(label: string, href: string, scheme: "gold" | "navy" = "gold") {
   return row(
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
       <td style="background:${bg};border-radius:8px;">
-        <a href="${esc(href)}" style="display:inline-block;padding:13px 22px;font-family:${FONT};font-size:13px;font-weight:bold;letter-spacing:.6px;text-transform:uppercase;color:${fg};text-decoration:none;">${label} &rarr;</a>
+        <a href="${esc(href)}" style="display:inline-block;padding:14px 24px;font-family:${FONT_DISPLAY};font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${fg};text-decoration:none;">${label} &rarr;</a>
       </td>
     </tr></table>`,
     "padding:18px 28px 0;"
@@ -285,7 +335,7 @@ function progress(status: string) {
         </td>
         ${connector(i < at, i === last)}
       </tr></table>
-      <div style="margin-top:8px;padding:0 2px;font-family:${FONT};font-size:11px;line-height:1.3;color:${now ? NAVY : done ? INK : FAINT};font-weight:${now || done ? "bold" : "normal"};">${esc(STEP_LABEL[s])}</div>
+      <div class="sm-step" style="margin-top:8px;padding:0 2px;font-family:${FONT};font-size:12px;line-height:1.3;color:${now ? NAVY : done ? INK : FAINT};font-weight:${now || done ? "bold" : "normal"};">${esc(STEP_LABEL[s])}</div>
     </td>`;
   }).join("");
   return row(
@@ -315,7 +365,7 @@ function nextStepsNote(order: OrderForEmail) {
   return row(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PALE};border-radius:10px;"><tr>
       <td width="44" valign="middle" style="padding:14px 0 14px 16px;">${icon("truck", 40)}</td>
-      <td valign="middle" style="padding:14px 16px 14px 12px;font-family:${FONT};font-size:13px;line-height:1.6;color:${BODY};">
+      <td valign="middle" style="padding:14px 16px 14px 12px;font-family:${FONT};font-size:14px;line-height:1.6;color:${BODY};">
         Vous recevrez un e-mail dès que votre commande sera expédiée.<br>${meanwhile}
       </td>
     </tr></table>`,
@@ -329,8 +379,8 @@ function sectionTitle(text: string, aside?: string, asideHref?: string) {
     : aside ?? "";
   return row(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td style="font-family:${FONT};font-size:15px;font-weight:bold;color:${NAVY};">${text}</td>
-      ${side ? `<td align="right" valign="middle" style="font-family:${FONT};font-size:12px;color:${MUTED};">${side}</td>` : ""}
+      <td style="font-family:${FONT_HEAD};font-size:17px;font-weight:800;letter-spacing:-.2px;color:${NAVY};">${text}</td>
+      ${side ? `<td class="sm-stack" align="right" valign="middle" style="font-family:${FONT};font-size:13px;color:${MUTED};">${side}</td>` : ""}
     </tr></table>`,
     "padding:26px 28px 10px;"
   );
@@ -350,10 +400,10 @@ function items(order: OrderForEmail) {
       (i) => `<tr>
     <td width="56" valign="top" style="padding:10px 0;border-top:1px solid ${LINE};">${thumb(i)}</td>
     <td valign="top" style="padding:10px 12px;border-top:1px solid ${LINE};font-family:${FONT};">
-      <div style="font-size:14px;line-height:1.4;font-weight:bold;color:${INK};">${esc(i.name)}</div>
-      <div style="margin-top:3px;font-size:12px;line-height:1.4;color:${MUTED};">Réf. ${esc(i.sku)} &nbsp;·&nbsp; ${i.qty} × ${esc(formatTNDfr(i.unitPrice))}</div>
+      <div style="font-size:15px;line-height:1.4;font-weight:700;color:${NAVY};">${esc(i.name)}</div>
+      <div style="margin-top:3px;font-size:13px;line-height:1.4;color:${MUTED};">Réf. ${esc(i.sku)} &nbsp;·&nbsp; ${i.qty} × ${esc(formatTNDfr(i.unitPrice))}</div>
     </td>
-    <td valign="top" align="right" style="padding:10px 0;border-top:1px solid ${LINE};font-family:${FONT};font-size:14px;line-height:1.4;font-weight:bold;color:${INK};white-space:nowrap;">${esc(formatTNDfr(i.lineTotal))}</td>
+    <td valign="top" align="right" style="padding:10px 0;border-top:1px solid ${LINE};font-family:${FONT_HEAD};font-size:15px;line-height:1.4;font-weight:800;color:${NAVY};white-space:nowrap;">${esc(formatTNDfr(i.lineTotal))}</td>
   </tr>`
     )
     .join("");
@@ -366,8 +416,8 @@ function items(order: OrderForEmail) {
 function totals(order: OrderForEmail) {
   const shipping = order.shippingFee > 0 ? esc(formatTNDfr(order.shippingFee)) : "Offerte";
   const line = (label: string, value: string, strong = false) => `<tr>
-    <td style="padding:${strong ? "12px 0 0" : "6px 0 0"};font-family:${FONT};font-size:${strong ? "16px" : "13px"};color:${strong ? NAVY : MUTED};font-weight:${strong ? "bold" : "normal"};${strong ? `border-top:2px solid ${NAVY};` : ""}">${label}</td>
-    <td align="right" style="padding:${strong ? "12px 0 0" : "6px 0 0"};font-family:${FONT};font-size:${strong ? "16px" : "13px"};color:${strong ? NAVY : INK};font-weight:${strong ? "bold" : "normal"};white-space:nowrap;${strong ? `border-top:2px solid ${NAVY};` : ""}">${value}</td>
+    <td style="padding:${strong ? "12px 0 0" : "6px 0 0"};font-family:${strong ? FONT_HEAD : FONT};font-size:${strong ? "18px" : "14px"};color:${strong ? NAVY : MUTED};font-weight:${strong ? "800" : "normal"};${strong ? `border-top:2px solid ${NAVY};` : ""}">${label}</td>
+    <td align="right" style="padding:${strong ? "12px 0 0" : "6px 0 0"};font-family:${strong ? FONT_HEAD : FONT};font-size:${strong ? "18px" : "14px"};color:${strong ? NAVY : INK};font-weight:${strong ? "800" : "normal"};white-space:nowrap;${strong ? `border-top:2px solid ${NAVY};` : ""}">${value}</td>
   </tr>`;
   return row(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${LINE};">
@@ -383,9 +433,9 @@ function totals(order: OrderForEmail) {
 function logistics(order: OrderForEmail, shop: ShopForEmail) {
   const window = deliveryWindow(order, shop);
   const cell = (label: string, value: string) => `
-    <td width="33%" valign="top" style="padding:0 8px;">
-      <div style="font-family:${FONT};font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:${MUTED};">${label}</div>
-      <div style="margin-top:4px;font-family:${FONT};font-size:13px;line-height:1.5;color:${INK};">${value}</div>
+    <td class="sm-col" width="33%" valign="top" style="padding:0 8px;">
+      <div style="font-family:${FONT_DISPLAY};font-size:13px;letter-spacing:1px;text-transform:uppercase;color:${MUTED};">${label}</div>
+      <div style="margin-top:3px;font-family:${FONT};font-size:14px;line-height:1.5;color:${INK};">${value}</div>
     </td>`;
   const first =
     order.deliveryMethod === "PICKUP"
@@ -421,12 +471,12 @@ function assurances(order: OrderForEmail, shop: ShopForEmail) {
   ];
   const cells = facts
     .map(
-      ([title, line, name]) => `<td width="33%" valign="top" style="padding:0 6px;">
+      ([title, line, name]) => `<td class="sm-col" width="33%" valign="top" style="padding:0 6px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
         <td valign="top" style="padding-right:10px;">${icon(name, 40)}</td>
         <td valign="top">
-          <div style="font-family:${FONT};font-size:13px;font-weight:bold;color:${NAVY};line-height:1.3;">${title}</div>
-          <div style="margin-top:3px;font-family:${FONT};font-size:12px;line-height:1.5;color:${MUTED};">${line}</div>
+          <div style="font-family:${FONT};font-size:14px;font-weight:700;color:${NAVY};line-height:1.3;">${title}</div>
+          <div style="margin-top:3px;font-family:${FONT};font-size:13px;line-height:1.5;color:${MUTED};">${line}</div>
         </td>
       </tr></table>
     </td>`
@@ -442,7 +492,7 @@ function assurances(order: OrderForEmail, shop: ShopForEmail) {
 
 function signoff(shop: ShopForEmail) {
   return row(
-    `<p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${BODY};">À très bientôt,<br><strong style="color:${NAVY};">L'équipe ${esc(shop.name)}</strong></p>`,
+    `<p style="margin:0;font-family:${FONT};font-size:14px;line-height:1.6;color:${BODY};">À très bientôt,<br><strong style="color:${NAVY};">L'équipe ${esc(shop.name)}</strong></p>`,
     "padding:26px 28px 28px;"
   );
 }
@@ -540,9 +590,9 @@ export function newOrderAlertMail(order: OrderForEmail, shop: ShopForEmail): Mai
 
   const customer = row(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${LINE};border-radius:10px;"><tr><td style="padding:14px 16px;">
-      <div style="font-family:${FONT};font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:${MUTED};">Client</div>
-      <div style="margin-top:4px;font-family:${FONT};font-size:16px;font-weight:bold;color:${NAVY};">${esc(order.customerName)}</div>
-      <div style="margin-top:4px;font-family:${FONT};font-size:13px;line-height:1.7;color:${INK};">
+      <div style="font-family:${FONT_DISPLAY};font-size:13px;letter-spacing:1px;text-transform:uppercase;color:${MUTED};">Client</div>
+      <div style="margin-top:4px;font-family:${FONT_HEAD};font-size:18px;font-weight:800;color:${NAVY};">${esc(order.customerName)}</div>
+      <div style="margin-top:4px;font-family:${FONT};font-size:14px;line-height:1.7;color:${INK};">
         <a href="tel:${esc(order.phone.replace(/\s+/g, ""))}" style="color:${INK};text-decoration:none;">${esc(order.phone)}</a>
         ${order.email ? `&nbsp;·&nbsp; <a href="mailto:${esc(order.email)}" style="color:${NAVY};text-decoration:underline;">${esc(order.email)}</a>` : `&nbsp;·&nbsp; <span style="color:${MUTED};">pas d'e-mail</span>`}
         ${order.userId ? `<br><span style="color:${MUTED};">Client avec compte</span>` : `<br><span style="color:${MUTED};">Commande sans compte</span>`}
@@ -553,7 +603,7 @@ export function newOrderAlertMail(order: OrderForEmail, shop: ShopForEmail): Mai
 
   const note = order.notes
     ? row(
-        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fffbea;border-left:4px solid ${GOLD};border-radius:0 10px 10px 0;"><tr><td style="padding:12px 14px;font-family:${FONT};font-size:13px;line-height:1.6;color:${INK};">
+        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fffbea;border-left:4px solid ${GOLD};border-radius:0 10px 10px 0;"><tr><td style="padding:12px 14px;font-family:${FONT};font-size:14px;line-height:1.6;color:${INK};">
           <strong>Note du client :</strong> ${esc(order.notes)}
         </td></tr></table>`,
         "padding:14px 28px 0;"
@@ -715,7 +765,7 @@ export function passwordResetMail(user: { name: string; email: string }, url: st
     }),
     button("Choisir un nouveau mot de passe", url),
     row(
-      `<p style="margin:0;font-family:${FONT};font-size:14px;line-height:1.6;color:${BODY};">
+      `<p style="margin:0;font-family:${FONT};font-size:15px;line-height:1.6;color:${BODY};">
         Ce lien est valable <strong>une heure</strong> et ne sert qu'une fois. Si vous n'avez rien demandé, ignorez
         simplement ce message : votre mot de passe reste inchangé et personne n'a accédé à votre compte.
       </p>`,
