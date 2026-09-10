@@ -291,3 +291,45 @@ body {
     }
   }
 }
+
+/* ---------------------------------------------------------------- print --
+   What comes out of a printer should be the document, not the website.
+
+   Added for the order receipt (/commande/[ref]/recu), which a customer files
+   and the shop puts in the box — but every page benefits: nobody has ever
+   wanted a navigation bar, a cookie strip or a newsletter form on paper, and
+   a sticky header prints on top of the content on the first page.
+
+   Colour-adjust is set so the navy rules and the totals line survive: most
+   browsers drop backgrounds when printing, which turned the document's only
+   structural lines into nothing. */
+@media print {
+  /* Only what is explicitly marked as chrome. This selector used to be
+     `header, footer, nav`, which also hid the receipt's OWN <header> and
+     <footer> — the shop name, the document title, the reference and the
+     payment note all vanished from the printout while the layout around them
+     disappeared correctly. Marking the chrome is the version that cannot
+     reach into a page's content. */
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A link's href is useless on paper and long enough to break the layout. */
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+}

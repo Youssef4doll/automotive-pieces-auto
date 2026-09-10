@@ -173,8 +173,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
             </div>
           </dl>
 
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <ReorderButton items={reorderItems} />
+            <Link
+              href={`/commande/${order.ref}/recu`}
+              className="inline-flex items-center gap-2 min-h-tap px-4 rounded-xl border border-slate-300 text-navy-900 font-display font-bold uppercase text-xs tracking-wide hover:border-navy-900 transition-colors"
+            >
+              Reçu
+            </Link>
           </div>
         </section>
 

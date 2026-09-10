@@ -92,6 +92,12 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
         <Link href="/compte/commandes" className="px-5 py-3 rounded-lg bg-navy-900 text-white font-semibold">
           Suivre ma commande
         </Link>
+        {/* A guest checking out has no account to come back to; this page and
+            the cookie behind it are the only record they have, so the way to
+            keep one belongs here rather than only in the account area. */}
+        <Link href={`/commande/${order.ref}/recu`} className="px-5 py-3 rounded-lg border border-gray-300 text-navy-900 font-semibold">
+          Reçu à imprimer
+        </Link>
         <Link href="/" className="px-5 py-3 rounded-lg border border-gray-300 text-navy-900 font-semibold">
           Continuer mes achats
         </Link>

@@ -38,6 +38,19 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           <OrderStatusButtons orderId={order.id} status={order.status} />
         </div>
 
+        {/* The same document the customer gets, used here as the note that
+            goes in the box — one set of facts rather than two that can drift. */}
+        <div>
+          <a
+            href={`/commande/${order.ref}/recu`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 min-h-tap px-4 rounded-lg border border-navy-900/15 text-navy-900 font-display font-bold uppercase text-xs tracking-wide hover:border-navy-900/40"
+          >
+            Bon à imprimer
+          </a>
+        </div>
+
         <div className="grid sm:grid-cols-2 gap-4 text-sm border-t border-navy-900/8 pt-4">
           <div>
             <h2 className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide mb-1">Client</h2>

@@ -86,7 +86,7 @@ export default function HeaderClient({
       {/* 12px floor (var(--text-min)): this bar carries real delivery/returns
           info on every page, so it must be readable without zooming. */}
       {noticeOpen && (
-      <div className="relative bg-red-500 text-white text-[clamp(12px,3vw,13px)] leading-[1.35] font-semibold">
+      <div data-print-hide className="relative bg-red-500 text-white text-[clamp(12px,3vw,13px)] leading-[1.35] font-semibold">
         <button
           onClick={dismissNotice}
           aria-label={t("cart.dismiss")}
@@ -110,7 +110,7 @@ export default function HeaderClient({
           shopper's selected vehicle stays on screen while they scroll a
           category or a long product page — that is the whole point of having
           it, and it was previously scrolling away. */}
-      <div className="sticky top-0 z-40 shadow-md">
+      <div data-print-hide className="sticky top-0 z-40 shadow-md">
       <header
         className="relative bg-navy-900 text-white px-[clamp(12px,3.5vw,28px)]"
         onMouseLeave={() => setMenuOpen(false)}
