@@ -74,7 +74,9 @@ export default function ProductCard({
     <Link
       href={`/produit/${product.slug}`}
       className={`group/img relative block overflow-hidden bg-white ${
-        list ? "w-28 sm:w-40 shrink-0 self-stretch min-h-[7.5rem] border-e border-navy-900/6" : "aspect-[4/3] border-b border-navy-900/6"
+        list
+          ? "w-28 sm:w-40 shrink-0 self-stretch min-h-[7.5rem] border-e border-navy-900/6"
+          : "aspect-square @[13rem]:aspect-[4/3] border-b border-navy-900/6"
       }`}
     >
       {/* object-contain, not cover: a part is photographed on white, or drawn
@@ -84,7 +86,7 @@ export default function ProductCard({
         src={product.imageUrl}
         alt={product.name}
         fill
-        className="object-contain p-3 transition-transform duration-300 group-hover/img:scale-[1.04]"
+        className="object-contain p-2 @[13rem]:p-3 transition-transform duration-300 group-hover/img:scale-[1.04]"
         sizes={list ? "160px" : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"}
       />
       {fit === "yes" && (
@@ -175,7 +177,7 @@ export default function ProductCard({
             //
             // Two lines, always: clamped so a long name cannot push the price
             // down, and floored so a short one cannot pull it up.
-            className="line-clamp-2 min-h-[42px] text-[15px] font-semibold leading-snug text-navy-700 underline-offset-2 decoration-1 hover:text-red-600 hover:underline"
+            className="line-clamp-3 min-h-[63px] @[13rem]:line-clamp-2 @[13rem]:min-h-[42px] text-[15px] font-semibold leading-snug text-navy-700 underline-offset-2 decoration-1 hover:text-red-600 hover:underline"
           >
             {product.name}
           </Link>
@@ -234,7 +236,7 @@ export default function ProductCard({
             )}
             {delivery && (
               <span
-                className={`inline-flex min-h-8 items-start gap-1.5 leading-4 text-gray-600 ${outOfStock ? "invisible" : ""}`}
+                className={`hidden min-h-8 items-start gap-1.5 leading-4 text-gray-600 @[13rem]:inline-flex ${outOfStock ? "invisible" : ""}`}
                 aria-hidden={outOfStock || undefined}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="mt-px shrink-0" aria-hidden="true">

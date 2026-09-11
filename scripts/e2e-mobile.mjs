@@ -385,6 +385,43 @@ console.log("\n[12] TEXT MEETS THE CONTRAST FLOOR");
   await page.close();
 }
 
+console.log("\n[X] NOTHING ON A PHONE SUMMONS A KEYBOARD, OR THE ZOOM THAT COMES WITH IT");
+{
+  const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage();
+  await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(600);
+
+  // iOS zooms the whole viewport when a text control under 16px takes focus,
+  // and does not zoom back out. globals.css forces 16px under a coarse
+  // pointer; this is the check that nothing slips past it.
+  const undersized = await page.evaluate(() =>
+    [...document.querySelectorAll("input, select, textarea")]
+      .filter((e) => !["checkbox", "radio", "range", "file"].includes(e.getAttribute("type") || ""))
+      .filter((e) => parseFloat(getComputedStyle(e).fontSize) < 16)
+      .map((e) => `${e.tagName.toLowerCase()}[${e.getAttribute("type") || ""}] ${getComputedStyle(e).fontSize}`));
+  check("every text control on the home page is at least 16px", undersized.length === 0, undersized.slice(0, 3).join(" | "));
+
+  // And the vehicle picker must not focus its search box on a touch device:
+  // a keyboard the shopper did not ask for covers the list they came to read.
+  await page.getByRole("button", { name: /Je connais ma voiture/ }).first().click();
+  await page.waitForTimeout(200);
+  await page.getByRole("button", { name: /Choisir ma voiture/ }).first().click();
+  await page.waitForTimeout(500);
+  const know = page.getByRole("button", { name: /Je connais ma voiture|Marque, modèle/ }).last();
+  if (await know.count()) { await know.click(); await page.waitForTimeout(600); }
+  const focused = await page.evaluate(() => {
+    const a = document.activeElement;
+    return a ? `${a.tagName.toLowerCase()}[${a.getAttribute("type") || ""}]` : "none";
+  });
+  check("the vehicle picker does not put the cursor in a field", !focused.startsWith("input"), focused);
+
+  const pickerFields = await page.evaluate(() =>
+    [...document.querySelectorAll('[role="dialog"] input, [role="dialog"] select, [role="dialog"] textarea')]
+      .filter((e) => parseFloat(getComputedStyle(e).fontSize) < 16).length);
+  check("and its own field would not zoom either if tapped", pickerFields === 0);
+  await page.close();
+}
+
 await browser.close();
 await prisma.$disconnect();
 

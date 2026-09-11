@@ -144,9 +144,15 @@ export default function VehiclePicker({
    */
   useEffect(() => {
     if (path !== "know" || step === "engine") return;
-    const hasFinePointer =
-      typeof window !== "undefined" && window.matchMedia?.("(pointer: fine)").matches;
-    if (hasFinePointer) searchRef.current?.focus();
+    // `pointer: fine` alone was not enough. It is true on a touch laptop, and
+    // on more than one Android browser and in-app WebView, so the keyboard
+    // still appeared on a phone — "sometimes", which is the worst kind of
+    // bug to be told about. All three conditions together can only describe a
+    // machine with a mouse and no touchscreen, which is the only place an
+    // automatic focus is a kindness rather than an ambush.
+    const mq = (q: string) => typeof window !== "undefined" && !!window.matchMedia?.(q).matches;
+    const isMouseDriven = mq("(pointer: fine)") && mq("(hover: hover)") && !mq("(any-pointer: coarse)");
+    if (isMouseDriven) searchRef.current?.focus();
   }, [path, step]);
 
   const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
