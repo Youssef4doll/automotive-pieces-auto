@@ -1,29 +1,16 @@
 import { expandQuery } from "./synonyms";
+import { fold, hasLatin } from "./fold";
 
 /**
- * Turning what was typed into what can be matched.
+ * Turning what was typed into what it means.
  *
- * Everything here is deliberately pure and dependency-free: the same folding
- * runs in the browser (to key the suggestion cache), on the server (to build
- * a query) and in SQL (to build the index blob), and the three must agree
- * character for character or a part becomes unreachable.
+ * Deliberately pure and dependency-free: the same reading runs in the browser
+ * (to key the suggestion cache) and on the server (to build a query), and the
+ * two must agree or a part becomes unreachable. The character layer — case,
+ * accents, Arabic spellings — lives in ./fold.
  */
 
-/**
- * Lower case, accents removed, punctuation turned into spaces.
- *
- * "Filtre à huile" and "FILTRE A HUILE" and "filtre-a-huile" all fold to the
- * same string. Accents in particular are not optional: half the phones in
- * Tunisia type French without them.
- */
-export function fold(input: string): string {
-  return input
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+export { fold } from "./fold";
 
 /** Words too common to narrow anything down. Position words are NOT here. */
 const STOPWORDS = new Set([
@@ -71,9 +58,17 @@ export function parseQuery(raw: string): ParsedQuery {
   const folded = fold(trimmed);
   const { canonical, rest } = expandQuery(folded);
 
+  // A word the vocabulary did not recognise and that carries no Latin
+  // character cannot appear in the index — the catalogue is written in French
+  // — so it is context, not a requirement. Requiring it is how "فلتر زيت
+  // كليو" found nothing while "فلتر زيت" found the oil filters: every token
+  // has to match, and كليو never can. The unrecognised Arabic is still in
+  // `folded`, so the demand log records what was really typed.
+  const indexable = rest.filter(hasLatin);
+
   const tokens = [
     ...new Set(
-      [...canonical.flatMap((c) => c.split(" ")), ...rest]
+      [...canonical.flatMap((c) => c.split(" ")), ...indexable]
         .filter((w) => w.length > 0 && !STOPWORDS.has(w))
         .map(singular),
     ),
@@ -84,6 +79,8 @@ export function parseQuery(raw: string): ParsedQuery {
     folded,
     canonical,
     tokens,
-    fuzzyText: [...canonical, ...rest].join(" ").trim() || folded,
+    // Likewise for the trigram comparison: the blob it is compared against is
+    // French, so Arabic in here only drags the similarity down.
+    fuzzyText: [...canonical, ...indexable].join(" ").trim() || folded,
   };
 }

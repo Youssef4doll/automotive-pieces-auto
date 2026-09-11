@@ -283,7 +283,22 @@ console.log("\n[9] THE INDEX FOLLOWS THE CATALOGUE");
   const after = await search(marker);
   check("and becomes findable once reindexed", after.count > 0, `${after.count} results`);
 
+  // Put the index back as well as the name.
+  //
+  // Restoring only the name left the marker sitting in this product's
+  // searchText for good, and the NEXT run of this suite generates a marker
+  // that differs from it by a few digits — close enough, sometimes, for the
+  // trigram rescue to match it. The check above then fails on a stale index
+  // this suite poisoned itself, days earlier. Intermittent, self-inflicted,
+  // and invisible until you run the suite twice in quick succession.
   await prisma.product.update({ where: { id: victim.id }, data: { name: victim.name } });
+  await prisma.$executeRawUnsafe(`
+    UPDATE "Product" p SET "searchText" = lower(unaccent(concat_ws(' ',
+      p.name, p.sku, p.description,
+      (SELECT b.name FROM "Brand" b WHERE b.id = p."brandId"),
+      (SELECT c.name FROM "Category" c WHERE c.id = p."categoryId"),
+      array_to_string(p."oemRefs", ' ')
+    ))) WHERE p.id = '${victim.id}'`);
 }
 
 console.log("\n[10] SEARCH DOES NOT SHIP ITS INDEX TO THE BROWSER");

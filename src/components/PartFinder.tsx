@@ -195,6 +195,7 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
                     <IconChevron />
                     {t("finder2.vinToggle")}
                   </summary>
+                  <p className="mt-1 text-xs text-gray-600">{t("finder2.vinWhere")}</p>
                   <form onSubmit={submitVin} className="mt-2 flex flex-wrap items-start gap-2">
                     <div className="min-w-0">
                       <input

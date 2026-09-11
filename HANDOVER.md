@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-25 Playwright suites, ~960 checks, driving real browsers against a real
+26 Playwright suites, ~1000 checks, driving real browsers against a real
 database. They are the main safety net and they have caught more real bugs
 than they have cost.
 
@@ -115,7 +115,7 @@ src/app/(site)/     storefront          src/lib/data/    all database reads
 src/app/admin/      admin               src/lib/         session, search, money,
 src/app/actions/    server actions                       rate limits, shipping…
 src/app/api/        images, part icons  prisma/          schema, 16 migrations
-src/components/     UI                  scripts/         the 25 e2e suites
+src/components/     UI                  scripts/         the 26 e2e suites
 ```
 
 **26 Prisma models.** The ones worth knowing: `Product`, `Category` (two levels
@@ -298,7 +298,12 @@ one would otherwise overwrite.
 Working and covered by tests:
 
 - Catalogue with two-level categories, brands, vehicle fitment, fuzzy search
-  (pg_trgm + unaccent), reference lookup, search suggestions. Category pages
+  (pg_trgm + unaccent), reference lookup, search suggestions. The search
+  understands how this shop's customers actually type: "debriyaj", "blaket",
+  "zit", and Arabic — دبرياج، فلتر الزيت، بلاكات — all reach the French
+  catalogue through the vocabulary in `src/lib/search/synonyms.ts`, including
+  Arabic car names. Anything that keeps turning up in
+  /admin/analytics → "Demande non satisfaite" belongs in that file. Category pages
   filter by brand (several, OR'd), price band, in-stock, and type, all in the
   URL (`?brand=a,b&min=20&max=120&stock=1&sort=price-asc`) so a filtered page
   can be shared and works with JavaScript off; grid or list view.
