@@ -48,7 +48,7 @@ export default async function VehicleShortcuts({ take = 18 }: { take?: number })
           uploaded, so the board stays even as the shop fills them in one at a
           time. The stand-in is the make's initial, never a drawn badge: an
           invented one would be a claim about a manufacturer. */}
-      <ul className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-2.5">
+      <ul className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 3xl:grid-cols-8 gap-2 sm:gap-2.5">
         {makes.map((m) => (
           <li key={m.slug}>
             <Link

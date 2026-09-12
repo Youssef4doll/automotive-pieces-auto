@@ -46,7 +46,7 @@ export default async function BrandBoard() {
             cost 82px. Alphabetical, so the nine a phone keeps are not a
             ranking anybody has to defend; the rest are one search away, and
             the catalogue's own brand filter lists every one of them. */}
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6 2xl:grid-cols-8">
+        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6 3xl:grid-cols-8">
           {brands.map((b, i) => (
             <li key={b.id} className={i < 9 ? "" : "hidden sm:block"}>
               {/* Search rather than a brand page: the index carries the brand

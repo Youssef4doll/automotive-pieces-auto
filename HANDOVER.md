@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-27 Playwright suites, ~1090 checks, driving real browsers against a real
+27 Playwright suites, ~1100 checks, driving real browsers against a real
 database. They are the main safety net and they have caught more real bugs
 than they have cost.
 
@@ -105,6 +105,20 @@ nothing outside Next resolves.
 
 Suites are independent, run in series (several place real orders and move real
 stock), and clean up after themselves.
+
+Two things that bit, both worth knowing before writing another suite:
+
+- **Never hard-code the thing you are going to buy.** Each pass places ~25 real
+  orders and really decrements stock; nothing puts it back. Two suites walked
+  to `/catalogue/filtres` and clicked the first "Ajouter au panier", and after a
+  day of runs that family sat at zero on all sixteen products — the button was
+  disabled and the suite crashed, reporting a stock problem as a mail problem.
+  `scripts/lib/stocked-product.mjs` asks the database what is buyable.
+- **A suite that edits shared state must restore it on every path out.**
+  `e2e-emails` sets `shop_email`, crashed before its cleanup once, and left a
+  test address in the settings — which flipped the site's contact link from the
+  store section to a `mailto:` and crashed a different suite in the next run.
+  It now restores on an uncaught exception too.
 
 ---
 
@@ -230,11 +244,23 @@ out 809px instead of 1280 and an empty cart came out 225px. Invisible on a
 phone, where content fills the width anyway, and the whole of "the site looks
 small on a big screen". `e2e-mobile` [16] measures it.
 
-**The width of the site is `.shell-w`, in one place.** 1280px up to a 1536px
-screen, 1536px above it — every band measures against it, so they line up down
-the page and widening the site is one edit rather than thirty. The grids take
-the extra room rather than stretching: catalogue 4 → 5 columns, family board
-6 → 8, top sellers 4 → 6.
+**The width of the site is `.shell-w`, in one place** — and it follows the
+screen rather than sitting at a fixed number. 85% of the viewport above 72rem,
+capped at 96rem. A fixed max-width always eats more of a small screen than a
+large one: 1280px is 89% of a 1440px laptop and 50% of a 27" monitor, so the
+same site read edge-to-edge on one and comfortable on the other. Every band
+measures against this, so they line up down the page and changing it is one
+edit rather than thirty.
+
+**Columns step where a card would get cramped, not at round viewport numbers.**
+The shell follows the screen and the catalogue's sidebar takes a fixed 280px
+off the grid, so `xl:grid-cols-4` (1280px) produced 172px cards — a two-up
+phone card, on a desktop. Three columns there, four from 1536, five from
+`3xl`, which is a custom 1800px breakpoint: about 230px at every desktop width
+and never narrower as the screen grows. `3xl` is declared in **rem**, and that
+is load-bearing — Tailwind sorts breakpoints by the literal it is given, so a
+px value lands in a block ahead of the rem-valued built-ins and `lg:` then
+wins at 1800px with the variant compiled and nothing happening.
 
 **The home page's two boards are makes and manufacturers, side by side.**
 Which car, then whose part — the two questions a parts shop is navigated by.

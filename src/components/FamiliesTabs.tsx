@@ -134,7 +134,7 @@ export default function FamiliesTabs({
         // grid-cols-N compiles to repeat(N, minmax(0, 1fr)) — the zero floor is
         // what keeps a long unbroken name from widening its own track and, with
         // it, the page.
-        <div className="grid grid-cols-2 min-[380px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-2.5">
+        <div className="grid grid-cols-2 min-[380px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 3xl:grid-cols-8 gap-2 sm:gap-2.5">
           {families.map((f) => {
             const open = openFamily === f.slug;
             // Only an admin is ever handed one of these, so the badge below

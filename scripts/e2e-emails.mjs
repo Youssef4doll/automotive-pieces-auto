@@ -24,6 +24,7 @@ import { chromium } from "playwright";
 import { createServer } from "node:http";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
+import { addStockedToCart } from "./lib/stocked-product.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const PORT = Number(process.env.MAIL_STUB_PORT || 8788);
@@ -80,11 +81,18 @@ const waitForMail = async (n, ms = 8000) => {
 
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 
+/** Whatever placeOrder last put in a basket, so the checks below can assert
+ *  against the part that was really bought rather than one named in advance. */
+let lastBought = null;
+
 async function placeOrder(page, { email, name = "Client E2E", phone = "20111222" }) {
-  await page.goto(`${BASE}/catalogue/filtres`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(600);
-  await page.click('button:has-text("Ajouter au panier")');
-  await page.waitForTimeout(700);
+  // Whatever is actually in stock, not the first card of a hard-coded
+  // category: this suite places six real orders and runs near the end of a
+  // battery that places twenty more, and "Filtres" has been bought to zero
+  // before now. See lib/stocked-product.
+  const bought = await addStockedToCart(page, prisma, BASE);
+  if (!bought) throw new Error("nothing in the catalogue is in stock to order");
+  lastBought = bought;
   await page.goto(`${BASE}/commande`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(700);
   await page.locator('input[autocomplete="name"]').first().fill(name);
@@ -108,6 +116,32 @@ await prisma.setting.upsert({
   where: { key: "shop_email" },
   create: { key: "shop_email", value: "boutique-e2e@example.tn" },
   update: { value: "boutique-e2e@example.tn" },
+});
+
+/**
+ * Put the shop's address back.
+ *
+ * Also wired to an uncaught exception below, because this leaked once: the
+ * suite crashed before its cleanup, left "boutique-e2e@example.tn" in the
+ * settings, and the next battery ran against a shop that suddenly had a
+ * contact address — which changed the "talk to an expert" link on the home
+ * page from the store section to a mailto and crashed a different suite
+ * entirely. A test that edits shared state has to put it back on every path
+ * out, not just the happy one.
+ */
+async function restoreShopEmail() {
+  if (previousShopEmail) {
+    await prisma.setting.update({ where: { key: "shop_email" }, data: { value: previousShopEmail.value } });
+  } else {
+    await prisma.setting.delete({ where: { key: "shop_email" } }).catch(() => {});
+  }
+}
+
+process.on("uncaughtException", async (err) => {
+  console.error(err);
+  await restoreShopEmail().catch(() => {});
+  await prisma.$disconnect().catch(() => {});
+  process.exit(1);
 });
 
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -146,7 +180,11 @@ check("every message carries a plain-text part", [toCustomer, toShop].every((m) 
 
 // What is inside matters more than that it arrived.
 const body = `${toCustomer?.html} ${toCustomer?.text}`;
-check("the confirmation lists what was actually bought", /KAMOKA|Filtre/i.test(body), (body.match(/Filtre [^<\n]{0,30}/) || [])[0]);
+// Against the part this run actually bought, not a name written down when
+// the suite was first written: it buys whatever is in stock now.
+check("the confirmation lists what was actually bought",
+  body.includes(lastBought.name) && body.includes(lastBought.sku),
+  `${lastBought.name} (${lastBought.sku})`);
 check("and the total that was actually charged", /\d+,\d{2}\sDT/.test(body), (body.match(/Total[\s\S]{0,60}?(\d+,\d{2}\sDT)/) || [])[1]);
 // A guest's order is attached to no account, so /compte/commandes would be a
 // sign-in form followed by a 404. The confirmation page is the one that
@@ -252,7 +290,20 @@ console.log("\n[4] FORGOT MY PASSWORD: A LINK BY E-MAIL, ONE HOUR, ONE USE");
   await pg.fill('input[name="email"]', "personne-inconnue@example.tn");
   await pg.click('button:has-text("Envoyer le lien")');
   await pg.waitForTimeout(2000);
-  check("an unknown address gets the same answer as a known one", /envoyé/i.test(await pg.locator("main").innerText()));
+
+  // "Forgot my password" allows five requests per quarter hour from one
+  // address, and this section spends two of them. Re-running the suite a few
+  // times inside that window legitimately exhausts the budget — the limiter
+  // is working, and a suite that reports that as a broken reset flow is
+  // reporting the wrong thing. Same reasoning as lib/wait-for-admin.
+  const answer = await pg.locator("main").innerText();
+  const refused = answer.match(/Réessayez dans (\d+) minute/);
+  if (refused) {
+    console.log(`  SKIP  the run's own rate limiting is holding the reset form — ${refused[0]}`);
+    await pg.context().close();
+  } else {
+
+  check("an unknown address gets the same answer as a known one", /envoyé/i.test(answer));
   check("and no e-mail goes anywhere", inbox.length === n0, `${inbox.length - n0} message(s)`);
 
   await pg.goto(`${BASE}/compte/mot-de-passe-oublie`, { waitUntil: "domcontentloaded" });
@@ -282,6 +333,7 @@ console.log("\n[4] FORGOT MY PASSWORD: A LINK BY E-MAIL, ONE HOUR, ONE USE");
 
   // The seeded password goes back so every other suite can still sign in.
   await prisma.user.update({ where: { email: RESET_EMAIL }, data: { passwordHash: before.passwordHash } });
+  }
 }
 
 console.log("\n[4b] A VAT-REGISTERED SHOP'S CONFIRMATION BREAKS THE MONEY OUT");
@@ -343,11 +395,7 @@ console.log("\n[5] THE MAIL SERVER GOING DOWN DOES NOT COST THE SHOP AN ORDER");
 /* ------------------------------------------------------- cleanup --------- */
 
 await browser.close();
-if (previousShopEmail) {
-  await prisma.setting.update({ where: { key: "shop_email" }, data: { value: previousShopEmail.value } });
-} else {
-  await prisma.setting.delete({ where: { key: "shop_email" } }).catch(() => {});
-}
+await restoreShopEmail();
 await prisma.$disconnect();
 
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);

@@ -26,6 +26,7 @@
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
 import { waitForAdmin } from "./lib/wait-for-admin.mjs";
+import { addStockedToCart } from "./lib/stocked-product.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const prisma = new PrismaClient();
@@ -93,10 +94,10 @@ async function setSetting(key, value) {
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 
 async function placeOrder(page, name) {
-  await page.goto(`${BASE}/catalogue/filtres`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(600);
-  await page.click('button:has-text("Ajouter au panier")');
-  await page.waitForTimeout(700);
+  // Whatever is in stock, not the first card of a hard-coded category — see
+  // lib/stocked-product for why that stopped being a safe assumption.
+  const bought = await addStockedToCart(page, prisma, BASE);
+  if (!bought) throw new Error("nothing in the catalogue is in stock to order");
   await page.goto(`${BASE}/commande`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(700);
   await page.locator('input[autocomplete="name"]').first().fill(name);
@@ -191,10 +192,8 @@ const p = await ctx.newPage();
 let cartTotal = null;
 let checkoutTotal = null;
 {
-  await p.goto(`${BASE}/catalogue/filtres`, { waitUntil: "domcontentloaded" });
-  await p.waitForTimeout(600);
-  await p.click('button:has-text("Ajouter au panier")');
-  await p.waitForTimeout(700);
+  const bought = await addStockedToCart(p, prisma, BASE);
+  check("there is something in stock to put in a basket", !!bought, bought?.sku);
 
   await p.goto(`${BASE}/panier`, { waitUntil: "domcontentloaded" });
   await p.waitForTimeout(700);

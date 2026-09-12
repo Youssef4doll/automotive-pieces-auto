@@ -522,17 +522,23 @@ console.log("\n[15] THE FILTERS STAY WITHIN REACH ALL THE WAY DOWN THE PAGE");
   await page.close();
 }
 
-console.log("\n[16] THE SITE USES THE SCREEN IT IS GIVEN");
+console.log("\n[16] THE SITE USES THE SCREEN IT IS GIVEN, IN PROPORTION");
 {
   // `<main>` was a column flex container, which makes every section a flex
   // item — and `mx-auto` on a flex item does not centre it inside its
   // container, it shrink-wraps it to its own content and centres that. So
   // pages laid out as `mx-auto shell-w` rendered at whatever width their text
   // happened to need: the home page's vehicle board came out 809px on a
-  // 1920px screen instead of 1280, and an empty cart came out 225px. Invisible
-  // on a phone, where content fills the width anyway, and the whole of "the
-  // site is small on a big screen".
-  for (const [w, want] of [[1280, 1280], [1920, 1536]]) {
+  // 1920px screen instead of 1280, and an empty cart came out 225px.
+  //
+  // What replaced it is a shell that follows the screen (85%, capped at
+  // 96rem) rather than a fixed number, because a fixed one always eats more
+  // of a small screen than a large one. The numbers are a design choice and
+  // will move; what is asserted here is what must not: the bands agree with
+  // each other, the shell never exceeds its cap, it leaves a real margin, and
+  // it never shrinks as the screen grows.
+  let previous = 0;
+  for (const w of [1280, 1440, 1920, 2560]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: 1000 } });
     const page = await ctx.newPage();
     await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
@@ -543,11 +549,13 @@ console.log("\n[16] THE SITE USES THE SCREEN IT IS GIVEN");
         .filter((r) => r.max !== "none")
         .map((r) => r.w)
     );
-    check(
-      `at ${w}px every bounded band fills the shell`,
-      widths.length > 0 && widths.every((x) => x === want),
-      `${widths.join(", ")} — expected ${want}`
-    );
+    const shell = widths[0] ?? 0;
+    check(`at ${w}px every bounded band is the same width`,
+      widths.length > 0 && widths.every((x) => x === shell), widths.join(", "));
+    check(`at ${w}px it leaves a real margin and stays under the cap`,
+      shell <= 1536 && shell <= w * 0.9, `${shell}px of ${w} — ${Math.round((shell / w) * 100)}%`);
+    check(`at ${w}px it did not shrink as the screen grew`, shell >= previous, `${previous}px → ${shell}px`);
+    previous = shell;
     await page.close();
     await ctx.close();
   }

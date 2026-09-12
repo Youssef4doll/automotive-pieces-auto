@@ -172,8 +172,19 @@ try {
     check("a person is offered", /Parler à un expert/.test(text));
     check("and browsing is offered", /Parcourir les familles/.test(text));
 
-    const expert = panel.locator('a[href*="wa.me"], a[href*="#magasin"]').first();
-    check("the expert route is a real link", (await expert.count()) > 0, await expert.getAttribute("href"));
+    // Any of the three routes contactLink can produce — WhatsApp when the shop
+    // has a number, mailto when it has only an address, the store section when
+    // it has neither. The check is that there IS a way to reach a person, not
+    // which one: a suite that names one channel fails the moment the shop
+    // fills in a different one.
+    //
+    // And the href is only read once the link is known to exist. Passing
+    // `await expert.getAttribute(...)` as the detail evaluated it either way,
+    // so an absent link spent thirty seconds waiting and then crashed the
+    // suite instead of failing this one check.
+    const expert = panel.locator('a[href*="wa.me"], a[href^="mailto:"], a[href*="#magasin"]').first();
+    const found = (await expert.count()) > 0;
+    check("the expert route is a real link", found, found ? await expert.getAttribute("href") : "no link in the panel");
     await p.close();
   }
 

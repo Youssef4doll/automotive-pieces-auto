@@ -65,6 +65,21 @@
   --font-display: var(--font-barlow-condensed);
   --font-heading: var(--font-archivo);
 
+  /* One step past Tailwind's 2xl, for the boards that want more columns only
+     once there is genuinely room for them.
+
+     2xl is 1536px, and the shell is 85% of the viewport — so at exactly 1536
+     the content is 1306px wide and eight columns are *narrower* than the six
+     they replaced at 1440. Tiles must not shrink as the screen grows. 1800px
+     is where 85% clears 1530 and eight columns are wider than six were.
+
+     In rem, not px, and that is load-bearing: Tailwind sorts breakpoints by
+     the literal it is given, so a px value lands in a block of its own ahead
+     of the rem-valued built-ins. `lg:grid-cols-6` then came later in the
+     stylesheet, at equal specificity, and quietly won at 1800px — the variant
+     compiled, the media query was in the file, and nothing happened. */
+  --breakpoint-3xl: 112.5rem;
+
   /* Expose the tap/gutter tokens to Tailwind so components can use
      h-tap-primary / min-h-tap / px-gutter instead of magic numbers. */
   --spacing-tap-primary: var(--tap-primary);
@@ -192,21 +207,25 @@ body {
      the footer — measures itself against this, so they line up down the page
      and widening the site is one edit rather than thirty.
 
-     1280px is right up to about a 1600px screen and starts to look like a
-     column on anything larger: the shop reported the site reading "small" on
-     a big monitor, and the Tunisian shops it is measured against run much
-     closer to the glass. Above 1536px it grows to 1536, which on a 1920px
-     screen leaves a 192px margin either side instead of 320. It does not grow
-     without limit — a product row twelve cards wide is not a better product
-     row. */
+     It follows the screen rather than sitting at a fixed number, because a
+     fixed one always eats more of a small screen than a large one: 1280px is
+     89% of a 1440px laptop and 50% of a 27" monitor, so the same site reads
+     edge-to-edge on one and comfortable on the other. 85% of the viewport
+     keeps the margin proportional, and the 96rem cap stops it running away —
+     a product row twelve cards wide is not a better product row.
+
+     Below 72rem the rule is off and the content fills the screen, minus its
+     gutter: a margin is a luxury of a big window, and on a tablet or a small
+     laptop it is just less shop. */
   .shell-w {
-    max-width: 80rem;
+    max-width: 96rem;
   }
-  @media (min-width: 96rem) {
+  @media (min-width: 72rem) {
     .shell-w {
-      max-width: 96rem;
+      max-width: min(96rem, 85vw);
     }
   }
+
   /* Cart motion. Short and functional: they communicate where the sheet came
      from, nothing more. All are disabled by the prefers-reduced-motion block. */
   @keyframes sheet-up {

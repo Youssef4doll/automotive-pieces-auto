@@ -19,6 +19,7 @@
  */
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
+import { findStockedProduct } from "./lib/stocked-product.mjs";
 
 const prisma = new PrismaClient();
 const BASE = process.env.BASE_URL || "http://localhost:3000";
@@ -261,10 +262,17 @@ console.log("\n[6] THE LIST ROW SAYS WHAT THE SHOP KNOWS, AND NOTHING ELSE");
 
   // The quantity is the point of putting a selector there at all: it has to
   // reach the cart, not be read and dropped.
-  // Discovered, not hard-coded: the selector is capped by what is actually in
-  // stock, eighteen suites run before this one and several of them place real
-  // orders. Asking for 3 of a part the battery has bought down to 2 is a
-  // crash that has nothing to do with filters.
+  //
+  // Driven on whichever listing actually holds something buyable, not on
+  // "Filtres": the selector is capped by real stock, suites before this one
+  // place real orders, and that family has been bought to zero before now.
+  const stocked = await findStockedProduct(prisma, 2);
+  if (stocked) {
+    await p.goto(`${BASE}${stocked.catalogPath}`, { waitUntil: "domcontentloaded" });
+    await p.waitForTimeout(700);
+    await p.locator('[role="group"][aria-label="Affichage"] button').last().click();
+    await p.waitForTimeout(500);
+  }
   const selects = p.locator('main select[id^="qty-"]');
   let qty = null;
   let want = 0;
