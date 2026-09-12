@@ -106,7 +106,7 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
   }
 
   return (
-    <section id="finder" className="mx-auto max-w-7xl px-4 pt-6 pb-8 sm:pt-9 sm:pb-12">
+    <section id="finder" className="mx-auto shell-w px-4 pt-6 pb-8 sm:pt-9 sm:pb-12">
       <div className="mb-4 sm:mb-5">
         <h2 className="font-heading font-extrabold uppercase text-xl sm:text-2xl text-navy-950 tracking-tight">
           {t("finder2.title")}

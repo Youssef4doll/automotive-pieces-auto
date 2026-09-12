@@ -522,6 +522,76 @@ console.log("\n[15] THE FILTERS STAY WITHIN REACH ALL THE WAY DOWN THE PAGE");
   await page.close();
 }
 
+console.log("\n[16] THE SITE USES THE SCREEN IT IS GIVEN");
+{
+  // `<main>` was a column flex container, which makes every section a flex
+  // item — and `mx-auto` on a flex item does not centre it inside its
+  // container, it shrink-wraps it to its own content and centres that. So
+  // pages laid out as `mx-auto shell-w` rendered at whatever width their text
+  // happened to need: the home page's vehicle board came out 809px on a
+  // 1920px screen instead of 1280, and an empty cart came out 225px. Invisible
+  // on a phone, where content fills the width anyway, and the whole of "the
+  // site is small on a big screen".
+  for (const [w, want] of [[1280, 1280], [1920, 1536]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: 1000 } });
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(700);
+    const widths = await page.evaluate(() =>
+      [...document.querySelector("main").children]
+        .map((el) => ({ w: Math.round(el.getBoundingClientRect().width), max: getComputedStyle(el).maxWidth }))
+        .filter((r) => r.max !== "none")
+        .map((r) => r.w)
+    );
+    check(
+      `at ${w}px every bounded band fills the shell`,
+      widths.length > 0 && widths.every((x) => x === want),
+      `${widths.join(", ")} — expected ${want}`
+    );
+    await page.close();
+    await ctx.close();
+  }
+
+  // An empty cart is the page with the least content on it, so it is where
+  // shrink-wrapping showed worst.
+  const ctx = await browser.newContext({ viewport: { width: 1920, height: 1000 } });
+  const page = await ctx.newPage();
+  await page.goto(`${BASE}/panier`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(600);
+  const box = await page.locator("main > div").first().boundingBox();
+  check("an almost empty page is still laid out, not shrink-wrapped", !!box && box.width >= 600,
+    box ? `${Math.round(box.width)}px` : "no box");
+  await page.close();
+  await ctx.close();
+}
+
+console.log("\n[17] THE BRANDS ARE A BOARD YOU CAN USE, NOT A STRIP THAT MOVES");
+{
+  // It was an auto-scrolling marquee of <div>s: nothing to click, names on
+  // navy where every maker's mark is drawn for white, and you had to wait for
+  // the one you wanted to come back round.
+  const page = await (await browser.newContext({ viewport: { width: 1280, height: 1000 } })).newPage();
+  await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(700);
+  const board = page.locator("#marques");
+  check("the board is there", await board.count() === 1);
+  const tiles = board.locator("a");
+  const n = await tiles.count();
+  check("every brand is a link into the catalogue", n > 0 && (await tiles.first().getAttribute("href") || "").startsWith("/recherche?q="),
+    `${n} tiles`);
+
+  // The subtitle used to read "+60 équipementiers distribués". Nobody had
+  // counted; there are nineteen. Scoped to the line itself rather than the
+  // whole board, because textContent runs the heading straight into it
+  // ("…PIÈCES19 équipementiers") and there is no word boundary to match on.
+  const sub = (await board.locator("h2 + span").textContent()) ?? "";
+  const real = await prisma.brand.count({ where: { isPartsBrand: true } });
+  check("and the count beside the heading is the one in the catalogue",
+    sub.trim().startsWith(String(real)) && !/\+\s*\d/.test(sub),
+    `"${sub.trim()}" vs ${real} in the catalogue`);
+  await page.close();
+}
+
 console.log("\n[X] NOTHING ON A PHONE SUMMONS A KEYBOARD, OR THE ZOOM THAT COMES WITH IT");
 {
   const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage();

@@ -50,7 +50,7 @@ export default async function SearchPage({
 
   if (!query) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="mx-auto shell-w px-4 py-8">
         <h1 className="text-xl font-heading font-extrabold uppercase text-navy-950 mb-1 tracking-tight">Rechercher</h1>
         <p className="text-sm text-gray-500 mb-6">
           Tapez un nom de pièce, une référence constructeur ou une référence OEM.
@@ -87,7 +87,7 @@ export default async function SearchPage({
   }
 
   return (
-    <div className="w-full min-w-0 mx-auto max-w-7xl px-4 py-8">
+    <div className="w-full min-w-0 mx-auto shell-w px-4 py-8">
       <h1 className="text-xl font-heading font-extrabold uppercase text-navy-950 mb-1 tracking-tight">
         Résultats pour « {query} »
       </h1>

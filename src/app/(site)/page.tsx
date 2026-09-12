@@ -1,6 +1,6 @@
 import Hero from "@/components/Hero";
 import PartFinder from "@/components/PartFinder";
-import BrandMarquee from "@/components/BrandMarquee";
+import BrandBoard from "@/components/BrandBoard";
 import CategoryGrid from "@/components/CategoryGrid";
 import ProductGrid from "@/components/ProductGrid";
 import WhyUs from "@/components/WhyUs";
@@ -10,7 +10,6 @@ import B2BBand from "@/components/B2BBand";
 import SectionHeading from "@/components/SectionHeading";
 import Eyebrow from "@/components/Eyebrow";
 import TrustBadges from "@/components/TrustBadges";
-import T from "@/components/T";
 import { getTopSellers, getActivePromotions, getTopSubcategories } from "@/lib/data/catalog";
 import { getSettings, publicContact, contactHref } from "@/lib/settings";
 import { requireAdmin } from "@/lib/session";
@@ -51,10 +50,12 @@ export default async function HomePage() {
           5. Why us / store — trust, at the point where they are deciding
           6. Help / B2B     — the ways out for everyone else
 
-          Two things moved a long way. The brand marquee used to sit between
-          the hero and the finder, so the first interactive thing on the page
-          was a strip of logos nobody came for; it now sits with the other
-          trust material near the bottom. And the promotional grid used to be
+          Two things moved a long way. The brand board used to sit between
+          the hero and the finder — as an auto-scrolling marquee — so the first
+          interactive thing on the page was a strip of logos nobody came for.
+          It is a still, clickable board now and sits with the vehicle board,
+          where the two questions a parts shop is navigated by (which car,
+          whose part) are asked next to each other. And the promotional grid used to be
           the very first thing above the hero, which made a parts shop open
           like a billboard. */}
       <Hero shortcuts={shortcuts} />
@@ -83,7 +84,12 @@ export default async function HomePage() {
       {/* Two ways to browse, side by side and equally valid: by the car you
           drive, or by the kind of part you need. Neither is forced. */}
       <CategoryGrid />
+      {/* The two boards a parts shop is navigated by, one after the other:
+          which car, then whose part. They belong together — a shopper who
+          knows neither reads both, and a shopper who came for "the Bosch one"
+          finds it without scrolling past the whole home page. */}
       <VehicleShortcuts />
+      <BrandBoard />
       {topSellers.length > 0 && (
         // min-w-0: this section is a flex child of <main>, and a flex item
         // refuses to shrink below its own content by default. The swipeable
@@ -91,7 +97,7 @@ export default async function HomePage() {
         // and without this floor the section grew to fit it and took the
         // phone's whole layout viewport with it — the page rendered zoomed
         // out to 1172px, every other section along with it.
-        <section id="produits" className="w-full min-w-0 mx-auto max-w-7xl px-4 py-7 sm:py-10">
+        <section id="produits" className="w-full min-w-0 mx-auto shell-w px-4 py-7 sm:py-10">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
             <div>
               <Eyebrow k="home.bestsellersEyebrow" />
@@ -110,7 +116,6 @@ export default async function HomePage() {
         </section>
       )}
       <TrustBadges />
-      <BrandMarquee />
       <WhyUs />
       <StoreSection />
       <NotFoundBand contactUrl={contactUrl} phone={contact.phone} />

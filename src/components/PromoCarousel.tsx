@@ -94,7 +94,7 @@ export default function PromoCarousel({
     // Admin-only: shoppers see nothing rather than an empty frame or, worse,
     // a placeholder campaign the shop never actually ran.
     return (
-      <section className="w-full mx-auto max-w-7xl px-gutter py-7 sm:py-10">
+      <section className="w-full mx-auto shell-w px-gutter py-7 sm:py-10">
         <Link
           href={manageHref}
           className="flex items-center justify-center min-h-[120px] sm:min-h-[160px] rounded-lg border-2 border-dashed border-navy-900/15 text-sm font-semibold text-navy-900/50 hover:border-navy-900/35 hover:text-navy-900 transition-colors text-center px-4"
@@ -109,7 +109,7 @@ export default function PromoCarousel({
     <section
       aria-roledescription="carrousel"
       aria-label={t("campaign.region")}
-      className="w-full mx-auto max-w-7xl px-gutter py-7 sm:py-10"
+      className="w-full mx-auto shell-w px-gutter py-7 sm:py-10"
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}

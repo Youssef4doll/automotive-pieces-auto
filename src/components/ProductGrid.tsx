@@ -57,7 +57,7 @@ export default function ProductGrid({
       // as a grid that has been cut off, the same way "Racheter en un clic"
       // does in the account.
       <div className="w-full min-w-0 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto no-scrollbar sm:overflow-visible">
-        <div className="flex gap-3 w-max sm:w-auto sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-4">
+        <div className="flex gap-3 w-max sm:w-auto sm:grid sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 sm:gap-4">
           {ordered.map((p) => (
             // A fixed width, not a vw one. vw resolves against the layout
             // viewport, and on a phone the layout viewport grows to fit
@@ -83,8 +83,11 @@ export default function ProductGrid({
     );
   }
 
+  // Five across above 1536px rather than four very wide ones: the shell grows
+  // there (see .shell-w) and a card that only gets wider gains nothing, while
+  // a fifth column is a fifth part on the screen.
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
       {ordered.map((p) => (
         <ProductCard key={p.id} product={p} delivery={delivery} priceNote={priceNote} />
       ))}

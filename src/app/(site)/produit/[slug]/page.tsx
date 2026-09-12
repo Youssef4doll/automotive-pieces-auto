@@ -139,7 +139,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="mx-auto shell-w px-4 py-6">
       <JsonLd data={jsonLd} />
       <JsonLd data={breadcrumbSchema(crumbs)} />
       <TrackEvent

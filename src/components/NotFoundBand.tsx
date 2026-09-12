@@ -19,7 +19,7 @@ export default function NotFoundBand({
 
   return (
     <section className="bg-gold-500">
-      <div className="mx-auto max-w-7xl px-4 py-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+      <div className="mx-auto shell-w px-4 py-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
         <div>
           <h2 className="font-heading font-extrabold uppercase text-xl sm:text-3xl text-navy-950 tracking-tight">
             {t("notfound.title")}

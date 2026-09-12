@@ -99,7 +99,7 @@ export default function PaymentDeliveryBand({
   ];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-8">
+    <div className="mx-auto shell-w px-4 pt-8">
       <div className="grid gap-6 sm:grid-cols-2 pb-8 border-b border-white/10">
         <Group titleKey="footer.methodsDelivery" methods={delivery} />
         <Group titleKey="footer.methodsPayment" methods={payment} />

@@ -78,7 +78,7 @@ export default async function ReferencePage({ params }: { params: Params }) {
   ];
 
   return (
-    <div className="w-full min-w-0 mx-auto max-w-7xl px-4 py-6">
+    <div className="w-full min-w-0 mx-auto shell-w px-4 py-6">
       <TrackEvent name="reference_page_viewed" properties={{ reference: normalized, resultCount: products.length }} />
       <JsonLd data={breadcrumbSchema(crumbs)} />
 

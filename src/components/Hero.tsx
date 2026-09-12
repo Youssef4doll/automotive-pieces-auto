@@ -60,7 +60,7 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
           inwards, which laid the brake caliper across the subtitle. Moving
           the split is what actually makes room for it. The text column keeps
           a comfortable measure; nothing above lg changes. */}
-      <div className="mx-auto max-w-7xl px-4 py-7 sm:py-16 grid lg:grid-cols-[1fr_1.35fr] gap-6 sm:gap-10 items-center">
+      <div className="mx-auto shell-w px-4 py-7 sm:py-16 grid lg:grid-cols-[1fr_1.35fr] gap-6 sm:gap-10 items-center">
         {/* min-w-0: this is a grid item, and a grid item's default min-width
             is auto — its own content's intrinsic width, not the track's. The
             search button's unbreakable label ("Rechercher") was enough to

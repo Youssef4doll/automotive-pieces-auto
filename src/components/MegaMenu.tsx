@@ -47,7 +47,7 @@ export default function MegaMenu({
       {/* The rail is wider than it was: a picture went into every row, and at
           264px "Direction et trains roulants" lost three more words to the
           ellipsis than it could afford. */}
-      <div className="mx-auto max-w-7xl bg-white text-navy-950 shadow-2xl border-b-[3px] border-gold-500 grid grid-cols-[316px_1fr] h-[min(460px,70vh)]">
+      <div className="mx-auto shell-w bg-white text-navy-950 shadow-2xl border-b-[3px] border-gold-500 grid grid-cols-[316px_1fr] h-[min(460px,70vh)]">
         <div className="border-e border-gray-200 bg-[#fafbfd] overflow-y-auto py-2.5">
           {families.map((family, i) => (
             <Link

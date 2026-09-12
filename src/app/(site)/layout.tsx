@@ -15,7 +15,23 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
     <>
       <NavProgress />
       <Header />
-      <main className="flex-1 flex flex-col">{children}</main>
+      {/* `flex-1` so a short page still pushes the footer to the bottom — but
+          NOT `flex flex-col`, which it was.
+
+          A column flex container makes every section on every page a flex
+          item, and `mx-auto` on a flex item does not centre it inside its
+          container: it shrink-wraps it to its own content and centres that.
+          So a page laid out as `mx-auto shell-w` rendered at whatever width
+          its text happened to need — the home page's vehicle board came out
+          809px wide on a 1920px screen instead of 1280, /marques came out
+          736px, and an empty cart came out 225px. It was invisible on a phone,
+          where content fills the width anyway, and is the whole of "the site
+          is small on a big screen".
+
+          Block layout also can't be widened from inside by a child that
+          overflows, which is what the `min-w-0` notes dotted around the
+          sections were defending against. Those are now belt and braces. */}
+      <main className="flex-1">{children}</main>
       <Footer />
       <CartSync />
       <CartDrawer freeShippingThreshold={freeShippingThreshold} />

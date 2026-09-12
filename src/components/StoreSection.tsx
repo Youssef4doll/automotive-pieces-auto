@@ -10,7 +10,7 @@ export default async function StoreSection() {
   const contact = publicContact(settings);
 
   return (
-    <section id="magasin" className="mx-auto max-w-7xl px-4 py-7 sm:py-10">
+    <section id="magasin" className="mx-auto shell-w px-4 py-7 sm:py-10">
       <div className="grid sm:grid-cols-2 gap-8 items-center">
         <div className="relative h-56 sm:h-80 rounded-2xl overflow-hidden border border-gray-200">
           <Image

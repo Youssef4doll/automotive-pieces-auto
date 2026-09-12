@@ -128,7 +128,7 @@ html {
 }
 
 /* Respect the OS "reduce motion" setting for every transition/animation the
-   app ships, including the brand marquee. */
+   app ships. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -186,26 +186,25 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  .marquee-track {
-    animation: marquee 28s linear infinite;
+  /* The width of the site, in one place.
+
+     Every band on the storefront — header, hero, the boards, the catalogue,
+     the footer — measures itself against this, so they line up down the page
+     and widening the site is one edit rather than thirty.
+
+     1280px is right up to about a 1600px screen and starts to look like a
+     column on anything larger: the shop reported the site reading "small" on
+     a big monitor, and the Tunisian shops it is measured against run much
+     closer to the glass. Above 1536px it grows to 1536, which on a 1920px
+     screen leaves a 192px margin either side instead of 320. It does not grow
+     without limit — a product row twelve cards wide is not a better product
+     row. */
+  .shell-w {
+    max-width: 80rem;
   }
-  @keyframes marquee {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
-  [dir="rtl"] .marquee-track {
-    animation-name: marquee-rtl;
-  }
-  @keyframes marquee-rtl {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(50%);
+  @media (min-width: 96rem) {
+    .shell-w {
+      max-width: 96rem;
     }
   }
   /* Cart motion. Short and functional: they communicate where the sheet came

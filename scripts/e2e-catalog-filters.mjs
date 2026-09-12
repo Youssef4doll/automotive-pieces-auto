@@ -261,14 +261,34 @@ console.log("\n[6] THE LIST ROW SAYS WHAT THE SHOP KNOWS, AND NOTHING ELSE");
 
   // The quantity is the point of putting a selector there at all: it has to
   // reach the cart, not be read and dropped.
-  const qty = p.locator('main select[id^="qty-"]').first();
-  await qty.selectOption("3");
-  await p.locator('main button:has-text("Ajouter au panier")').first().click();
-  await p.waitForTimeout(900);
-  const badge = await p.locator('header a[href="/panier"], header button:has-text("Panier")').first().textContent().catch(() => "");
-  const stored = await p.evaluate(() => JSON.parse(localStorage.getItem("apa-cart") || "{}")?.state?.items ?? []);
-  check("the chosen quantity is what reaches the cart", stored.length > 0 && stored[0].qty === 3,
-    `${stored.map((i) => `${i.qty}×`).join(" ")}${badge ? ` · ${badge.trim()}` : ""}`);
+  // Discovered, not hard-coded: the selector is capped by what is actually in
+  // stock, eighteen suites run before this one and several of them place real
+  // orders. Asking for 3 of a part the battery has bought down to 2 is a
+  // crash that has nothing to do with filters.
+  const selects = p.locator('main select[id^="qty-"]');
+  let qty = null;
+  let want = 0;
+  for (let i = 0; i < (await selects.count()); i++) {
+    const options = await selects.nth(i).locator("option").count();
+    if (options >= 2) {
+      qty = selects.nth(i);
+      want = Math.min(3, options);
+      break;
+    }
+  }
+  if (!qty) {
+    check("there is a part with more than one in stock to order", false);
+  } else {
+    await qty.selectOption(String(want));
+    // The button sitting beside that selector, not the first one on the page:
+    // the quantity only means anything against the row it was chosen in.
+    await qty.locator("xpath=..").locator('button:has-text("Ajouter au panier")').first().click();
+    await p.waitForTimeout(900);
+    const stored = await p.evaluate(() => JSON.parse(localStorage.getItem("apa-cart") || "{}")?.state?.items ?? []);
+    check("the chosen quantity is what reaches the cart",
+      stored.length > 0 && stored.some((i) => i.qty === want),
+      `asked for ${want}, cart holds ${stored.map((i) => `${i.qty}×`).join(" ") || "nothing"}`);
+  }
 
   await ctx.close();
 }

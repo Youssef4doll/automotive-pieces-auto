@@ -99,6 +99,44 @@ export async function listVehiclePages() {
   return rows.map((r) => ({ ...r, productCount: Number(r.n) }));
 }
 
+/**
+ * The makes the shop covers, deepest first.
+ *
+ * The home board used to list make+model pairs — "Peugeot 208", "Renault Clio
+ * IV". That is the more precise route, and it is still one tap further on, but
+ * it answered a question nobody starts with: a shopper arrives knowing they
+ * drive a Renault long before they can say which Clio. Makes first is how the
+ * big parts catalogues lay this out, and it fits eighteen recognisable marks
+ * on a screen where twelve model names took the same room.
+ *
+ * Counted the same way as everything else here: distinct active products with
+ * a fitment against one of that make's engines. Never a popularity figure.
+ */
+export async function listVehicleMakePages() {
+  const rows = await prisma.$queryRaw<
+    { slug: string; name: string; logoUrl: string | null; models: bigint; n: bigint }[]
+  >`
+    SELECT mk.slug, mk.name, mk."logoUrl",
+           COUNT(DISTINCT md.id) AS models,
+           COUNT(DISTINCT p.id) AS n
+    FROM "ProductFitment" f
+    JOIN "VehicleEngine" e ON e.id = f."engineId"
+    JOIN "VehicleModel" md ON md.id = e."modelId"
+    JOIN "VehicleMake" mk ON mk.id = md."makeId"
+    JOIN "Product" p ON p.id = f."productId" AND p.active
+    GROUP BY mk.slug, mk.name, mk."logoUrl"
+    HAVING COUNT(DISTINCT p.id) > 0
+    ORDER BY n DESC, mk.name ASC
+  `;
+  return rows.map((r) => ({
+    slug: r.slug,
+    name: r.name,
+    logoUrl: r.logoUrl,
+    modelCount: Number(r.models),
+    productCount: Number(r.n),
+  }));
+}
+
 /** Model/family pairs with products — the deepest pages worth indexing. */
 export async function listVehicleFamilyPages() {
   const rows = await prisma.$queryRaw<

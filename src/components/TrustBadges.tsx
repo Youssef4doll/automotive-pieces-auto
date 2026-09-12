@@ -5,7 +5,7 @@ const ITEMS = [1, 2, 3, 4] as const;
 export default function TrustBadges() {
   return (
     <section className="bg-white px-4 pb-2 pt-5 sm:pt-8">
-      <div className="mx-auto max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="mx-auto shell-w grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {ITEMS.map((n) => (
           <div key={n} className="flex items-center gap-3.5 p-4.5 rounded-lg bg-gray-50">
             <div

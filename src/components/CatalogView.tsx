@@ -126,7 +126,7 @@ export default function CatalogView({
           buying from it, and which car the shopper is buying for. Full-bleed
           so it reads as the top of a page rather than a box in one. */}
       <section className="w-full border-b border-navy-900/6 bg-[linear-gradient(180deg,#f2f5fa_0%,#ffffff_100%)]">
-        <div className="mx-auto w-full max-w-7xl px-4 pt-3 pb-5 lg:pt-4 lg:pb-7">
+        <div className="mx-auto w-full shell-w px-4 pt-3 pb-5 lg:pt-4 lg:pb-7">
           <Breadcrumbs
             items={[
               { name: "Accueil", path: "/" },
@@ -208,7 +208,7 @@ export default function CatalogView({
           flex item and defaults to min-width:auto — it would inflate to the
           min-content width of the horizontally scrolling filter chips below
           and push the whole page sideways. It has to opt out explicitly. */}
-      <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-5 lg:py-7">
+      <div className="mx-auto w-full min-w-0 shell-w px-4 py-5 lg:py-7">
         {/* On phones the filters are one scrollable row each, so the products
             stay above the fold, plus a button that unfolds the full panel for
             the price band and the stock tick. */}

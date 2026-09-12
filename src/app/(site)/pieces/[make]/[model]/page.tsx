@@ -69,7 +69,7 @@ export default async function VehiclePage({ params }: { params: Params }) {
   ];
 
   return (
-    <div className="w-full min-w-0 mx-auto max-w-7xl px-4 py-6">
+    <div className="w-full min-w-0 mx-auto shell-w px-4 py-6">
       <TrackEvent name="vehicle_page_viewed" properties={{ make: vehicle.make.slug, model: vehicle.slug }} />
       <JsonLd data={breadcrumbSchema(crumbs)} />
       <JsonLd

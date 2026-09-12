@@ -17,7 +17,7 @@ export default function WhyUs() {
 
   return (
     <section className="bg-navy-900 text-white py-12 sm:py-16">
-      <div className="mx-auto max-w-7xl px-4 grid lg:grid-cols-2 gap-10 items-center">
+      <div className="mx-auto shell-w px-4 grid lg:grid-cols-2 gap-10 items-center">
         <div>
           <p className="text-xs font-display font-bold uppercase tracking-wide text-gold-500 mb-1.5">
             {t("why.eyebrow")}

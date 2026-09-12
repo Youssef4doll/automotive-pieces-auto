@@ -75,7 +75,7 @@ export default async function VehicleFamilyPage({ params }: { params: Params }) 
   ];
 
   return (
-    <div className="w-full min-w-0 mx-auto max-w-7xl px-4 py-6">
+    <div className="w-full min-w-0 mx-auto shell-w px-4 py-6">
       <TrackEvent
         name="vehicle_category_viewed"
         properties={{ make: vehicle.make.slug, model: vehicle.slug, family: category.slug, resultCount: products.length }}

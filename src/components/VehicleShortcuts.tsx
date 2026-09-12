@@ -1,107 +1,85 @@
 import Image from "next/image";
 import Link from "next/link";
-import { listVehiclePages } from "@/lib/data/vehicles";
+import { listVehicleMakePages } from "@/lib/data/vehicles";
 
 /**
- * "Which car?" as a browsable list, on the home page.
+ * "Which car?" as a browsable board, on the home page.
  *
  * The finder above asks the shopper to pick make → model → engine from
- * dropdowns, which is the precise path. This is the fast one: the cars the
- * catalogue actually covers, in order of how much it stocks for them, one tap
- * each. It is also the only internal route into the vehicle pages, which is
- * what turns them from a sitemap entry into part of the site.
+ * dropdowns, which is the precise path. This is the fast one: the makes the
+ * catalogue actually covers, one tap each into that make's models. It is also
+ * the only internal route into the vehicle pages, which is what turns them
+ * from a sitemap entry into part of the site.
  *
- * Ordered by real coverage and capped, so it stays a shortcut rather than
- * becoming a directory — and it disappears entirely if no vehicle has parts.
+ * **Makes, not models.** It listed make+model pairs — "Peugeot 208", "Renault
+ * Clio IV" — which is a more precise answer to a question nobody starts with:
+ * somebody arrives knowing they drive a Renault long before they can say which
+ * Clio, and the make page one tap on is where that gets settled. It is also
+ * how the big parts catalogues lay this board out, and a maker's mark is
+ * recognised across a screen in a way a model name is not.
+ *
+ * Ordered by how deeply the shop covers each make, and it disappears entirely
+ * if no vehicle has parts.
  */
-export default async function VehicleShortcuts({ take = 12 }: { take?: number }) {
-  const vehicles = (await listVehiclePages()).slice(0, take);
-  if (vehicles.length === 0) return null;
+export default async function VehicleShortcuts({ take = 18 }: { take?: number }) {
+  const makes = (await listVehicleMakePages()).slice(0, take);
+  if (makes.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-7 sm:py-10">
+    <section className="mx-auto shell-w px-4 py-7 sm:py-10">
       <div className="mb-4">
         <p className="text-xs font-display font-bold uppercase tracking-wide text-red-600 mb-1">
           Acheter pour ma voiture
         </p>
         <h2 className="text-xl sm:text-3xl font-heading font-extrabold uppercase text-navy-950 tracking-tight">
-          Les véhicules que nous couvrons
+          Les marques de véhicules
         </h2>
         <p className="text-sm text-gray-500 mt-1.5 max-w-prose">
-          Compatibilité vérifiée sur la motorisation. Choisissez votre modèle : nous ne montrons que les
-          pièces qui vont dessus.
+          Compatibilité vérifiée sur la motorisation. Choisissez votre marque, puis votre modèle : nous ne
+          montrons que les pièces qui vont dessus.
         </p>
       </div>
 
-      {/* Cards, at the weight of the family board above.
+      {/* Six across on a laptop, eight on a wide screen — a mark is a square,
+          so these want more columns and less height than the model cards they
+          replaced, which carried two lines of text each.
 
-          These were single-line rows barely taller than a tap target, with a
-          36px logo and the part count as a bare number — the two boards did
-          the same job on the same page, and this one read as a footnote to the
-          other. Picking your car is not a smaller decision than picking a part
-          family, so it does not get a smaller control. The logo is 56px, the
-          model is the loudest thing in the card, and the count says what it is
-          counting. */}
-      {/* The card turns a corner on a phone.
-
-          Logo beside text is right on a wide screen and wrong on a narrow
-          one: three columns on a 400px phone leaves each card about 115px,
-          and a 56px logo, a gap and the padding eat all but roughly thirty of
-          them. Everything then hit `truncate`, so the board read "PEU… 208 /
-          REN… Cli… / VOL… Gol…" — a wall of ellipses where the make and model
-          are the only two things a shopper is looking for.
-
-          Stacked, the text gets the full width of the card instead of what is
-          left over, and every name fits at every phone size. It goes back to
-          side-by-side at md, where there is room for both. */}
-      {/* Six on a phone, twelve above it.
-
-          This is a shortcut list, not the catalogue — the finder above is the
-          path for a car that is not on it. Twelve of these stacked cards ran
-          to six rows and about 870px, on a home page already ten screens long,
-          to save a tap for the seventh-to-twelfth most stocked model. They are
-          ordered by how much the shop carries for each, so the six a phone
-          keeps are the six most likely to be somebody's car. */}
-      <div className="grid grid-cols-2 min-[480px]:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
-        {vehicles.map((v, i) => (
-          <Link
-            key={`${v.makeSlug}/${v.modelSlug}`}
-            href={`/pieces/${v.makeSlug}/${v.modelSlug}`}
-            className={`flex flex-col items-center text-center gap-2 p-3 md:flex-row md:text-start md:gap-3 md:p-3.5 rounded-xl border border-navy-900/12 bg-white hover:border-gold-500 hover:shadow-sm hover:-translate-y-0.5 transition ${
-              i >= 6 ? "hidden sm:flex" : ""
-            }`}
-          >
-            {/* Same fixed slot whether or not the make has a logo uploaded,
-                so the grid stays even as the shop fills these in one brand
-                at a time — see the identical choice on the family cards. */}
-            {v.makeLogoUrl ? (
-              <span className="relative shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-lg overflow-hidden bg-gray-50">
-                <Image src={v.makeLogoUrl} alt="" fill sizes="(max-width: 768px) 48px, 56px" className="object-contain p-1.5" />
+          The logo slot is the same size whether or not the make has a logo
+          uploaded, so the board stays even as the shop fills them in one at a
+          time. The stand-in is the make's initial, never a drawn badge: an
+          invented one would be a claim about a manufacturer. */}
+      <ul className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-2.5">
+        {makes.map((m) => (
+          <li key={m.slug}>
+            <Link
+              href={`/pieces/${m.slug}`}
+              className="flex h-full flex-col items-center gap-2 rounded-xl border border-navy-900/12 bg-white p-3 text-center transition hover:-translate-y-0.5 hover:border-gold-500 hover:shadow-sm sm:p-3.5"
+            >
+              {m.logoUrl ? (
+                <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-50 sm:h-14 sm:w-14">
+                  <Image src={m.logoUrl} alt="" fill sizes="56px" className="object-contain p-1.5" />
+                </span>
+              ) : (
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-50 font-display text-lg font-bold text-navy-900/35 sm:h-14 sm:w-14 sm:text-xl">
+                  {m.name[0]?.toUpperCase() ?? "?"}
+                </span>
+              )}
+              <span className="flex w-full min-w-0 flex-col gap-0.5">
+                <span className="block text-[15px] font-semibold leading-tight text-navy-950 [overflow-wrap:anywhere]">
+                  {m.name}
+                </span>
+                {/* Counted from the fitment table, like everything else on this
+                    page. "6 modèles" is what a shopper is deciding with; the
+                    part count is the same fifty-odd for every make the shop
+                    covers and would read as noise. */}
+                <span className="block text-[12px] leading-none text-navy-900/50">
+                  {m.modelCount} modèle{m.modelCount > 1 ? "s" : ""}
+                </span>
               </span>
-            ) : (
-              <span className="shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-lg bg-gray-50 text-navy-900/35 font-display font-bold text-lg md:text-xl flex items-center justify-center">
-                {v.makeName[0]?.toUpperCase() ?? "?"}
-              </span>
-            )}
-            <span className="w-full min-w-0 md:flex-1 flex flex-col gap-0.5">
-              {/* 12px, not 11: the project's legibility floor, and a make
-                  name set below it is the small print this card exists to get
-                  away from. */}
-              <span className="block text-[12px] font-display font-bold uppercase tracking-wide text-navy-900/50 truncate">
-                {v.makeName}
-              </span>
-              {/* Wrapped to two lines rather than cut. "Série 3 (E90)" is the
-                  answer to "is this my car?", and half of it is not. */}
-              <span className="block text-[15px] md:text-base font-semibold text-navy-950 leading-tight line-clamp-2 [overflow-wrap:anywhere]">
-                {v.modelName}
-              </span>
-              <span className="block text-[12px] text-navy-900/50 leading-none">
-                {v.productCount} pièce{v.productCount > 1 ? "s" : ""}
-              </span>
-            </span>
-          </Link>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-27 Playwright suites, ~1080 checks, driving real browsers against a real
+27 Playwright suites, ~1090 checks, driving real browsers against a real
 database. They are the main safety net and they have caught more real bugs
 than they have cost.
 
@@ -220,6 +220,31 @@ F235701", and a Réf. line under that prints it twice.
 does not.** A grid has to read across, so an out-of-stock card keeps the space
 its delivery line would occupy. Stacked rows have no neighbour to line up with,
 so reserving there is just a gap.
+
+**`<main>` is `flex-1`, never `flex flex-col`.** A column flex container makes
+every section a flex item, and `mx-auto` on a flex item does not centre it
+inside its container — it shrink-wraps it to its own content and centres that.
+Pages laid out as `mx-auto shell-w` therefore rendered at whatever width their
+text happened to need: measured at 1920px, the home page's vehicle board came
+out 809px instead of 1280 and an empty cart came out 225px. Invisible on a
+phone, where content fills the width anyway, and the whole of "the site looks
+small on a big screen". `e2e-mobile` [16] measures it.
+
+**The width of the site is `.shell-w`, in one place.** 1280px up to a 1536px
+screen, 1536px above it — every band measures against it, so they line up down
+the page and widening the site is one edit rather than thirty. The grids take
+the extra room rather than stretching: catalogue 4 → 5 columns, family board
+6 → 8, top sellers 4 → 6.
+
+**The home page's two boards are makes and manufacturers, side by side.**
+Which car, then whose part — the two questions a parts shop is navigated by.
+The vehicle board listed make+model pairs ("Peugeot 208"), which is a more
+precise answer to a question nobody starts with; a shopper knows they drive a
+Renault long before they can say which Clio, and the make page one tap on is
+where that gets settled. The manufacturers board was an auto-scrolling marquee
+of `<div>`s near the footer — nothing clickable, names set in type on navy
+where every maker's mark is drawn for white, and you had to wait for the one
+you wanted to come round. Both are still grids of links now.
 
 **On a phone the filters are a tab on the edge of the screen.** They were a
 button above the grid, which is several screens behind anyone who has scrolled

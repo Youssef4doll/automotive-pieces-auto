@@ -73,7 +73,7 @@ console.log("\n[2] THE HOMEPAGE SHOWS IT");
 
 console.log("\n[3] ADMIN UPLOADS A MAKE LOGO");
 {
-  const make = await prisma.vehicleMake.findFirst({ where: { name: { contains: "Renault" } }, select: { id: true, name: true } });
+  const make = await prisma.vehicleMake.findFirst({ where: { name: { contains: "Renault" } }, select: { id: true, name: true, slug: true } });
   if (!make) {
     console.log("  SKIP  no Renault in the seed");
   } else {
@@ -93,12 +93,13 @@ console.log("\n[3] ADMIN UPLOADS A MAKE LOGO");
     const shop = await (await browser.newContext({ viewport: { width: 1280, height: 1000 } })).newPage();
     await shop.goto(BASE);
     await shop.waitForTimeout(1500);
-    const section = shop.locator("h2", { hasText: "Les véhicules que nous couvrons" }).locator("..").locator("..");
-    await section.scrollIntoViewIfNeeded();
-    await shop.waitForTimeout(600);
-    const modelCard = section.locator(`a:has-text("${make.name}")`).first();
-    check("a model card for this make exists", (await modelCard.count()) > 0);
+    // Located by the link the board actually renders, not by the heading over
+    // it: a heading is copy and gets reworded, a route is the contract.
+    const modelCard = shop.locator(`main a[href="/pieces/${make.slug}"]`).first();
+    check("a tile for this make exists on the board", (await modelCard.count()) > 0, `/pieces/${make.slug}`);
     if (await modelCard.count() > 0) {
+      await modelCard.scrollIntoViewIfNeeded();
+      await shop.waitForTimeout(400);
       const img = modelCard.locator("img").first();
       const painted = await img.evaluate((el) => el.naturalWidth).catch(() => 0);
       check("its logo is painted", painted > 0, `naturalWidth ${painted}`);

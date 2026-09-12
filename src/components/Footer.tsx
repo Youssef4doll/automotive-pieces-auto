@@ -15,7 +15,7 @@ export default async function Footer() {
 
   return (
     <footer data-print-hide className="bg-navy-950 text-white/80 mt-8 pb-24 lg:pb-8">
-      <div className="mx-auto max-w-7xl px-4 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div className="mx-auto shell-w px-4 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
         <div className="col-span-2 md:col-span-1">
           <Image src="/images/logo-white.png" alt="Automotive Pièces Auto" width={150} height={50} className="h-9 w-auto mb-3" />
           <About />
@@ -100,7 +100,7 @@ export default async function Footer() {
         regions={settings.delivery_regions}
       />
 
-      <div className="mx-auto max-w-7xl px-4 pb-6">
+      <div className="mx-auto shell-w px-4 pb-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6">
           <p className="text-xs text-white/40">
             © {new Date().getFullYear()} Automotive Pièces Auto. <Rights />

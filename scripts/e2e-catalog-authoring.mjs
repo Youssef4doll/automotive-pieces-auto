@@ -200,22 +200,22 @@ console.log("\n[3] THE VEHICLE BOARD IS THE SAME WEIGHT AS THE FAMILY BOARD");
     check("its logo is big enough to recognise", !!logo && logo.width >= 48, logo ? `${Math.round(logo.width)}px` : "no box");
 
     // The count was a bare number in the corner with nothing saying what it
-    // counted.
-    check("the count says what it counts", /pièce/i.test(await vehicleCard.innerText()), (await vehicleCard.innerText()).replace(/\n/g, " · "));
+    // counted. The board lists makes now, so what it counts is models.
+    check("the count says what it counts", /mod[èe]le/i.test(await vehicleCard.innerText()), (await vehicleCard.innerText()).replace(/\n/g, " · "));
 
     // Not measured against the family tile: that one is a square built around
-    // a picture, and a card holding a logo and two lines of text has no
-    // business being 260px tall. What matters is that the model name is the
+    // a picture, and a card holding a mark and two lines of text has no
+    // business being 260px tall. What matters is that the make name is the
     // loudest thing in the card and reads at a glance, which is what a bare
     // 13px line in a 44px row did not do.
-    // The card is [logo, [make, model, count]] — so the model is the middle
-    // line of the last child. Taking the largest font in the card instead
-    // would have measured the logo's placeholder letter and passed on it.
+    // The card is [logo, [make, modelCount]] — so the name is the first line
+    // of the last child. Taking the largest font in the card instead would
+    // have measured the logo's placeholder letter and passed on it.
     const model = await vehicleCard.evaluate((a) => {
-      const el = a.lastElementChild?.children[1];
+      const el = a.lastElementChild?.children[0];
       return el ? { size: parseFloat(getComputedStyle(el).fontSize), text: el.textContent.trim() } : null;
     });
-    check("the model name reads at a glance", !!model && model.size >= 15, model ? `${model.text} at ${model.size}px` : "not found");
+    check("the make name reads at a glance", !!model && model.size >= 15, model ? `${model.text} at ${model.size}px` : "not found");
 
     // Every phone width, not one.
     //

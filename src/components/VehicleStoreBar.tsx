@@ -41,7 +41,7 @@ export default function VehicleStoreBar({ storeAddress }: { storeAddress: string
         aria-hidden={shown ? undefined : true}
         inert={!shown}
       >
-        <div className="mx-auto max-w-7xl grid grid-cols-2 divide-x divide-gray-200">
+        <div className="mx-auto shell-w grid grid-cols-2 divide-x divide-gray-200">
           <button
             onClick={() => setPickerOpen(true)}
             className="flex items-center gap-2.5 px-gutter py-2 min-h-tap text-start hover:bg-gray-50 transition-colors"
