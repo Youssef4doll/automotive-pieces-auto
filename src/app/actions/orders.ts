@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { shippingFeeFor } from "@/lib/shipping";
+import { taxPolicy } from "@/lib/tax";
 import { markCartConverted } from "./cart";
 import { getCurrentUser } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
@@ -78,6 +79,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   const settings = await getSettings();
   const freeShippingThreshold = Number(settings.free_shipping_threshold) || 150;
+  // Read once, here, and written onto the order below — so the paper the
+  // customer files states the rate that was in force when they bought, not
+  // whatever the settings say the day somebody prints it again.
+  const tax = taxPolicy(settings);
   const user = await getCurrentUser();
 
   // Two simultaneous checkouts can read the same MAX(ref) and try to write
@@ -138,7 +143,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
       const subtotal = lineItems.reduce((s, l) => s + l.lineTotal, 0);
       const shippingFee = shippingFeeFor(subtotal, freeShippingThreshold, data.deliveryMethod);
-      const total = subtotal + shippingFee;
+      // Prices are TTC, so the rate adds nothing here — it only decides how
+      // the total is broken out on the document. The droit de timbre is a
+      // real extra dinar, and it is quoted in the cart and on the checkout
+      // summary before this runs, so it is never a surprise at this point.
+      const total = subtotal + shippingFee + tax.stampDuty;
 
       // Derive the reference from the highest existing one, never from
       // row count. count() breaks permanently the first time any order is
@@ -170,6 +179,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           campaign: data.campaign,
           subtotal,
           shippingFee,
+          vatRate: tax.vatRate,
+          stampDuty: tax.stampDuty,
           total,
           notes: data.notes,
           items: { create: lineItems },

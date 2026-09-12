@@ -157,12 +157,34 @@ export default function CatalogView({
                 </div>
               </div>
 
-              {/* Three facts, each true for every part on the page. */}
-              <ul className="mt-5 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
-                <Fact icon="fit" title={t("cat.factFit")} sub={t("cat.factFitSub")} />
-                <Fact icon="truck" title={t("cat.factDelivery")} sub={deliveryLine} />
-                <Fact icon="cash" title={t("cat.factCod")} sub={t("cat.factCodSub")} />
-              </ul>
+              {/* Three facts, each true for every part on the page — folded
+                  away behind an "i" rather than standing open.
+
+                  They do not change from one category to the next, so after
+                  the first page they are read once and then permanently in
+                  the way: on a phone they were about 130px of the screen
+                  between the title and the first part, which is the thing
+                  the shopper actually came for. Native details/summary, so
+                  it opens without script and the facts are in the markup for
+                  a crawler either way. */}
+              <details className="group/facts mt-3">
+                <summary className="inline-flex min-h-tap-compact cursor-pointer select-none list-none items-center gap-2 text-[13px] font-semibold text-navy-900 [&::-webkit-details-marker]:hidden">
+                  <span
+                    aria-hidden="true"
+                    className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-navy-900/35 font-heading text-[11px] font-extrabold leading-none transition-colors group-open/facts:border-navy-900 group-open/facts:bg-navy-900 group-open/facts:text-white"
+                  >
+                    i
+                  </span>
+                  <span className="underline decoration-navy-900/25 underline-offset-4 group-open/facts:decoration-transparent">
+                    {t("cat.facts")}
+                  </span>
+                </summary>
+                <ul className="mt-3 grid max-w-3xl grid-cols-1 gap-3.5 rounded-2xl border border-navy-900/10 bg-white/70 p-4 sm:grid-cols-3 sm:gap-5">
+                  <Fact icon="fit" title={t("cat.factFit")} sub={t("cat.factFitSub")} />
+                  <Fact icon="truck" title={t("cat.factDelivery")} sub={deliveryLine} />
+                  <Fact icon="cash" title={t("cat.factCod")} sub={t("cat.factCodSub")} />
+                </ul>
+              </details>
             </div>
 
             <div className="flex items-start gap-5 lg:shrink-0">

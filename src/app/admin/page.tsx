@@ -1,16 +1,24 @@
 import Link from "next/link";
 import { getDashboardData } from "@/lib/data/admin";
+import { getSettings } from "@/lib/settings";
+import { taxPolicy } from "@/lib/tax";
 import { formatTND, toNumber } from "@/lib/money";
 import { ORDER_STATUS_LABEL } from "@/lib/order-status";
 import StatusBadge from "@/components/admin/StatusBadge";
 
 export default async function AdminDashboard() {
-  const data = await getDashboardData();
+  const [data, settings] = await Promise.all([getDashboardData(), getSettings()]);
   const maxRevenue = Math.max(1, ...data.last7Days.map((d) => d.revenue));
+  // These figures are the sum of what was charged, so once the shop is VAT
+  // registered they carry la TVA and the timbre — money collected for the
+  // state, not turnover. The number is right; saying so is what stops it
+  // being read as a jump in sales the month the matricule went in.
+  const { vatRate, stampDuty } = taxPolicy(settings);
+  const chargedNote = vatRate > 0 || stampDuty > 0 ? "toutes commandes, TTC" : "toutes commandes";
 
   const kpis = [
     { label: "Commandes", value: data.orderCount.toString(), sub: `${data.pendingCount} en attente` },
-    { label: "Revenu total", value: formatTND(data.revenue), sub: "toutes commandes" },
+    { label: "Revenu total", value: formatTND(data.revenue), sub: chargedNote },
     { label: "Panier moyen", value: formatTND(data.avgBasket), sub: "" },
     { label: "Clients", value: data.customerCount.toString(), sub: "comptes créés" },
   ];

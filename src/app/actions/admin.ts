@@ -320,6 +320,12 @@ const SETTINGS_KEYS: (keyof SettingsMap)[] = [
   "shop_whatsapp",
   "shop_email",
   "shop_hours",
+  // Was missing, so the matricule fiscal field on the settings form silently
+  // discarded whatever was typed into it and the printable document could
+  // never become a facture however many times somebody filled it in.
+  "shop_tax_id",
+  "vat_rate",
+  "stamp_duty",
   "free_shipping_threshold",
   "delivery_grand_tunis",
   "delivery_regions",

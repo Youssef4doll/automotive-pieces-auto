@@ -35,11 +35,19 @@ export function shippingFeeFor(
  * Quoting the cheaper case and surprising someone at the last step is the
  * behaviour this whole module exists to stop.
  */
-export function cartDeliveryQuote(subtotal: number, freeShippingThreshold: number) {
+export function cartDeliveryQuote(
+  subtotal: number,
+  freeShippingThreshold: number,
+  /** Droit de timbre, from lib/tax. Flat, so the cart can quote it honestly
+   *  before it knows anything about the order — and it has to, because it is
+   *  charged at checkout and this total may not go up there. */
+  stampDuty = 0,
+) {
   const fee = shippingFeeFor(subtotal, freeShippingThreshold, "DELIVERY");
   return {
     fee,
-    total: subtotal + fee,
+    stampDuty,
+    total: subtotal + fee + stampDuty,
     free: fee === 0,
     /** How much more would earn free delivery, or 0 once it is earned. */
     remainingForFree: Math.max(0, freeShippingThreshold - subtotal),

@@ -439,6 +439,15 @@ model Order {
   status         OrderStatus    @default(PENDING)
   subtotal       Decimal        @db.Decimal(10, 2)
   shippingFee    Decimal        @default(0) @db.Decimal(10, 2)
+  // The shop's tax position at the moment this order was placed, snapshotted
+  // so a later rate change in /admin/parametres cannot restate a document
+  // that has already been printed and filed. Prices are quoted TTC, so the
+  // rate decomposes `subtotal` and `shippingFee` rather than adding to them;
+  // the droit de timbre is a real extra dinar and IS inside `total`. Both
+  // default to 0, which is what every order placed before the shop had a
+  // matricule fiscal honestly says: no VAT stated, no stamp charged.
+  vatRate        Decimal        @default(0) @db.Decimal(5, 2)
+  stampDuty      Decimal        @default(0) @db.Decimal(10, 2)
   total          Decimal        @db.Decimal(10, 2)
   notes          String?
   // First-touch marketing attribution, carried from the visitor's first

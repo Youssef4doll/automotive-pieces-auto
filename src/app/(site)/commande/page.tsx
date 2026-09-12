@@ -1,4 +1,5 @@
 import { getSettings } from "@/lib/settings";
+import { taxPolicy } from "@/lib/tax";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import CheckoutForm from "@/components/CheckoutForm";
@@ -30,6 +31,7 @@ export default async function CheckoutPage() {
     <CheckoutForm
       signedIn={Boolean(user)}
       freeShippingThreshold={Number(settings.free_shipping_threshold) || 150}
+      stampDuty={taxPolicy(settings).stampDuty}
       deliveryGrandTunis={settings.delivery_grand_tunis}
       deliveryRegions={settings.delivery_regions}
       defaults={{

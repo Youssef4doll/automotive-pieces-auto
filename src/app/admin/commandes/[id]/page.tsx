@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatTND, toNumber } from "@/lib/money";
+import { taxBreakdown, vatRateLabel } from "@/lib/tax";
 import { ORDER_STATUS_LABEL } from "@/lib/order-status";
 import OrderStatusButtons from "@/components/admin/OrderStatusButtons";
 import StatusBadge from "@/components/admin/StatusBadge";
@@ -13,6 +14,13 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
     include: { items: true, history: { orderBy: { createdAt: "asc" } }, user: true },
   });
   if (!order) notFound();
+
+  const tax = taxBreakdown({
+    subtotal: toNumber(order.subtotal),
+    shippingFee: toNumber(order.shippingFee),
+    vatRate: toNumber(order.vatRate),
+    stampDuty: toNumber(order.stampDuty),
+  });
 
   return (
     <div className="flex flex-col gap-5 max-w-3xl">
@@ -87,17 +95,32 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
               </div>
             ))}
           </div>
+          {/* Broken out exactly as the customer's receipt breaks it out, so
+              the person answering "why 62.100 and not 61.100?" is reading the
+              same four lines the caller is holding. */}
           <div className="flex flex-col gap-1 border-t border-navy-900/8 mt-2 pt-2 text-sm">
             <div className="flex justify-between text-gray-500">
-              <span>Sous-total</span>
-              <span>{formatTND(toNumber(order.subtotal))}</span>
+              <span>{tax.taxed ? "Sous-total HT" : "Sous-total"}</span>
+              <span>{formatTND(tax.goodsHT)}</span>
             </div>
             <div className="flex justify-between text-gray-500">
-              <span>Livraison</span>
-              <span>{toNumber(order.shippingFee) === 0 ? "Gratuite" : formatTND(toNumber(order.shippingFee))}</span>
+              <span>{tax.taxed ? "Livraison HT" : "Livraison"}</span>
+              <span>{toNumber(order.shippingFee) === 0 ? "Gratuite" : formatTND(tax.shippingHT)}</span>
             </div>
+            {tax.taxed && (
+              <div className="flex justify-between text-gray-500">
+                <span>TVA {vatRateLabel(tax.vatRate)}</span>
+                <span>{formatTND(tax.vat)}</span>
+              </div>
+            )}
+            {tax.stampDuty > 0 && (
+              <div className="flex justify-between text-gray-500">
+                <span>Timbre fiscal</span>
+                <span>{formatTND(tax.stampDuty)}</span>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-navy-900 text-base">
-              <span>Total</span>
+              <span>{tax.taxed ? "Total TTC" : "Total"}</span>
               <span>{formatTND(toNumber(order.total))}</span>
             </div>
           </div>

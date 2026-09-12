@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 import { toNumber, formatTNDfr } from "@/lib/money";
+import { taxBreakdown, vatRateLabel } from "@/lib/tax";
 import { contactFrom, getOrderCounts } from "@/lib/data/account";
 import AccountShell from "@/components/account/AccountShell";
 import OrderTracker from "@/components/account/OrderTracker";
@@ -32,6 +33,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
     where: { ref },
     select: {
       id: true, ref: true, status: true, total: true, subtotal: true, shippingFee: true,
+      vatRate: true, stampDuty: true,
       createdAt: true, governorate: true, address: true, deliveryMethod: true,
       paymentMethod: true, notes: true, userId: true,
       history: { orderBy: { createdAt: "asc" }, select: { status: true, createdAt: true } },
@@ -55,6 +57,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
   ]);
   const liveById = new Map(live.map((p) => [p.id, p]));
   const contact = contactFrom(settings);
+  const tax = taxBreakdown({
+    subtotal: toNumber(order.subtotal),
+    shippingFee: toNumber(order.shippingFee),
+    vatRate: toNumber(order.vatRate),
+    stampDuty: toNumber(order.stampDuty),
+  });
 
   const reorderItems: ReorderItem[] = order.items
     .filter((i) => i.productId && liveById.get(i.productId)?.active)
@@ -154,19 +162,34 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
             })}
           </ul>
 
+          {/* The same decomposition the receipt prints, from the same
+              function — a customer who compares the screen with the paper
+              must not find two different breakdowns of one order. */}
           <dl className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-1.5 text-sm">
             <div className="flex justify-between">
-              <dt className="text-slate-500">Sous-total</dt>
-              <dd className="tabular-nums text-navy-950">{formatTNDfr(toNumber(order.subtotal))}</dd>
+              <dt className="text-slate-500">{tax.taxed ? "Sous-total HT" : "Sous-total"}</dt>
+              <dd className="tabular-nums text-navy-950">{formatTNDfr(tax.goodsHT)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-500">Livraison</dt>
+              <dt className="text-slate-500">{tax.taxed ? "Frais de livraison HT" : "Livraison"}</dt>
               <dd className="tabular-nums text-navy-950">
-                {toNumber(order.shippingFee) === 0 ? "Offerte" : formatTNDfr(toNumber(order.shippingFee))}
+                {toNumber(order.shippingFee) === 0 ? "Offerte" : formatTNDfr(tax.shippingHT)}
               </dd>
             </div>
+            {tax.taxed && (
+              <div className="flex justify-between">
+                <dt className="text-slate-500">TVA {vatRateLabel(tax.vatRate)}</dt>
+                <dd className="tabular-nums text-navy-950">{formatTNDfr(tax.vat)}</dd>
+              </div>
+            )}
+            {tax.stampDuty > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-slate-500">Timbre fiscal</dt>
+                <dd className="tabular-nums text-navy-950">{formatTNDfr(tax.stampDuty)}</dd>
+              </div>
+            )}
             <div className="flex justify-between pt-2 mt-1 border-t border-slate-100">
-              <dt className="font-semibold text-navy-950">Total</dt>
+              <dt className="font-semibold text-navy-950">{tax.taxed ? "Total TTC" : "Total"}</dt>
               <dd className="font-heading font-extrabold text-lg text-navy-950 tabular-nums">
                 {formatTNDfr(toNumber(order.total))}
               </dd>

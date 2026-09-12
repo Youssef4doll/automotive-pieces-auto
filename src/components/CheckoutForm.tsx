@@ -22,12 +22,16 @@ export type CheckoutDefaults = {
 
 export default function CheckoutForm({
   freeShippingThreshold,
+  stampDuty = 0,
   deliveryGrandTunis,
   deliveryRegions,
   defaults,
   signedIn = false,
 }: {
   freeShippingThreshold: number;
+  /** Droit de timbre, from the shop's settings — the same figure the cart
+   *  quoted, and zero unless the shop is VAT registered. */
+  stampDuty?: number;
   deliveryGrandTunis: string;
   deliveryRegions: string;
   defaults?: CheckoutDefaults;
@@ -53,7 +57,7 @@ export default function CheckoutForm({
 
   const isGrandTunis = GRAND_TUNIS.has(governorate);
   const shippingFee = shippingFeeFor(subtotal, freeShippingThreshold, deliveryMethod);
-  const total = subtotal + shippingFee;
+  const total = subtotal + shippingFee + stampDuty;
   const estimate = deliveryMethod === "PICKUP" ? "2h" : isGrandTunis ? deliveryGrandTunis : deliveryRegions;
 
   // items.length, not [] — the cart is a zustand `persist` store, so on
@@ -304,6 +308,12 @@ export default function CheckoutForm({
               <span>{t("cart.shipping")}</span>
               <span>{shippingFee === 0 ? t("cart.free") : <Price value={shippingFee} />}</span>
             </div>
+            {stampDuty > 0 && (
+              <div className="flex justify-between text-gray-600">
+                <span>{t("cart.stamp")}</span>
+                <Price value={stampDuty} />
+              </div>
+            )}
             <div className="flex justify-between font-bold text-navy-900 text-base">
               <span>{t("cart.total")}</span>
               <Price value={total} />

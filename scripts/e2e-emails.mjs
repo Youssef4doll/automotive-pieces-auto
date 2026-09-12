@@ -284,6 +284,49 @@ console.log("\n[4] FORGOT MY PASSWORD: A LINK BY E-MAIL, ONE HOUR, ONE USE");
   await prisma.user.update({ where: { email: RESET_EMAIL }, data: { passwordHash: before.passwordHash } });
 }
 
+console.log("\n[4b] A VAT-REGISTERED SHOP'S CONFIRMATION BREAKS THE MONEY OUT");
+{
+  // The facture's arithmetic is e2e-tax's job; what is checked here is that
+  // the message says the same thing the paper says. A mail quoting a total
+  // the receipt does not is the version of this a customer notices.
+  // All three are put back, including the two that had no row before — a
+  // suite that leaves a setting behind is a suite that quietly changes what
+  // the next one is testing.
+  const taxKeys = ["shop_tax_id", "vat_rate", "stamp_duty"];
+  const taxBefore = Object.fromEntries(
+    await Promise.all(
+      taxKeys.map(async (k) => [k, (await prisma.setting.findUnique({ where: { key: k } }))?.value ?? null])
+    )
+  );
+  for (const [key, value] of [["shop_tax_id", "1234567/A/M/000"], ["vat_rate", "19"], ["stamp_duty", "1.000"]]) {
+    await prisma.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+  }
+
+  const n = inbox.length;
+  const taxed = await placeOrder(p, { email: "client-tva@example.tn", name: "Client TVA", phone: "20999111" });
+  await waitForMail(n + 2);
+  const mail = inbox.slice(n).find((m) => m.to?.includes("client-tva@example.tn"));
+  const body = `${mail?.html} ${mail?.text}`;
+  check("it states the sous-total excluding tax", /Sous-total HT/.test(body));
+  check("the TVA and its rate", /TVA\s*19\s*%/.test(body));
+  check("and the timbre fiscal", /Timbre fiscal/.test(body));
+  check("under a total labelled TTC", /Total TTC/.test(body));
+
+  const stored = await prisma.order.findUnique({ where: { ref: taxed.ref }, select: { total: true } });
+  const printed = (body.match(/Total TTC[\s\S]{0,120}?(\d[\d\s]*,\d{2})\s?DT/) || [])[1];
+  check("quoting the total that was actually charged",
+    printed && Math.abs(Number(printed.replace(/\s/g, "").replace(",", ".")) - Number(stored.total)) < 0.005,
+    `${printed} DT vs ${Number(stored.total)} DT`);
+  check("and the plain-text part says the same",
+    /Sous-total HT/.test(mail?.text || "") && /Timbre fiscal/.test(mail?.text || ""));
+
+  for (const key of taxKeys) {
+    const value = taxBefore[key];
+    if (value === null) await prisma.setting.delete({ where: { key } }).catch(() => {});
+    else await prisma.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+  }
+}
+
 console.log("\n[5] THE MAIL SERVER GOING DOWN DOES NOT COST THE SHOP AN ORDER");
 {
   await new Promise((r) => stub.close(r));

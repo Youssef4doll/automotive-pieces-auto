@@ -1,4 +1,5 @@
 import { getSettings } from "@/lib/settings";
+import { taxPolicy } from "@/lib/tax";
 import CartView from "@/components/CartView";
 
 /**
@@ -9,5 +10,10 @@ import CartView from "@/components/CartView";
  */
 export default async function CartPage() {
   const settings = await getSettings();
-  return <CartView freeShippingThreshold={Number(settings.free_shipping_threshold) || 150} />;
+  return (
+    <CartView
+      freeShippingThreshold={Number(settings.free_shipping_threshold) || 150}
+      stampDuty={taxPolicy(settings).stampDuty}
+    />
+  );
 }

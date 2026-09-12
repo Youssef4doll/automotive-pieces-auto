@@ -385,6 +385,36 @@ console.log("\n[12] TEXT MEETS THE CONTRAST FLOOR");
   await page.close();
 }
 
+console.log("\n[13] THE CATEGORY'S STANDING COPY IS OUT OF THE WAY UNTIL ASKED FOR");
+{
+  // The three trust facts — compatibility, delivery window, cash on delivery
+  // — are the same on every category page. Standing open they put about a
+  // phone-screen's worth of already-read copy between the title and the first
+  // part. Folded behind an "i" they cost one line and are still one tap away.
+  const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage();
+  await page.goto(`${BASE}/catalogue/freinage`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(600);
+
+  const facts = page.locator("details:has-text('Livraison, compatibilité')").first();
+  check("the facts are folded away on arrival", (await facts.count()) === 1 && !(await facts.evaluate((d) => d.open)));
+
+  const summary = facts.locator("summary");
+  const closed = await summary.boundingBox();
+  check("and cost one line while folded", closed && closed.height <= 48, closed ? `${Math.round(closed.height)}px` : "no box");
+
+  const firstCard = page.locator("main a[href^='/produit/']").first();
+  const cardTop = (await firstCard.boundingBox())?.y ?? 0;
+  check("so the first part is within a screen and a half of the top", cardTop < 1266, `${Math.round(cardTop)}px`);
+
+  await summary.click();
+  await page.waitForTimeout(250);
+  check("tapping the i opens them", await facts.evaluate((d) => d.open));
+  const open = await facts.textContent();
+  check("and all three facts are there", /Compatibilité par véhicule/.test(open) && /Livraison rapide/.test(open) && /Paiement à la livraison/.test(open));
+  check("with the shop's real delivery window, not a slogan", /\d+\s*h/.test(open), (open.match(/\d+\s*h[^·]*/) || [])[0]?.trim());
+  await page.close();
+}
+
 console.log("\n[X] NOTHING ON A PHONE SUMMONS A KEYBOARD, OR THE ZOOM THAT COMES WITH IT");
 {
   const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage();

@@ -66,6 +66,8 @@ async function loadOrder(orderId: string): Promise<OrderForEmail | null> {
       paymentMethod: true,
       subtotal: true,
       shippingFee: true,
+      vatRate: true,
+      stampDuty: true,
       total: true,
       notes: true,
       items: { select: { name: true, sku: true, imageUrl: true, qty: true, unitPrice: true, lineTotal: true } },
@@ -77,6 +79,8 @@ async function loadOrder(orderId: string): Promise<OrderForEmail | null> {
     ...order,
     subtotal: toNumber(order.subtotal),
     shippingFee: toNumber(order.shippingFee),
+    vatRate: toNumber(order.vatRate),
+    stampDuty: toNumber(order.stampDuty),
     total: toNumber(order.total),
     items: order.items.map((i) => ({
       ...i,

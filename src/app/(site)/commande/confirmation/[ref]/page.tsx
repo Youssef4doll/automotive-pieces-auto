@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOrderByRef } from "@/app/actions/orders";
-import { toNumber } from "@/lib/money";
+import { toNumber, formatTND } from "@/lib/money";
+import { taxBreakdown, vatRateLabel } from "@/lib/tax";
 import Price from "@/components/Price";
 import type { Metadata } from "next";
 import OrderTracker from "@/components/account/OrderTracker";
@@ -29,6 +30,14 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
   // is reachable on its own, page guard or no page guard.
   const order = await getOrderByRef(ref);
   if (!order) notFound();
+
+  const shipping = toNumber(order.shippingFee);
+  const tax = taxBreakdown({
+    subtotal: toNumber(order.subtotal),
+    shippingFee: shipping,
+    vatRate: toNumber(order.vatRate),
+    stampDuty: toNumber(order.stampDuty),
+  });
 
   return (
     <div className="mx-auto max-w-xl px-4 py-16 text-center">
@@ -61,9 +70,34 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
             <Price value={toNumber(item.lineTotal)} className="font-medium" />
           </div>
         ))}
-        <div className="border-t mt-2 pt-2 flex justify-between font-bold text-navy-900">
-          <span>Total</span>
-          <Price value={toNumber(order.total)} />
+        {/* Everything between the parts and the total, named. This block
+            listed the lines and then a larger Total with nothing in between,
+            which is exactly the gap the question "why 22,20 and not 13,20?"
+            lives in — and the timbre fiscal made it wider. */}
+        <div className="border-t mt-2 pt-2 flex flex-col gap-1 text-sm">
+          <div className="flex justify-between text-gray-600">
+            <span>{order.deliveryMethod === "PICKUP" ? "Retrait en magasin" : "Livraison"}</span>
+            <span>{shipping > 0 ? <Price value={shipping} /> : "Offerte"}</span>
+          </div>
+          {tax.stampDuty > 0 && (
+            <div className="flex justify-between text-gray-600">
+              <span>Timbre fiscal</span>
+              <Price value={tax.stampDuty} />
+            </div>
+          )}
+          <div className="flex justify-between font-bold text-navy-900 pt-1">
+            <span>{tax.taxed ? "Total TTC" : "Total"}</span>
+            <Price value={toNumber(order.total)} />
+          </div>
+          {/* Below the total, not in the column above it: the TVA is already
+              inside every figure there, and a row that is not added to the
+              ones around it does not belong among them. The facture states
+              the same amount properly broken out. */}
+          {tax.taxed && (
+            <p className="text-xs text-gray-500">
+              dont TVA {vatRateLabel(tax.vatRate)} : {formatTND(tax.vat)}
+            </p>
+          )}
         </div>
       </div>
 

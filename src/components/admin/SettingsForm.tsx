@@ -21,6 +21,21 @@ export default function SettingsForm({ settings }: { settings: SettingsMap }) {
         defaultValue={settings.shop_tax_id}
         dir="ltr"
       />
+
+      {/* Both are read as zero until the matricule above is filled in: a
+          trader without one cannot charge la TVA and issues a reçu, not une
+          facture. Said here rather than left for somebody to discover by
+          typing 19 and seeing nothing change. */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Field label="Taux de TVA (%)" name="vat_rate" defaultValue={settings.vat_rate} type="number" step="any" />
+        <Field label="Timbre fiscal (DT par commande)" name="stamp_duty" defaultValue={settings.stamp_duty} type="number" step="any" />
+      </div>
+      <p className="-mt-2 text-xs text-gray-500">
+        {settings.shop_tax_id.trim()
+          ? "Les prix du catalogue sont TTC : la TVA est détaillée sur la facture, elle ne s'ajoute pas au total. Le timbre fiscal, lui, s'ajoute — il est annoncé dès le panier."
+          : "Sans matricule fiscal, ces deux champs restent sans effet et le document imprimable reste un reçu."}
+      </p>
+
       <div className="grid sm:grid-cols-3 gap-4">
         <Field label="Seuil livraison gratuite (DT)" name="free_shipping_threshold" defaultValue={settings.free_shipping_threshold} type="number" />
         <Field label="Délai Grand Tunis" name="delivery_grand_tunis" defaultValue={settings.delivery_grand_tunis} />
@@ -45,12 +60,15 @@ function Field({
   defaultValue,
   type = "text",
   dir,
+  step,
 }: {
   label: string;
   name: string;
   defaultValue: string;
   type?: string;
   dir?: "ltr" | "rtl";
+  /** Number fields default to whole steps, which refuses "0.6" as invalid. */
+  step?: string;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
@@ -58,6 +76,7 @@ function Field({
       <input
         name={name}
         type={type}
+        step={step}
         defaultValue={defaultValue}
         dir={dir}
         className="px-3 py-2.5 border border-navy-900/15 rounded-lg text-sm outline-none focus:border-gold-500"

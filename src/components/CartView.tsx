@@ -7,13 +7,22 @@ import { useCart, cartSubtotal } from "@/lib/cart-store";
 import { cartDeliveryQuote } from "@/lib/shipping";
 import Price from "@/components/Price";
 
-export default function CartView({ freeShippingThreshold }: { freeShippingThreshold: number }) {
+export default function CartView({
+  freeShippingThreshold,
+  stampDuty = 0,
+}: {
+  freeShippingThreshold: number;
+  /** Droit de timbre, from the shop's settings. Quoted here rather than
+   *  sprung at checkout — see lib/shipping. Zero unless the shop is VAT
+   *  registered, and then this row is not rendered at all. */
+  stampDuty?: number;
+}) {
   const { t } = useLocale();
   const items = useCart((s) => s.items);
   const setQty = useCart((s) => s.setQty);
   const remove = useCart((s) => s.remove);
   const subtotal = cartSubtotal(items);
-  const delivery = cartDeliveryQuote(subtotal, freeShippingThreshold);
+  const delivery = cartDeliveryQuote(subtotal, freeShippingThreshold, stampDuty);
 
   if (items.length === 0) {
     return (
@@ -109,6 +118,13 @@ export default function CartView({ freeShippingThreshold }: { freeShippingThresh
             <Price value={delivery.fee} />
           )}
         </div>
+
+        {stampDuty > 0 && (
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>{t("cart.stamp")}</span>
+            <Price value={stampDuty} />
+          </div>
+        )}
 
         <div className="flex justify-between font-bold text-navy-900 text-lg pt-1 border-t border-gray-100">
           <span>{t("cart.total")}</span>

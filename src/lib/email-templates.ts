@@ -1,5 +1,6 @@
 import "server-only";
 import { formatTNDfr } from "@/lib/money";
+import { taxBreakdown, vatRateLabel } from "@/lib/tax";
 import { siteUrl } from "@/lib/site";
 import { GRAND_TUNIS } from "@/lib/governorates";
 import { ORDER_STATUS_FLOW, ORDER_STATUS_LABEL } from "@/lib/order-status";
@@ -92,6 +93,9 @@ export type OrderForEmail = {
   paymentMethod: string;
   subtotal: number;
   shippingFee: number;
+  /** The shop's tax position as snapshotted on this order — see lib/tax. */
+  vatRate: number;
+  stampDuty: number;
   total: number;
   notes: string | null;
   items: {
@@ -413,17 +417,31 @@ function items(order: OrderForEmail) {
   );
 }
 
+/**
+ * The money, broken out the way the receipt breaks it out.
+ *
+ * Same function behind both (lib/tax), because an email and a printed facture
+ * disagreeing about one order is the kind of thing a customer photographs and
+ * sends to the shop. Untaxed — a shop with no matricule fiscal — this renders
+ * the plain three lines it always did.
+ */
 function totals(order: OrderForEmail) {
-  const shipping = order.shippingFee > 0 ? esc(formatTNDfr(order.shippingFee)) : "Offerte";
+  const tax = taxBreakdown(order);
+  const shipping = order.shippingFee > 0 ? esc(formatTNDfr(tax.shippingHT)) : "Offerte";
   const line = (label: string, value: string, strong = false) => `<tr>
     <td style="padding:${strong ? "12px 0 0" : "6px 0 0"};font-family:${strong ? FONT_HEAD : FONT};font-size:${strong ? "18px" : "14px"};color:${strong ? NAVY : MUTED};font-weight:${strong ? "800" : "normal"};${strong ? `border-top:2px solid ${NAVY};` : ""}">${label}</td>
     <td align="right" style="padding:${strong ? "12px 0 0" : "6px 0 0"};font-family:${strong ? FONT_HEAD : FONT};font-size:${strong ? "18px" : "14px"};color:${strong ? NAVY : INK};font-weight:${strong ? "800" : "normal"};white-space:nowrap;${strong ? `border-top:2px solid ${NAVY};` : ""}">${value}</td>
   </tr>`;
   return row(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${LINE};">
-      ${line("Sous-total", esc(formatTNDfr(order.subtotal)))}
-      ${line(order.deliveryMethod === "PICKUP" ? "Retrait en magasin" : "Livraison", order.deliveryMethod === "PICKUP" ? "—" : shipping)}
-      ${line("Total", esc(formatTNDfr(order.total)), true)}
+      ${line(tax.taxed ? "Sous-total HT" : "Sous-total", esc(formatTNDfr(tax.goodsHT)))}
+      ${line(
+        order.deliveryMethod === "PICKUP" ? "Retrait en magasin" : tax.taxed ? "Frais de livraison HT" : "Livraison",
+        order.deliveryMethod === "PICKUP" ? "—" : shipping,
+      )}
+      ${tax.taxed ? line(`TVA ${vatRateLabel(tax.vatRate)}`, esc(formatTNDfr(tax.vat))) : ""}
+      ${tax.stampDuty > 0 ? line("Timbre fiscal", esc(formatTNDfr(tax.stampDuty))) : ""}
+      ${line(tax.taxed ? "Total TTC" : "Total", esc(formatTNDfr(order.total)), true)}
     </table>`,
     "padding:8px 28px 0;"
   );
@@ -499,14 +517,19 @@ function signoff(shop: ShopForEmail) {
 
 function textLines(order: OrderForEmail, shop: ShopForEmail) {
   const window = deliveryWindow(order, shop);
+  const tax = taxBreakdown(order);
   return [
     ...order.items.map((i) => `- ${i.name} (réf. ${i.sku}) × ${i.qty} — ${formatTNDfr(i.lineTotal)}`),
     ``,
-    `Sous-total : ${formatTNDfr(order.subtotal)}`,
+    `${tax.taxed ? "Sous-total HT" : "Sous-total"} : ${formatTNDfr(tax.goodsHT)}`,
     order.deliveryMethod === "PICKUP"
       ? `Retrait en magasin`
-      : `Livraison : ${order.shippingFee > 0 ? formatTNDfr(order.shippingFee) : "offerte"}`,
-    `Total : ${formatTNDfr(order.total)}`,
+      : `${tax.taxed ? "Frais de livraison HT" : "Livraison"} : ${
+          order.shippingFee > 0 ? formatTNDfr(tax.shippingHT) : "offerte"
+        }`,
+    ...(tax.taxed ? [`TVA ${vatRateLabel(tax.vatRate)} : ${formatTNDfr(tax.vat)}`] : []),
+    ...(tax.stampDuty > 0 ? [`Timbre fiscal : ${formatTNDfr(tax.stampDuty)}`] : []),
+    `${tax.taxed ? "Total TTC" : "Total"} : ${formatTNDfr(order.total)}`,
     ``,
     order.deliveryMethod === "PICKUP"
       ? `Retrait en magasin — nous vous prévenons dès que la commande est prête.`

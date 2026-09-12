@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getOrderByRef } from "@/app/actions/orders";
 import { getSettings, publicContact } from "@/lib/settings";
 import { toNumber, formatTNDfr } from "@/lib/money";
+import { taxBreakdown, vatRateLabel } from "@/lib/tax";
 import { ORDER_STATUS_LABEL } from "@/lib/order-status";
 import PrintButton from "@/components/PrintButton";
 
@@ -50,7 +51,14 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
   const isInvoice = taxId.length > 0;
   const title = isInvoice ? "Facture" : "Reçu";
 
-  const subtotal = toNumber(order.subtotal);
+  // Every figure comes off the order, including the rate — a rate changed in
+  // the settings next year must not restate a document filed this year.
+  const tax = taxBreakdown({
+    subtotal: toNumber(order.subtotal),
+    shippingFee: toNumber(order.shippingFee),
+    vatRate: toNumber(order.vatRate),
+    stampDuty: toNumber(order.stampDuty),
+  });
   const shipping = toNumber(order.shippingFee);
   const total = toNumber(order.total);
   const placed = new Date(order.createdAt).toLocaleDateString("fr-FR", {
@@ -163,24 +171,53 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
           </tbody>
         </table>
 
-        {/* ------------------------------------------------------- totals */}
+        {/* ------------------------------------------------------- totals
+
+            On a facture this reads as a Tunisian facture does: the amounts
+            excluding tax, then the TVA on them, then the droit de timbre,
+            then what was actually paid. The prices in the catalogue are TTC,
+            so the HT lines are a decomposition of money already counted — the
+            four lines sum to the total to the millime, and the total is the
+            one stored on the order.
+
+            On a reçu — a shop with no matricule fiscal, which cannot charge
+            TVA — there is no rate to state, so the block is the plain
+            sous-total / livraison / total it has always been. */}
         <div className="flex justify-end mt-4">
-          <table className="text-sm w-full sm:w-72">
+          <table className="text-sm w-full sm:w-80">
             <tbody>
               <tr>
-                <td className="py-1 text-slate-600">Sous-total</td>
-                <td className="py-1 text-end tabular-nums">{formatTNDfr(subtotal)}</td>
+                <td className="py-1 text-slate-600">{tax.taxed ? "Sous-total HT" : "Sous-total"}</td>
+                <td className="py-1 text-end tabular-nums">{formatTNDfr(tax.goodsHT)}</td>
               </tr>
               <tr>
                 <td className="py-1 text-slate-600">
-                  {order.deliveryMethod === "PICKUP" ? "Retrait en magasin" : "Livraison"}
+                  {order.deliveryMethod === "PICKUP"
+                    ? "Retrait en magasin"
+                    : tax.taxed
+                      ? "Frais de livraison HT"
+                      : "Livraison"}
                 </td>
                 <td className="py-1 text-end tabular-nums">
-                  {shipping > 0 ? formatTNDfr(shipping) : "Offerte"}
+                  {shipping > 0 ? formatTNDfr(tax.shippingHT) : "Offerte"}
                 </td>
               </tr>
+              {tax.taxed && (
+                <tr>
+                  <td className="py-1 text-slate-600">TVA {vatRateLabel(tax.vatRate)}</td>
+                  <td className="py-1 text-end tabular-nums">{formatTNDfr(tax.vat)}</td>
+                </tr>
+              )}
+              {tax.stampDuty > 0 && (
+                <tr>
+                  <td className="py-1 text-slate-600">Timbre fiscal</td>
+                  <td className="py-1 text-end tabular-nums">{formatTNDfr(tax.stampDuty)}</td>
+                </tr>
+              )}
               <tr className="border-t-2 border-navy-900">
-                <td className="pt-2 font-heading font-extrabold uppercase text-navy-950">Total</td>
+                <td className="pt-2 font-heading font-extrabold uppercase text-navy-950">
+                  {tax.taxed ? "Total TTC" : "Total"}
+                </td>
                 <td className="pt-2 text-end font-heading font-extrabold text-navy-950 tabular-nums">
                   {formatTNDfr(total)}
                 </td>

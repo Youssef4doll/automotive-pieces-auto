@@ -16,6 +16,15 @@ export const DEFAULT_SETTINGS = {
   // same document is labelled "Reçu", because an invoice without a tax number
   // is not an invoice in Tunisia and calling it one would be a lie on paper.
   shop_tax_id: "",
+  // Both only apply once the matricule above is filled in — see lib/tax.ts.
+  // A trader without one cannot charge TVA and does not issue factures, so
+  // until it is set these two are read as zero however they are filled in.
+  // 19 % is the standard Tunisian rate and the droit de timbre on an invoice
+  // is 1 DT; both are here rather than in the code so a rate change is a
+  // settings edit, and both are snapshotted onto each order so a later change
+  // cannot rewrite paper that has already been printed.
+  vat_rate: "19",
+  stamp_duty: "1.000",
   free_shipping_threshold: "150",
   delivery_grand_tunis: "24h",
   delivery_regions: "48–72h",

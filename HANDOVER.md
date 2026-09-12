@@ -15,7 +15,7 @@ worth reading first — what is not.
 ```bash
 npm install                 # postinstall runs `prisma generate`
 cp .env.example .env        # then fill in the values below
-npm run db:migrate          # 16 migrations
+npm run db:migrate          # 18 migrations
 npm run db:seed             # catalogue, vehicles, demo customer, admin
 npm run dev                 # http://localhost:3000
 ```
@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-26 Playwright suites, ~1000 checks, driving real browsers against a real
+27 Playwright suites, ~1050 checks, driving real browsers against a real
 database. They are the main safety net and they have caught more real bugs
 than they have cost.
 
@@ -114,8 +114,8 @@ stock), and clean up after themselves.
 src/app/(site)/     storefront          src/lib/data/    all database reads
 src/app/admin/      admin               src/lib/         session, search, money,
 src/app/actions/    server actions                       rate limits, shipping…
-src/app/api/        images, part icons  prisma/          schema, 16 migrations
-src/components/     UI                  scripts/         the 26 e2e suites
+src/app/api/        images, part icons  prisma/          schema, 18 migrations
+src/components/     UI                  scripts/         the 27 e2e suites
 ```
 
 **26 Prisma models.** The ones worth knowing: `Product`, `Category` (two levels
@@ -157,6 +157,25 @@ number by construction.
 **Delivery is flat.** 8 DT anywhere in Tunisia, free over a threshold the admin
 sets, free for pickup. Not governorate-dependent, which is what makes it safe
 to state in the cart before an address is known.
+
+**TVA is a decomposition; the timbre fiscal is an addition.** `src/lib/tax.ts`.
+Catalogue prices are TTC, so the "Sous-total HT" and "TVA 19 %" lines split
+money that was already counted — the total on the document is the total that
+was charged, and the lines sum to it exactly (the VAT line absorbs the
+rounding of both HT figures, deliberately, so a column that does not add up is
+impossible). The droit de timbre is the opposite: a real extra dinar, so it is
+quoted in the cart and on the checkout summary before it is charged. Both are
+switched on by one thing — the shop's matricule fiscal. Without one a trader
+cannot charge la TVA and does not issue factures, which is already why the
+printed document is titled "Reçu"; with the matricule empty the rate and the
+stamp read as zero however they are filled in, and every total reads as it did
+before any of this existed.
+
+**The rate and the stamp are snapshotted onto each order.** `Order.vatRate`
+and `Order.stampDuty`, written at checkout from the settings then in force.
+A rate changed next year must not restate a facture filed this year, and every
+order placed before the shop was registered honestly carries 0 — which is why
+its document still prints no TVA line at all.
 
 **Empty categories are hidden from shoppers and shown to admins.** A tile that
 opens onto nothing is a dead end; but an admin who adds a category and sees the
@@ -323,7 +342,10 @@ Working and covered by tests:
 - Order e-mail: confirmation to the customer, alert to the shop, a line when
   the status moves. Off until a transport is configured, and the admin says so.
 - A printable receipt (or facture, with a matricule fiscal) for every order,
-  shared by the customer and the packing bench.
+  shared by the customer and the packing bench. With the matricule filled in
+  it carries the TVA and the timbre fiscal broken out — sous-total HT, frais de
+  livraison HT, TVA, timbre, total TTC — and the same five lines appear in the
+  order e-mail, on the customer's order page and on the admin's.
 - Reviews: written only by customers who took delivery of that part, published
   only after the shop reads them, moderated at /admin/avis.
 - Security: nonce CSP, HSTS, nosniff, frame-deny, permissions policy, bcrypt,
