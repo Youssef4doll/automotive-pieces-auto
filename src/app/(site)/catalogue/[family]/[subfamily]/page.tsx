@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCategoryBySlug, getProductsForCategory, getBrandsForCategory, getCategoryFacets } from "@/lib/data/catalog";
+import { priceNote } from "@/lib/tax";
 import { getSettings, publicContact } from "@/lib/settings";
 import { parseFilters } from "@/lib/catalog-filters";
 import CatalogView from "@/components/CatalogView";
@@ -83,6 +84,7 @@ export default async function SubfamilyPage({
         // which is what the header menu shows for it too.
         art={{ slug: category.slug, imageUrl: category.imageUrl ?? siblingCategory?.imageUrl ?? null }}
         delivery={{ grandTunis: settings.delivery_grand_tunis, regions: settings.delivery_regions }}
+        priceNote={priceNote(settings)}
         whatsapp={publicContact(settings).whatsapp}
       />
     </>

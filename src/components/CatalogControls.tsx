@@ -83,7 +83,10 @@ export default function CatalogControls({
         ))}
       </div>
 
-      <div className="ms-auto flex items-center gap-2">
+      {/* Wraps: with the view toggle now offered on a phone too, the sort
+          control and the toggle together are wider than a 320px screen, and
+          without this the whole page scrolled sideways. */}
+      <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
         {/* One control, labelled inline the way the mock reads: "Trier par :
             Pertinence". The label is part of the tap target. */}
         <label className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white ps-3 pe-1.5 min-h-tap text-sm text-gray-700">
@@ -99,10 +102,15 @@ export default function CatalogControls({
           </select>
         </label>
 
-        {/* Grid or list. Phones keep the two-up grid — a list of tall cards
-            is longer than the grid it replaces, which is the opposite of the
-            reason anyone picks a list. */}
-        <div className="hidden sm:flex rounded-lg border border-gray-300 overflow-hidden" role="group" aria-label="Affichage">
+        {/* Grid or list, on every screen including a phone.
+            The toggle used to be hidden below sm, on the grounds that a list
+            of tall cards is longer than the grid it replaces. That was true of
+            the list as it was then. It is a compact row now — picture on the
+            left, everything else beside it, the way the Tunisian shops that
+            sell the most parts lay theirs out — and it is the layout that has
+            room for the reference and a line of description. Two honest
+            options, and the shopper picks; the grid is still the default. */}
+        <div className="flex rounded-lg border border-gray-300 overflow-hidden" role="group" aria-label="Affichage">
           <button type="button" aria-pressed={view === "grid"} aria-label={t("cat.gridView")} onClick={() => onView("grid")} className={toggle(view === "grid")}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />

@@ -415,6 +415,113 @@ console.log("\n[13] THE CATEGORY'S STANDING COPY IS OUT OF THE WAY UNTIL ASKED F
   await page.close();
 }
 
+console.log("\n[14] A CARD CAN SAY TWO THINGS AT ONCE WITHOUT SAYING NEITHER");
+{
+  // The owner photographed this: a part that both fits the saved car and is
+  // down to its last few was labelled "Compatible" and "Stock limité" pinned
+  // to opposite corners of a 170px picture, and at that width the two pills
+  // printed on top of each other. Both labels are true and both have to be
+  // readable, so this measures them rather than trusting the CSS.
+  const fitment = await prisma.productFitment.findFirst({
+    include: { engine: { include: { model: { include: { make: true } } } } },
+  });
+  const saved = fitment && {
+    makeId: fitment.engine.model.make.id, makeName: fitment.engine.model.make.name,
+    modelId: fitment.engine.model.id, modelName: fitment.engine.model.name,
+    engineId: fitment.engine.id, engineName: fitment.engine.name,
+  };
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  if (saved) {
+    await ctx.addInitScript((v) => {
+      localStorage.setItem("apa-vehicle", JSON.stringify({ state: { vehicles: [v], vehicle: v }, version: 0 }));
+    }, saved);
+  }
+  const page = await ctx.newPage();
+  await page.goto(`${BASE}/catalogue/filtres`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(900);
+
+  const cards = page.locator("main a[href^='/produit/']");
+  let overlaps = 0;
+  let bothSeen = 0;
+  for (let i = 0; i < (await cards.count()); i++) {
+    // :text-is, not :has-text — the latter matches every ancestor that
+    // merely contains the words, so the wrapper around both pills counts as
+    // a pill and "overlaps" its own children.
+    const pills = cards
+      .nth(i)
+      .locator('span:text-is("Compatible"), span:text-is("Stock limité"), span:text-is("Top vente")');
+    if ((await pills.count()) < 2) continue;
+    bothSeen++;
+    const a = await pills.nth(0).boundingBox();
+    const b = await pills.nth(1).boundingBox();
+    if (!a || !b) continue;
+    const hit = a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+    if (hit) overlaps++;
+  }
+  check("at least one card carries two labels at once", bothSeen > 0, `${bothSeen} of them`);
+  check("and no two of them overlap at 390px", overlaps === 0, `${overlaps} collisions`);
+
+  // The list layout — a compact row rather than a taller card — is now an
+  // option on a phone, not only from 640px up.
+  const toggle = page.locator('[role="group"][aria-label="Affichage"] button');
+  check("the grid/list toggle is offered on a phone", (await toggle.count()) === 2);
+  await toggle.last().click();
+  await page.waitForTimeout(500);
+  const row = page.locator("main a[href^='/produit/']").first();
+  const box = await row.boundingBox();
+  check("a list row is a row, not a full-height card", !!box && box.height < 420, box ? `${Math.round(box.height)}px` : "no box");
+  await page.close();
+  await ctx.close();
+}
+
+console.log("\n[15] THE FILTERS STAY WITHIN REACH ALL THE WAY DOWN THE PAGE");
+{
+  // They used to be a button above the grid. By the time a shopper has
+  // scrolled far enough to want to narrow a list, a control at the top of the
+  // page is not a control at all.
+  const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage();
+  await page.goto(`${BASE}/catalogue/filtres`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(800);
+
+  // Two triggers, one sheet: a labelled button in the flow, and a fixed tab
+  // for once that button has scrolled away.
+  const triggers = page.locator('button[aria-haspopup="dialog"]');
+  check("the filters are offered by a labelled button in the page", await triggers.first().isVisible());
+  check("with the word on it, not just an icon", /Filtres/.test(await triggers.first().textContent()));
+  const tab = triggers.nth(1);
+  check("and by a tab on the edge of the screen", (await tab.count()) === 1);
+
+  await page.evaluate(() => window.scrollBy(0, 2000));
+  await page.waitForTimeout(400);
+  const box = await tab.boundingBox();
+  const vw = page.viewportSize().width;
+  const vh = page.viewportSize().height;
+  check("it is still on screen after scrolling to the bottom",
+    !!box && box.y >= 0 && box.y < vh && box.x + box.width <= vw + 1,
+    box ? `x ${Math.round(box.x)} y ${Math.round(box.y)} w ${Math.round(box.width)}` : "no box");
+  // A fixed strip sits over the catalogue for the whole page, so it is held
+  // to a tap target and no more — the word lives on the button above, which
+  // costs nothing because it scrolls.
+  check("and no wider than a tap target, since it covers parts", !!box && box.width <= 48,
+    box ? `${Math.round(box.width)}px` : "no box");
+  check("still reachable by a screen reader", (await tab.getAttribute("aria-label")) === "Filtres");
+
+  await tab.click();
+  await page.waitForTimeout(500);
+  const sheet = page.locator('[role="dialog"]').filter({ hasText: "Filtres" }).first();
+  check("tapping it opens the filters", await sheet.isVisible());
+  const text = await sheet.textContent();
+  check("with the same filters as the desktop sidebar",
+    /Prix/.test(text) && /Marque/.test(text) && /Disponibilité/.test(text));
+  check("and a way out that names what it is going back to", /Voir les \d+ résultats/.test(text),
+    (text.match(/Voir les \d+ résultats/) || [])[0]);
+
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(400);
+  check("Escape closes it", (await page.locator('[role="dialog"]').count()) === 0);
+  await page.close();
+}
+
 console.log("\n[X] NOTHING ON A PHONE SUMMONS A KEYBOARD, OR THE ZOOM THAT COMES WITH IT");
 {
   const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage();

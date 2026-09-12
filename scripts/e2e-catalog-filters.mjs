@@ -18,7 +18,9 @@
  * Driven against a production build. See run-e2e.sh for why not `next dev`.
  */
 import { chromium } from "playwright";
+import { PrismaClient } from "@prisma/client";
 
+const prisma = new PrismaClient();
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 
 let pass = 0;
@@ -195,6 +197,83 @@ console.log("\n[5] BIGGER PICTURES: THE SUBCATEGORY GRIDS THAT REPLACED PLAIN LI
   await ctx.close();
 }
 
+console.log("\n[6] THE LIST ROW SAYS WHAT THE SHOP KNOWS, AND NOTHING ELSE");
+{
+  // The row is modelled on the specialist parts catalogues: maker's mark,
+  // name, labels, the reference, what the part actually is, and a price block
+  // with the quantity beside the button. Every one of those is a real field —
+  // the spec rows in particular appear only once somebody has filled them in,
+  // which is what this section drives from both sides.
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const p = await ctx.newPage();
+
+  const toList = async () => {
+    await p.goto(`${BASE}/catalogue/filtres`, { waitUntil: "domcontentloaded" });
+    await p.waitForTimeout(700);
+    await p.locator('[role="group"][aria-label="Affichage"] button').last().click();
+    await p.waitForTimeout(500);
+  };
+
+  await toList();
+  const row = p.locator('main div:has(> div > a[href^="/produit/"])').first();
+  check("a list row carries a quantity beside the button", (await p.locator("main select#qty-" ).count()) >= 0 && (await p.locator('main select[id^="qty-"]').count()) > 0);
+  check("and the add button next to it", (await p.locator('main button:has-text("Ajouter au panier")').count()) > 0);
+
+  // Nothing invented: with an empty specs bag there is no spec block at all,
+  // and no row of blank labels standing in for one.
+  const before = await p.textContent("main");
+  check("with no specs filled in, no spec rows are printed", !/Position :|Réf\. OE :/.test(before));
+
+  // Now fill some in, the way the admin would, and read the same page back.
+  const target = await prisma.product.findFirst({
+    where: { active: true, category: { parent: { slug: "filtres" } } },
+    select: { id: true, name: true, specs: true, oemRefs: true, axle: true },
+  });
+  if (!target) {
+    check("there is a product to describe", false);
+  } else {
+    await prisma.product.update({
+      where: { id: target.id },
+      data: {
+        axle: "AVANT",
+        oemRefs: ["8001063523620", "1109AY"],
+        specs: { "Hauteur (mm)": "98,6", "Type de filtre": "Cartouche", "Diamètre (mm)": "82" },
+      },
+    });
+    await toList();
+    const after = await p.textContent("main");
+    check("the position it fits is printed", /Position :\s*Avant/.test(after));
+    // Ahead of the measurements, deliberately: only the first few rows are
+    // shown, and the number a mechanic matches the part by must not be the
+    // one pushed off the card by a height in millimetres.
+    check("the manufacturer's numbers come next", /Réf\. OE :[\s\S]{0,40}8001063523620/.test(after));
+    check("then the shop's own specs", /Hauteur \(mm\) :\s*98,6/.test(after));
+    check("with a way to the rest of them", /Voir toutes les caractéristiques/.test(after));
+
+    await prisma.product.update({
+      where: { id: target.id },
+      data: { specs: target.specs, oemRefs: target.oemRefs, axle: target.axle },
+    });
+    await toList();
+    const restored = await p.textContent("main");
+    check("emptying them again leaves nothing behind", !/Position :|Hauteur \(mm\) :/.test(restored));
+  }
+
+  // The quantity is the point of putting a selector there at all: it has to
+  // reach the cart, not be read and dropped.
+  const qty = p.locator('main select[id^="qty-"]').first();
+  await qty.selectOption("3");
+  await p.locator('main button:has-text("Ajouter au panier")').first().click();
+  await p.waitForTimeout(900);
+  const badge = await p.locator('header a[href="/panier"], header button:has-text("Panier")').first().textContent().catch(() => "");
+  const stored = await p.evaluate(() => JSON.parse(localStorage.getItem("apa-cart") || "{}")?.state?.items ?? []);
+  check("the chosen quantity is what reaches the cart", stored.length > 0 && stored[0].qty === 3,
+    `${stored.map((i) => `${i.qty}×`).join(" ")}${badge ? ` · ${badge.trim()}` : ""}`);
+
+  await ctx.close();
+}
+
 await browser.close();
+await prisma.$disconnect();
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

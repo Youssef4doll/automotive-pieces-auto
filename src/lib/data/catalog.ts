@@ -113,6 +113,8 @@ export function serializeProduct<
     imageUrl?: string;
     images?: { id: string }[];
     searchText?: string;
+    skuNormalized?: string;
+    refsNormalized?: string[];
     category?: { slug: string } | null;
   },
 >(p: T) {
@@ -120,10 +122,18 @@ export function serializeProduct<
   // been given a real picture shows it everywhere — cards, cart, search,
   // packs — without each of those components knowing about ProductImage.
   const uploaded = p.images?.[0]?.id;
-  // searchText is an index, not content: several hundred bytes per card that
-  // no component reads. Dropped here rather than in every query's select, so
-  // a new caller cannot forget and quietly double its page weight.
-  const { images: _images, searchText: _searchText, ...rest } = p;
+  // searchText, skuNormalized and refsNormalized are index columns, not
+  // content: several hundred bytes per card that no component reads — they
+  // exist for the trigram matcher in lib/search and are queried there, never
+  // rendered. Dropped here rather than in every query's select, so a new
+  // caller cannot forget and quietly double its page weight.
+  const {
+    images: _images,
+    searchText: _searchText,
+    skuNormalized: _skuNormalized,
+    refsNormalized: _refsNormalized,
+    ...rest
+  } = p;
 
   // Nothing photographed yet: draw the family instead of showing a picture of
   // different parts. Only the seeded stand-in is replaced — a path the shop

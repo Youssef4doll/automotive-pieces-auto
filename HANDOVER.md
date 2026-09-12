@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-27 Playwright suites, ~1050 checks, driving real browsers against a real
+27 Playwright suites, ~1080 checks, driving real browsers against a real
 database. They are the main safety net and they have caught more real bugs
 than they have cost.
 
@@ -185,6 +185,51 @@ empty families badged "masquée · vide". `getMegaMenu(includeEmpty)`.
 **Out-of-stock parts sort last, never off.** They are real references the shop
 carries and they say plainly that they are out. They just stop leading the
 aisle.
+
+**A card's labels live in one wrapping row, not in two corners.** A part can
+fit your car *and* be down to its last few, and both labels are true. Pinned
+to opposite corners of the picture they printed on top of each other at phone
+width. They now share one flex row: side by side where there is room, stacked
+where there is not. `e2e-mobile` [14] measures the bounding boxes rather than
+trusting the CSS — with the old pinning restored by hand, 9 of 9 two-label
+cards collide.
+
+**The brand's own logo, or its name — never a stand-in.** `Brand.logoUrl` is
+uploaded in /admin/catalogue/marques and shown on every card; with none
+uploaded the name is set in type instead. A drawn placeholder would be an
+invented maker's mark, which is a claim about a manufacturer.
+
+**The list row is built the way the specialist parts catalogues build theirs**
+— maker's mark above the picture, name, labels and the reference on one line,
+then what the shop actually knows about the part (`Position`, `Réf. OE`, then
+`specs`, first four, the rest behind a link), and a price block on the right
+carrying the struck-through price, the discount, what the price includes, stock,
+the delivery window and a quantity selector beside the button. Ordering in that
+spec list is deliberate: a cross-reference is what a mechanic matches a part by,
+a height in millimetres is what they check afterwards, so the number must not be
+the row pushed off the card.
+
+**Nothing in that block is rendered without data behind it.** `specs` is `{}`
+and `oemRefs` is `[]` on every seeded product, so today the row falls back to
+the description and prints no spec rows at all. Fill them in from /admin/stock
+and they appear. The reference chip likewise appears only when the SKU is not
+already inside the name — most of this catalogue is named "Filtre à air KAMOKA
+F235701", and a Réf. line under that prints it twice.
+
+**The grid card reserves a fixed height for every row; the list deliberately
+does not.** A grid has to read across, so an out-of-stock card keeps the space
+its delivery line would occupy. Stacked rows have no neighbour to line up with,
+so reserving there is just a gap.
+
+**On a phone the filters are a tab on the edge of the screen.** They were a
+button above the grid, which is several screens behind anyone who has scrolled
+far enough to want them. `FilterSheet` holds the tab and the sheet; the panel
+inside is the desktop sidebar's, passed in rather than rebuilt.
+
+**Every sheet shares `lib/use-sheet.ts`** — scroll position preserved behind
+the overlay, the device back button closing the sheet instead of the page, and
+Escape. The cart had all three and the filter sheet needed the same three;
+two copies would have drifted the first time one was fixed.
 
 **The navigation carries a picture per category, and TecDoc is not in it.**
 The phone menu is a drill-down list — families with pictures, tap one and the

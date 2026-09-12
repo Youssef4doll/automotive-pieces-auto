@@ -125,3 +125,16 @@ export function taxBreakdown({
 export function vatRateLabel(rate: number): string {
   return `${rate.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} %`;
 }
+
+/**
+ * What a price on a card includes, said once.
+ *
+ * "TVA 19 % incluse" is true only of a shop that charges la TVA. Everywhere
+ * else this is null and the card prints nothing, because "prix TTC" on a
+ * receipt that carries no VAT line is a claim about a tax position the shop
+ * does not have.
+ */
+export function priceNote(settings: SettingsMap): string | null {
+  const { vatRate } = taxPolicy(settings);
+  return vatRate > 0 ? `TVA ${vatRateLabel(vatRate)} incluse` : null;
+}

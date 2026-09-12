@@ -13,6 +13,7 @@ import TrackEvent from "./TrackEvent";
 import PriceRange from "./PriceRange";
 import Checkbox from "./Checkbox";
 import CategoryVehicleBar from "./CategoryVehicleBar";
+import FilterSheet from "./FilterSheet";
 import type { CardProduct } from "./ProductCard";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import VehicleFilterBar, { groupByFit } from "@/components/VehicleFilterBar";
@@ -37,6 +38,7 @@ export default function CatalogView({
   facets,
   art,
   delivery,
+  priceNote,
   whatsapp,
 }: {
   family: { name: string; slug: string };
@@ -51,6 +53,8 @@ export default function CatalogView({
   art: { slug: string; imageUrl: string | null };
   /** The shop's delivery windows, from settings. Never typed into a component. */
   delivery: { grandTunis: string; regions: string };
+  /** What a price includes, from the shop's tax position — see lib/tax. */
+  priceNote: string | null;
   whatsapp: string | null;
 }) {
   const { t } = useLocale();
@@ -68,7 +72,6 @@ export default function CatalogView({
   const vehicle = useVehicle((v) => v.vehicle);
   const [showAll, setShowAll] = useState(false);
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [mobileFilters, setMobileFilters] = useState(false);
   const groups = groupByFit(products, vehicle?.engineId ?? null);
   const shown = !vehicle || showAll ? products : groups.fits;
   const title = subfamily ? subfamily.name : family.name;
@@ -253,19 +256,13 @@ export default function CatalogView({
               </div>
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => setMobileFilters((v) => !v)}
-            aria-expanded={mobileFilters}
-            className="inline-flex min-h-tap items-center gap-2 self-start rounded-lg border border-navy-900/15 bg-white px-4 text-sm font-semibold text-navy-950"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M4 6h16M7 12h10M10 18h4" />
-            </svg>
-            {t("cat.filters")}
-            {nFilters > 0 && <span className="rounded-full bg-gold-500 px-1.5 text-xs font-bold text-navy-950">{nFilters}</span>}
-          </button>
-          {mobileFilters && <div className="rounded-2xl border border-navy-900/10 bg-white p-4">{panel}</div>}
+
+          {/* The price band and the stock tick, on a phone: a labelled button
+              here and a tab on the edge of the screen for once this has
+              scrolled away. Same panel as the desktop sidebar. */}
+          <FilterSheet activeCount={nFilters} resultCount={shown.length}>
+            {panel}
+          </FilterSheet>
         </div>
 
         <div className="flex flex-col gap-6 lg:flex-row xl:gap-8">
@@ -302,7 +299,7 @@ export default function CatalogView({
             ) : shown.length === 0 ? (
               <NoFitState make={vehicle?.makeName ?? ""} onShowAll={() => setShowAll(true)} whatsapp={whatsapp} />
             ) : (
-              <ProductGrid products={shown} layout={view} delivery={deliveryLine} />
+              <ProductGrid products={shown} layout={view} delivery={deliveryLine} priceNote={priceNote} />
             )}
 
             {/* Parts the catalogue has no fitment data for. Kept out of the
@@ -319,7 +316,7 @@ export default function CatalogView({
                   {groups.unverified.length > 1 ? "s" : ""}. Elles ne sont pas déclarées incompatibles avec votre{" "}
                   {vehicle.makeName} — simplement non vérifiées. Envoyez-nous votre référence et nous confirmons.
                 </p>
-                <ProductGrid products={groups.unverified} layout={view} delivery={deliveryLine} />
+                <ProductGrid products={groups.unverified} layout={view} delivery={deliveryLine} priceNote={priceNote} />
               </section>
             )}
           </div>

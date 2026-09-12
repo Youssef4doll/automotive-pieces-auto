@@ -229,6 +229,22 @@ body {
   [dir="rtl"] .sm\:motion-safe\:animate-\[slide-in-end_240ms_cubic-bezier\(0\.32\,0\.72\,0\,1\)\] {
     animation-name: slide-in-start;
   }
+  /* A panel that slides in from the trailing edge, mirrored in Arabic without
+     the caller having to know which side that is. A named class rather than a
+     `[dir="rtl"] .animate-[…]` selector matching a mangled utility name: the
+     next sheet that needs this should not have to escape its own class name
+     into globals.css to get the RTL half. */
+  .sheet-end {
+    animation: slide-in-end 220ms ease-out;
+  }
+  [dir="rtl"] .sheet-end {
+    animation-name: slide-in-start;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sheet-end {
+      animation: none;
+    }
+  }
   @keyframes slide-in-start {
     from {
       transform: translateX(-100%);

@@ -154,6 +154,31 @@ console.log("\n[2] A BRAND CAN BE GIVEN A LOGO");
   const after = await prisma.brand.findUnique({ where: { id: createdBrandId }, select: { name: true, logoUrl: true } });
   check("renaming saved", after.name === `${BRAND_NAME} bis`, after.name);
   check("and the logo survived the rename", after.logoUrl === brand.logoUrl, `${brand.logoUrl} -> ${after.logoUrl}`);
+
+  // A logo the shop uploads and nobody ever sees is not a feature. Lend the
+  // brand a real product for a moment and read its card on the storefront.
+  const lent = await prisma.product.findFirst({
+    where: { active: true, stockQty: { gt: 0 }, category: { parent: { isNot: null } } },
+    select: { id: true, slug: true, brandId: true, category: { select: { slug: true, parent: { select: { slug: true } } } } },
+  });
+  if (!lent) {
+    check("there is a stocked product to show the logo on", false);
+  } else {
+    await prisma.product.update({ where: { id: lent.id }, data: { brandId: createdBrandId } });
+    const shopper = await (await browser.newContext({ viewport: { width: 1280, height: 1000 } })).newPage();
+    await shopper.goto(`${BASE}/catalogue/${lent.category.parent.slug}/${lent.category.slug}`, { waitUntil: "domcontentloaded" });
+    await shopper.waitForTimeout(900);
+    const card = shopper.locator(`a[href="/produit/${lent.slug}"]`).first();
+    const onCard = card.locator(`img[src*="${brand.logoUrl}"]`);
+    // The card links to the product twice (picture and name); either carrying
+    // the logo is the same fact.
+    const anywhere = shopper.locator(`img[src*="${brand.logoUrl}"]`);
+    check("the shopper sees the brand's own logo on the card", (await anywhere.count()) > 0 || (await onCard.count()) > 0);
+    const alt = await anywhere.first().getAttribute("alt").catch(() => null);
+    check("named, so a screen reader says whose part it is", alt === `${BRAND_NAME} bis`, String(alt));
+    await shopper.context().close();
+    await prisma.product.update({ where: { id: lent.id }, data: { brandId: lent.brandId } });
+  }
 }
 
 /* ------------------------------------------------------------------ */

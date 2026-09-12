@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { pageMeta, clampDescription } from "@/lib/seo";
 import { getCategoryBySlug, getProductsForCategory, getBrandsForCategory, getCategoryFacets } from "@/lib/data/catalog";
+import { priceNote } from "@/lib/tax";
 import { getSettings, publicContact } from "@/lib/settings";
 import { parseFilters } from "@/lib/catalog-filters";
 import CatalogView from "@/components/CatalogView";
@@ -83,6 +84,7 @@ export default async function FamilyPage({
         facets={facets}
         art={{ slug: category.slug, imageUrl: category.imageUrl }}
         delivery={{ grandTunis: settings.delivery_grand_tunis, regions: settings.delivery_regions }}
+        priceNote={priceNote(settings)}
         whatsapp={publicContact(settings).whatsapp}
       />
     </>

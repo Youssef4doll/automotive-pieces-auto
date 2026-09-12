@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { useCart, cartSubtotal, cartCount } from "@/lib/cart-store";
+import { useSheet } from "@/lib/use-sheet";
 import Price from "./Price";
 
 /**
@@ -29,52 +29,11 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
   const remaining = Math.max(0, freeShippingThreshold - subtotal);
   const progress = Math.min(100, (subtotal / freeShippingThreshold) * 100);
 
-  // Set when the shopper is leaving for checkout, so the history entry we
-  // pushed isn't rewound underneath the navigation.
-  const navigatingAway = useRef(false);
-
-  // Lock the page behind the sheet WITHOUT losing the shopper's place.
-  // position:fixed collapses scroll to 0, so stash it and restore on close —
-  // reopening/closing the cart must land you exactly where you were.
-  useEffect(() => {
-    if (!isOpen) return;
-    const y = window.scrollY;
-    const body = document.body;
-    const prev = { position: body.style.position, top: body.style.top, width: body.style.width };
-    body.style.position = "fixed";
-    body.style.top = `-${y}px`;
-    body.style.width = "100%";
-    return () => {
-      body.style.position = prev.position;
-      body.style.top = prev.top;
-      body.style.width = prev.width;
-      // "instant", not the document's default smooth behaviour: restoring
-      // position should be invisible, not an animated jump back.
-      window.scrollTo({ top: y, behavior: "instant" });
-    };
-  }, [isOpen]);
-
-  // The device back button should close the sheet first, not leave the page.
-  useEffect(() => {
-    if (!isOpen) return;
-    const onPop = () => close();
-    window.history.pushState({ apaCart: true }, "");
-    window.addEventListener("popstate", onPop);
-    return () => {
-      window.removeEventListener("popstate", onPop);
-      if (!navigatingAway.current && window.history.state?.apaCart) window.history.back();
-    };
-  }, [isOpen, close]);
-
-  // Escape closes it too (desktop keyboard users).
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, close]);
+  // Scroll lock, the device back button and Escape — all three shared with
+  // the catalogue's filter sheet, so the two can never behave differently.
+  // `leaving` is called just before we navigate to checkout, so closing the
+  // sheet does not rewind the history entry the navigation just added.
+  const leaving = useSheet(isOpen, close, "apaCart");
 
   if (!isOpen) return null;
 
@@ -199,7 +158,7 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
               <Link
                 href="/commande"
                 onClick={() => {
-                  navigatingAway.current = true;
+                  leaving();
                   close();
                 }}
                 className="flex items-center justify-center w-full min-h-tap-primary rounded-lg bg-red-600 hover:bg-red-700 text-white font-display font-bold uppercase tracking-wide"
