@@ -74,10 +74,10 @@ export default function CategoryManager({ families }: { families: AdminCategory[
   return (
     <div className="flex flex-col gap-4">
       {msg?.error && (
-        <p className="text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{msg.error}</p>
+        <p className="text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{msg.error}</p>
       )}
       {msg?.ok && (
-        <p className="text-sm font-medium text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg.ok}</p>
+        <p className="text-sm font-semibold text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg.ok}</p>
       )}
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -109,7 +109,7 @@ export default function CategoryManager({ families }: { families: AdminCategory[
                 >
                   <span className={`text-gray-600 transition-transform ${open ? "rotate-90" : ""}`}>›</span>
                   <Thumb name={f.name} imageUrl={f.imageUrl} />
-                  <span className="font-heading font-bold uppercase text-navy-950 truncate">{f.name}</span>
+                  <span className="font-heading font-extrabold uppercase text-navy-950 truncate">{f.name}</span>
                   <span className="text-xs text-gray-600 shrink-0">
                     /{f.slug} · {f.children.length} sous-cat. · {f.productCount} prod.
                   </span>

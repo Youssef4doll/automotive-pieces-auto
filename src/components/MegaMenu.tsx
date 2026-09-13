@@ -55,7 +55,7 @@ export default function MegaMenu({
               href={`/catalogue/${family.slug}`}
               onClick={onNavigate}
               onMouseEnter={() => setActive(i)}
-              className={`flex items-center gap-2.5 ps-3.5 pe-4 py-1.5 font-heading font-bold uppercase text-[12.5px] tracking-wide border-s-[3px] hover:text-red-600 ${
+              className={`flex items-center gap-2.5 ps-3.5 pe-4 py-1.5 font-heading font-extrabold uppercase text-[12.5px] tracking-wide border-s-[3px] hover:text-red-600 ${
                 i === active ? "bg-white border-red-500" : "border-transparent"
               }`}
             >

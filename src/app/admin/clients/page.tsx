@@ -61,7 +61,7 @@ export default async function AdminClientsPage({
               return (
                 <tr key={c.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <Link href={`/admin/clients/${c.id}`} className="font-medium text-navy-900 hover:underline">{c.name}</Link>
+                    <Link href={`/admin/clients/${c.id}`} className="font-semibold text-navy-900 hover:underline">{c.name}</Link>
                     <p className="text-xs text-navy-900/40">{c.email}</p>
                   </td>
                   <td className="px-4 py-3">

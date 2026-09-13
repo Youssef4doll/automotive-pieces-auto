@@ -77,7 +77,7 @@ export default async function AdminClientDetail({ params }: { params: Promise<{ 
                 </span>
                 <span className="text-gray-500 line-through break-all">{c.oldValue || "—"}</span>
                 <span className="text-navy-900/30">→</span>
-                <span className="text-navy-950 font-medium break-all">{c.newValue || "—"}</span>
+                <span className="text-navy-950 font-semibold break-all">{c.newValue || "—"}</span>
                 <span className="ms-auto text-xs text-navy-900/40 whitespace-nowrap">
                   {new Date(c.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" })}
                   {" · "}

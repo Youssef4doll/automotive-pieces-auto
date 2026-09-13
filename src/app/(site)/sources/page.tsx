@@ -79,12 +79,20 @@ export default async function SourcesPage() {
               { label: "Avec photo réelle", value: withPhotos, sub: `${pct(withPhotos)} %` },
             ].map((s) => (
               <div key={s.label} className="rounded-xl border border-gray-200 bg-white p-4">
-                <dt className="text-[11px] font-display font-bold uppercase tracking-wide text-gray-600">
+                {/* 12px, the floor the rest of the site keeps. */}
+                <dt className="text-[12px] font-display font-bold uppercase tracking-wide text-gray-600">
                   {s.label}
                 </dt>
                 <dd className="mt-1 text-2xl font-heading font-extrabold text-navy-950 tabular-nums">
                   {s.value}
-                  {s.sub && <span className="block text-xs font-normal text-gray-500">{s.sub}</span>}
+                  {/* font-sans as well as font-normal: this inherits the
+                      heading face from the <dd>, and that face ships in one
+                      weight, so "normal" was drawn at 800 like everything
+                      around it. The caption has to leave the display font to
+                      be lighter than the number it sits under. */}
+                  {s.sub && (
+                    <span className="block text-xs font-sans font-normal text-gray-500">{s.sub}</span>
+                  )}
                 </dd>
               </div>
             ))}

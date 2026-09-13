@@ -13,6 +13,13 @@ import VehiclePicker from "./VehiclePicker";
 import VehicleStoreBar from "./VehicleStoreBar";
 import SearchSuggest from "@/components/SearchSuggest";
 
+/**
+ * Set when the shopper closes the delivery strip. A cookie rather than
+ * localStorage, because the server renders the strip and only a cookie reaches
+ * it — see `noticeDismissed` below. A year, like the language cookie.
+ */
+export const NOTICE_COOKIE = "apa_notice_dismissed";
+
 export default function HeaderClient({
   menu,
   whatsapp,
@@ -21,6 +28,7 @@ export default function HeaderClient({
   contactUrl,
   userName,
   isAdmin,
+  noticeDismissed,
 }: {
   menu: MegaMenuFamily[];
   /** null until the owner fills it in — the control is hidden, not faked. */
@@ -30,6 +38,8 @@ export default function HeaderClient({
   contactUrl: string;
   userName: string | null;
   isAdmin: boolean;
+  /** Read from the cookie on the server, so the first paint is already right. */
+  noticeDismissed: boolean;
 }) {
   const { t } = useLocale();
   const router = useRouter();
@@ -53,23 +63,21 @@ export default function HeaderClient({
 
   // The delivery/returns strip sits on every page. It is useful once, then it
   // is permanent chrome the shopper cannot get rid of — so let them close it,
-  // and remember that. Starts hidden until we have read localStorage so a
-  // dismissed bar never flashes back on navigation.
-  const [noticeOpen, setNoticeOpen] = useState<boolean | null>(null);
-  useEffect(() => {
-    try {
-      setNoticeOpen(localStorage.getItem("apa-notice-dismissed") !== "1");
-    } catch {
-      setNoticeOpen(true);
-    }
-  }, []);
+  // and remember that.
+  //
+  // Remembered in a cookie, and the server decides. The dismissal used to live
+  // in localStorage, which the server cannot see, so the strip had to start
+  // hidden and appear in an effect — 44px inserted at the top of the document
+  // about two seconds in, pushing every page down. Measured on a throttled
+  // phone that was 0.046 of layout shift on every route, and the site's only
+  // shift. A cookie is read before the HTML is written, so both answers are
+  // right on the first paint: the strip is there, or it never was.
+  const [noticeOpen, setNoticeOpen] = useState(!noticeDismissed);
   function dismissNotice() {
     setNoticeOpen(false);
-    try {
-      localStorage.setItem("apa-notice-dismissed", "1");
-    } catch {
-      /* private mode — it will simply show again next visit */
-    }
+    // Lax, so it survives arriving from a search result; a year, like the
+    // language cookie. No personal data in it — it is one bit about one bar.
+    document.cookie = `${NOTICE_COOKIE}=1; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
   }
 
   function submitSearch(e: React.FormEvent) {
@@ -133,6 +141,15 @@ export default function HeaderClient({
               width={160}
               height={53}
               className="h-[clamp(28px,9vw,48px)] w-auto"
+              // Deliberately no `sizes`. It carried `sizes="160px"` for a
+              // while on the reasoning that naming the box must beat letting
+              // Next guess — and measured on a phone it was twice the bytes.
+              // With a `width` and no `sizes`, Next writes an x-descriptor
+              // srcset of exactly two candidates, 160 and 320, so a 3× screen
+              // takes the 320 (14KB). Name a size instead and it writes a
+              // w-descriptor srcset of every width it knows, the browser
+              // multiplies 160 by the device ratio, and a 3× screen asks for
+              // 640 — 30KB of wordmark in a 105px slot.
               priority
             />
           </Link>
@@ -202,7 +219,7 @@ export default function HeaderClient({
                 className="hidden xl:flex flex-col gap-px items-end leading-tight"
               >
                 <span className="text-[11.5px] uppercase text-white/60 tracking-[.1em]">{t("nav.callToOrder")}</span>
-                <span dir="ltr" className="font-heading text-base font-bold tracking-[.01em] text-white">{phone}</span>
+                <span dir="ltr" className="font-heading text-base font-extrabold tracking-[.01em] text-white">{phone}</span>
               </a>
             )}
             <Link

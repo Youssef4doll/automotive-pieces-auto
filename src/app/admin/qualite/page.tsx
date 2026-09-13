@@ -98,7 +98,7 @@ export default async function QualityPage({
               return (
                 <tr key={product.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <p className="font-medium truncate">{product.name}</p>
+                    <p className="font-semibold truncate">{product.name}</p>
                     <p className="text-xs text-navy-900/40 font-mono">{product.sku}</p>
                   </td>
                   <td className="px-3 py-3">

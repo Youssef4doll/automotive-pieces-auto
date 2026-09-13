@@ -62,7 +62,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         <div className="grid sm:grid-cols-2 gap-4 text-sm border-t border-navy-900/8 pt-4">
           <div>
             <h2 className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide mb-1">Client</h2>
-            <p className="font-medium">{order.customerName}</p>
+            <p className="font-semibold">{order.customerName}</p>
             <p dir="ltr" className="text-start text-gray-600">{order.phone}</p>
             {order.email && <p className="text-gray-600">{order.email}</p>}
             {order.user && <p className="text-xs text-navy-900/40 mt-1">Compte : {order.user.email}</p>}
@@ -91,7 +91,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             {order.items.map((item) => (
               <div key={item.id} className="flex justify-between py-2 text-sm">
                 <span>{item.qty}× {item.name} <span className="text-navy-900/40">({item.sku})</span></span>
-                <span className="font-medium">{formatTND(toNumber(item.lineTotal))}</span>
+                <span className="font-semibold">{formatTND(toNumber(item.lineTotal))}</span>
               </div>
             ))}
           </div>

@@ -28,8 +28,11 @@ export default function CartView({
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center">
         <p className="text-4xl mb-4">🛒</p>
-        <p className="text-gray-600 font-medium mb-6">{t("cart.empty")}</p>
-        <Link href="/" className="px-5 py-3 rounded-lg bg-navy-900 text-white font-semibold">
+        <p className="text-gray-600 font-semibold mb-6">{t("cart.empty")}</p>
+        <Link
+          href="/"
+          className="inline-flex min-h-tap items-center px-5 rounded-lg bg-navy-900 text-white font-semibold"
+        >
           {t("cart.continue")}
         </Link>
       </div>
@@ -49,7 +52,7 @@ export default function CartView({
               <Image src={item.imageUrl} alt={item.name} fill sizes="(max-width: 640px) 64px, 80px" className="object-cover" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-navy-900">{item.name}</p>
+              <p className="font-semibold text-navy-900">{item.name}</p>
               <p className="text-xs text-gray-600 mt-0.5">{t("product.reference")} {item.sku}</p>
               {/* flex-wrap: the 44px tap targets on the stepper make this row's
                   minimum width exceed a 320px screen, so let the price drop to
@@ -138,12 +141,12 @@ export default function CartView({
             {t("cart.freeShipProgress").replace("{amount}", String(Math.ceil(delivery.remainingForFree)))}
           </p>
         ) : (
-          <p className="text-xs text-green-700 font-medium -mt-1">{t("cart.freeShipReached")}</p>
+          <p className="text-xs text-green-700 font-semibold -mt-1">{t("cart.freeShipReached")}</p>
         )}
         <Link href="/commande" className="block text-center py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold">
           {t("cart.checkout")}
         </Link>
-        <Link href="/" className="flex items-center justify-center text-center text-sm text-gray-500 font-medium min-h-tap">
+        <Link href="/" className="flex items-center justify-center text-center text-sm text-gray-500 font-semibold min-h-tap">
           {t("cart.continue")}
         </Link>
       </div>

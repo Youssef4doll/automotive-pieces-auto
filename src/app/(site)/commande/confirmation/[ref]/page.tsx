@@ -67,7 +67,7 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
         {order.items.map((item) => (
           <div key={item.id} className="flex justify-between text-sm py-1">
             <span className="text-gray-600">{item.qty}× {item.name}</span>
-            <Price value={toNumber(item.lineTotal)} className="font-medium" />
+            <Price value={toNumber(item.lineTotal)} className="font-semibold" />
           </div>
         ))}
         {/* Everything between the parts and the total, named. This block

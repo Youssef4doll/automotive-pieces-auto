@@ -1,13 +1,15 @@
+import { cookies } from "next/headers";
 import { getMegaMenu } from "@/lib/data/catalog";
 import { getSettings, publicContact, contactHref } from "@/lib/settings";
 import { getCurrentUser } from "@/lib/session";
-import HeaderClient from "./HeaderClient";
+import HeaderClient, { NOTICE_COOKIE } from "./HeaderClient";
 
 export default async function Header() {
-  const [families, settings, user] = await Promise.all([
+  const [families, settings, user, jar] = await Promise.all([
     getMegaMenu(),
     getSettings(),
     getCurrentUser(),
+    cookies(),
   ]);
 
   // Only what the menu draws. The category rows carry a picture now, so
@@ -42,6 +44,13 @@ export default async function Header() {
       contactUrl={contactUrl}
       userName={user?.name ?? null}
       isAdmin={user?.role === "ADMIN"}
+      // Read here, on the server, so the delivery strip is in the first HTML
+      // the phone paints. It used to be decided in an effect against
+      // localStorage, which meant it was absent from every first paint and
+      // then inserted 44px above the fold a second later: the whole page
+      // jumped down, on every route, for every visitor who had not dismissed
+      // it. That one shift was the site's entire CLS.
+      noticeDismissed={jar.get(NOTICE_COOKIE)?.value === "1"}
     />
   );
 }

@@ -109,7 +109,7 @@ export default function CheckoutForm({
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center">
-        <p className="text-gray-600 font-medium mb-6">{t("cart.empty")}</p>
+        <p className="text-gray-600 font-semibold mb-6">{t("cart.empty")}</p>
         <Link href="/" className="px-5 py-3 rounded-lg bg-navy-900 text-white font-semibold">
           {t("cart.continue")}
         </Link>
@@ -243,7 +243,7 @@ export default function CheckoutForm({
                   key={g}
                   type="button"
                   onClick={() => setGovernorate(g)}
-                  className={`inline-flex items-center min-h-tap px-4 rounded-full text-xs font-medium border ${governorate === g ? "bg-navy-900 text-white border-navy-900" : "border-gray-300 text-gray-600"}`}
+                  className={`inline-flex items-center min-h-tap px-4 rounded-full text-xs font-semibold border ${governorate === g ? "bg-navy-900 text-white border-navy-900" : "border-gray-300 text-gray-600"}`}
                 >
                   {g}
                 </button>
@@ -295,7 +295,7 @@ export default function CheckoutForm({
             {items.map((i) => (
               <div key={i.productId} className="flex justify-between text-sm min-w-0">
                 <span className="text-gray-600 truncate pe-2 min-w-0">{i.qty}× {i.name}</span>
-                <span className="font-medium whitespace-nowrap"><Price value={i.unitPrice * i.qty} /></span>
+                <span className="font-semibold whitespace-nowrap"><Price value={i.unitPrice * i.qty} /></span>
               </div>
             ))}
           </div>
@@ -319,7 +319,7 @@ export default function CheckoutForm({
               <Price value={total} />
             </div>
           </div>
-          {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
+          {error && <p className="text-xs text-red-600 font-semibold">{error}</p>}
           <button
             type="submit"
             disabled={submitting}

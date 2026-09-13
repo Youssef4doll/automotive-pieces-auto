@@ -10,7 +10,7 @@ export default function NewsletterForm() {
   const [state, action, pending] = useActionState<NewsletterState, FormData>(subscribeNewsletter, undefined);
 
   if (state?.ok) {
-    return <p className="text-sm text-gold-500 font-medium">{t("footer.newsletterThanks")}</p>;
+    return <p className="text-sm text-gold-500 font-semibold">{t("footer.newsletterThanks")}</p>;
   }
 
   return (

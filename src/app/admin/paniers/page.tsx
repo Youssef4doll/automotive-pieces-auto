@@ -81,7 +81,7 @@ export default async function AbandonedCartsPage() {
                 return (
                   <tr key={cart.id} className="hover:bg-gray-50 align-top">
                     <td className="px-4 py-3">
-                      <p className="font-medium truncate">{cart.user?.name ?? "Visiteur"}</p>
+                      <p className="font-semibold truncate">{cart.user?.name ?? "Visiteur"}</p>
                       <p className="text-xs text-navy-900/40" dir="ltr">{phone ?? "sans contact"}</p>
                     </td>
                     <td className="px-3 py-3">

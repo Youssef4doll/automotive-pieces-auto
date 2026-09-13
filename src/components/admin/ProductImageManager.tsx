@@ -46,10 +46,10 @@ export default function ProductImageManager({
       </span>
 
       {msg?.error && (
-        <p className="text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{msg.error}</p>
+        <p className="text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{msg.error}</p>
       )}
       {msg?.ok && (
-        <p className="text-sm font-medium text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg.ok}</p>
+        <p className="text-sm font-semibold text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{msg.ok}</p>
       )}
 
       {images.length === 0 ? (

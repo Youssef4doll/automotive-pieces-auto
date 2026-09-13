@@ -56,10 +56,10 @@ export default function ImportPanel({ batches }: { batches: BatchRow[] }) {
   return (
     <div className="flex flex-col gap-5">
       {notice?.error && (
-        <p className="text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{notice.error}</p>
+        <p className="text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{notice.error}</p>
       )}
       {notice?.ok && (
-        <p className="text-sm font-medium text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{notice.ok}</p>
+        <p className="text-sm font-semibold text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{notice.ok}</p>
       )}
 
       <form action={action} className="rounded-xl border border-navy-900/10 bg-white p-4 flex flex-col gap-3">
@@ -103,7 +103,7 @@ export default function ImportPanel({ batches }: { batches: BatchRow[] }) {
               <div key={b.id} className="rounded-xl border border-navy-900/10 bg-white overflow-hidden">
                 <div className="flex items-center gap-3 p-4 flex-wrap">
                   <button onClick={() => setOpenId(open ? null : b.id)} className="flex-1 min-w-0 text-start min-h-tap">
-                    <p className="font-medium text-navy-950 truncate">{b.filename}</p>
+                    <p className="font-semibold text-navy-950 truncate">{b.filename}</p>
                     <p className="text-xs text-gray-500">
                       {new Date(b.createdAt).toLocaleString("fr-FR")} · {b.rowCount} ligne(s)
                     </p>

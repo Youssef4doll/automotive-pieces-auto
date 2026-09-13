@@ -222,9 +222,27 @@ console.log("\n[7] THE DESKTOP FLYOUT STILL FITS ITS ROW");
   for (const w of [1024, 1280, 1440]) {
     await dp.setViewportSize({ width: w, height: 900 });
     await dp.goto(BASE + "/", { waitUntil: "domcontentloaded" });
-    await dp.waitForTimeout(500);
+    // Park the pointer somewhere else first, then hover, then wait for a row.
+    //
+    // This hovered 500ms after domcontentloaded and counted 450ms later, and
+    // reported "0 images" about one run in three — at 1024px, or 1280, or
+    // 1440, never the same one twice. Two things were wrong and only the
+    // second one is interesting. The menu opens on an onMouseEnter that React
+    // has to have attached first, so waiting for the flyout beats sleeping
+    // through hydration. And the pointer does not move between iterations:
+    // the nav button sits at the same coordinates at all three widths, so on
+    // the loop after a successful hover Playwright was already parked on it,
+    // `hover()` had nowhere to move the mouse to, and no mouseenter was
+    // dispatched at all. Moving away first is what makes the next hover a
+    // real one.
+    await dp.waitForLoadState("networkidle");
+    await dp.mouse.move(0, 0);
     await dp.hover("header nav button");
-    await dp.waitForTimeout(450);
+    try {
+      await dp.waitForSelector("header a[href^='/catalogue/'] img", { timeout: 4000 });
+    } catch {
+      // Leave it to the check below to report — with a count, not a timeout.
+    }
     const r = await dp.evaluate(() => ({
       scroll: document.documentElement.scrollWidth,
       inner: window.innerWidth,

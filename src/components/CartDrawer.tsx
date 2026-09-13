@@ -89,7 +89,7 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
           <>
             <div className="px-4 py-2.5 bg-gold-500/10 border-b shrink-0">
               {remaining > 0 ? (
-                <p className="text-xs font-medium text-navy-900 mb-1.5">
+                <p className="text-xs font-semibold text-navy-900 mb-1.5">
                   {t("cart.freeShipProgress", { amount: remaining.toFixed(2) })}
                 </p>
               ) : (
@@ -107,7 +107,7 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
                     <Image src={item.imageUrl} alt="" fill sizes="64px" className="object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-navy-900 line-clamp-2 leading-snug">{item.name}</p>
+                    <p className="text-sm font-semibold text-navy-900 line-clamp-2 leading-snug">{item.name}</p>
                     <div className="flex items-center justify-between gap-2 flex-wrap mt-2">
                       <div className="flex items-center border rounded-lg">
                         <button
@@ -167,7 +167,7 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
               </Link>
               <button
                 onClick={close}
-                className="flex items-center justify-center w-full min-h-tap text-sm text-gray-500 font-medium mt-1"
+                className="flex items-center justify-center w-full min-h-tap text-sm text-gray-500 font-semibold mt-1"
               >
                 {t("cart.keepShopping")}
               </button>

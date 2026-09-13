@@ -40,15 +40,27 @@ export default async function VehicleShortcuts({ take = 18 }: { take?: number })
         </p>
       </div>
 
-      {/* Six across on a laptop, eight on a wide screen — a mark is a square,
-          so these want more columns and less height than the model cards they
-          replaced, which carried two lines of text each.
+      {/* Three across on a phone, six on a laptop, eight on a wide screen — a
+          mark is a square, so these want more columns and less height than the
+          model cards they replaced, which carried two lines of text each.
+
+          Three rather than two on a phone is worth 190px of a home page that
+          is already nine screens long: ten makes go from five rows to four,
+          and the tile loses the dead width it had around a 48px logo. Nothing
+          is hidden to pay for it — a shopper whose car is not on the board has
+          no way back, so the whole of the shop's coverage stays on screen.
 
           The logo slot is the same size whether or not the make has a logo
           uploaded, so the board stays even as the shop fills them in one at a
           time. The stand-in is the make's initial, never a drawn badge: an
           invented one would be a claim about a manufacturer. */}
-      <ul className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 3xl:grid-cols-8 gap-2 sm:gap-2.5">
+      {/* Two across on the narrowest phones, three from 360px.
+
+          Three at 320px leaves 65px of text inside the tile and "Volkswagen"
+          sets in 78px, so the make a shopper is looking for broke across two
+          lines mid-word. The families board above already steps 2 → 3 at a
+          phone breakpoint for the same reason; this matches it. */}
+      <ul className="grid grid-cols-2 min-[360px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 3xl:grid-cols-8 gap-2 sm:gap-2.5">
         {makes.map((m) => (
           <li key={m.slug}>
             <Link

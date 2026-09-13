@@ -169,7 +169,27 @@ export default function Hero({ shortcuts = [] }: { shortcuts?: Shortcut[] }) {
             src="/images/parts-lineup.png"
             alt="Pièces automobiles Automotive"
             fill
-            sizes="(max-width: 1024px) 100vw, 60vw"
+            // Below sm the box above is `hidden`, so the honest declaration
+            // there is "as close to nothing as this can say".
+            //
+            // The browser downloads it regardless: `priority` preloads it from
+            // the document head, and even lazily a display:none image is
+            // fetched rather than deferred, because there is no intersection
+            // to wait for (measured — switching to loading="lazy" did not stop
+            // the request, it only made Next pick a *larger* candidate). What
+            // `sizes` does control is which candidate.
+            //
+            // `1vw` and not `1px`, which is what this said and why it kept
+            // costing a phone 16KB for nought pixels. Next builds the srcset
+            // from the *vw* values it can find in this string: it takes the
+            // smallest, multiplies it by the first device size (640) and drops
+            // every candidate below that (`getWidths` in
+            // next/dist/shared/lib/get-img-props.js). A px value is not a vw
+            // value, so the smallest ratio here was the desktop's 60vw, the
+            // floor was 384px, and 384 is what the phone dutifully took — the
+            // smallest thing on offer. With a vw in the phone arm the floor
+            // drops to 6px and the 16px candidate exists to be chosen.
+            sizes="(max-width: 639px) 1vw, (max-width: 1024px) 100vw, 60vw"
             className="object-contain"
             // Two stacked drop-shadows, straight from the reference. They
             // trace the parts themselves rather than a box, because

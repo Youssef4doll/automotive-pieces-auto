@@ -281,7 +281,7 @@ export default function ProductCard({
   const fitLine = fit ? (
     <span
       className={`min-h-4 truncate text-[12px] leading-4 ${
-        fit === "unverified" ? "font-medium text-amber-600" : fit === "no" ? "font-medium text-gray-500" : "text-gray-500"
+        fit === "unverified" ? "font-semibold text-amber-600" : fit === "no" ? "font-semibold text-gray-500" : "text-gray-500"
       }`}
     >
       {fit === "yes" && vehicle
@@ -332,7 +332,7 @@ export default function ProductCard({
                 {facts.slice(0, SHOWN_FACTS).map((f) => (
                   <div key={f.label} className="flex min-w-0 gap-2">
                     <dt className="shrink-0 text-gray-500">{f.label} :</dt>
-                    <dd className="min-w-0 truncate font-medium text-navy-900">{f.value}</dd>
+                    <dd className="min-w-0 truncate font-semibold text-navy-900">{f.value}</dd>
                   </div>
                 ))}
               </dl>

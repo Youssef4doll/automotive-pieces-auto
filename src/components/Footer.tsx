@@ -84,7 +84,12 @@ export default async function Footer() {
           </ul>
         </div>
 
-        <div>
+        {/* Full width on a phone. The footer is two columns there, and this
+            sat in one of them: a 160px box holding an e-mail field and an OK
+            button, which left about seven characters of "Votre e-mail"
+            visible. Nothing else in the footer is a form — the link columns
+            are happy at half width, this is not. */}
+        <div className="col-span-2 md:col-span-1">
           <Heading k="footer.promosCol" />
           <div className="mt-3">
             <NewsletterForm />

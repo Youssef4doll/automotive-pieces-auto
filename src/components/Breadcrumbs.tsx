@@ -21,7 +21,7 @@ export default function Breadcrumbs({ items }: { items: Crumb[] }) {
           return (
             <li key={c.path} className="flex items-center gap-1.5">
               {last ? (
-                <span aria-current="page" className="text-gray-700 font-medium">
+                <span aria-current="page" className="text-gray-700 font-semibold">
                   {c.name}
                 </span>
               ) : (

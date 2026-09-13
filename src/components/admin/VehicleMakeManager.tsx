@@ -132,7 +132,7 @@ function MakeRow({ make, open, onToggle }: { make: AdminMake; open: boolean; onT
             value={name}
             onChange={(e) => setName(e.target.value)}
             aria-label={`Nom de ${make.name}`}
-            className="w-36 min-h-tap-compact px-2 rounded-lg border border-transparent hover:border-navy-900/15 focus:border-gold-500 font-heading font-bold uppercase text-navy-950 text-sm outline-none"
+            className="w-36 min-h-tap-compact px-2 rounded-lg border border-transparent hover:border-navy-900/15 focus:border-gold-500 font-heading font-extrabold uppercase text-navy-950 text-sm outline-none"
           />
           {name !== make.name && (
             <button disabled={namePending} className="min-h-tap-compact px-2.5 rounded-lg bg-navy-900 text-white text-[11px] font-display font-bold uppercase disabled:opacity-60">

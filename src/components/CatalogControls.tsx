@@ -76,7 +76,7 @@ export default function CatalogControls({
           <a
             key={c.key}
             href={c.href}
-            className="inline-flex items-center gap-1.5 text-xs px-2.5 min-h-tap-compact rounded-full bg-navy-900 text-white font-medium"
+            className="inline-flex items-center gap-1.5 text-xs px-2.5 min-h-tap-compact rounded-full bg-navy-900 text-white font-semibold"
           >
             {c.label} <span aria-hidden="true">✕</span>
           </a>

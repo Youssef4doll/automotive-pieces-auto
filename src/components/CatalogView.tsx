@@ -555,7 +555,7 @@ function EmptyState({ whatsapp }: { whatsapp: string | null }) {
   return (
     <div className="rounded-xl border border-dashed border-gray-300 px-4 py-16 text-center">
       <p className="mb-3 text-3xl">🔧</p>
-      <p className="mb-4 font-medium text-gray-600">Aucune référence en ligne pour cette catégorie</p>
+      <p className="mb-4 font-semibold text-gray-600">Aucune référence en ligne pour cette catégorie</p>
       {/* Same fix as FamiliesFooter and HelpCenter: the target was hardcoded,
           so with no WhatsApp number set this opened the site's own store
           section in a new tab, under a label naming WhatsApp. */}

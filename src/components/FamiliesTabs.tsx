@@ -165,8 +165,19 @@ export default function FamiliesTabs({
                       tile is narrow, so they wrap and are clamped to two lines
                       rather than truncated at the first word. `anywhere` is the
                       backstop for the single words that are wider than the tile
-                      on a 320px screen. */}
-                  <span className="w-full min-w-0 line-clamp-2 [overflow-wrap:anywhere] font-display font-bold uppercase tracking-wide text-[12px] sm:text-[13px] text-navy-950 leading-tight">
+                      on a 320px screen.
+
+                      No letter-spacing below sm, because on a phone it was
+                      costing a line and a word. The tile's text box is 92px
+                      across at 390px; "REFROIDISSEMENT" sets in 94px with
+                      tracking-wide and 89px without, so the backstop was firing
+                      on an ordinary category name and the tile read
+                      "REFROIDISSEMEN / T MOTEUR". Hyphenation is not the escape
+                      — measured, Chromium has no French pattern table and
+                      `hyphens: auto` changes nothing here. Losing 0.025em is
+                      what makes the word fit, and it takes the tile from three
+                      lines to two while it is at it. */}
+                  <span className="w-full min-w-0 line-clamp-2 [overflow-wrap:anywhere] font-display font-bold uppercase tracking-normal sm:tracking-wide text-[12px] sm:text-[13px] text-navy-950 leading-tight">
                     {f.name}
                   </span>
                   {/* What is behind the tile, counted from the catalogue.

@@ -24,11 +24,11 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
         </div>
         <AdminNav />
         <div className="mt-auto p-4 border-t border-white/10 flex flex-col gap-2">
-          <Link href="/" className="font-display font-semibold uppercase text-[11px] tracking-wide text-white/50 hover:text-gold-500">
+          <Link href="/" className="font-display font-bold uppercase text-[11px] tracking-wide text-white/50 hover:text-gold-500">
             ← Retour au site
           </Link>
           <form action={logout}>
-            <button className="font-display font-semibold uppercase text-[11px] tracking-wide text-white/50 hover:text-gold-500">
+            <button className="font-display font-bold uppercase text-[11px] tracking-wide text-white/50 hover:text-gold-500">
               Déconnexion
             </button>
           </form>
@@ -38,7 +38,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="lg:hidden bg-navy-950 text-white p-4 flex items-center justify-between border-b-2 border-gold-500">
           <Image src="/images/logo-white.png" alt="" width={130} height={43} className="h-7 w-auto" />
-          <Link href="/" className="font-display font-semibold uppercase text-[11px] tracking-wide text-white/60">
+          <Link href="/" className="font-display font-bold uppercase text-[11px] tracking-wide text-white/60">
             Retour au site
           </Link>
         </header>

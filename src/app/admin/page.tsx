@@ -44,7 +44,7 @@ export default async function AdminDashboard() {
       {data.alerts.length > 0 && (
         <div className="flex flex-col gap-2">
           {data.alerts.map((a, i) => (
-            <div key={i} className={`px-4 py-2.5 rounded-lg border text-sm font-medium flex items-center gap-2 ${ALERT_STYLE[a.level]}`}>
+            <div key={i} className={`px-4 py-2.5 rounded-lg border text-sm font-semibold flex items-center gap-2 ${ALERT_STYLE[a.level]}`}>
               <span>{ALERT_ICON[a.level]}</span>
               {a.text}
             </div>
@@ -100,7 +100,7 @@ export default async function AdminDashboard() {
               <div key={p.name} className="flex items-center gap-3">
                 <span className="text-xs font-bold text-navy-900/35 w-4">{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{p.name}</p>
+                  <p className="text-sm font-semibold truncate">{p.name}</p>
                   <p className="text-xs text-navy-900/40">{p.qty} vendus</p>
                 </div>
                 <span className="text-sm font-bold text-navy-900">{formatTND(p.revenue)}</span>
@@ -146,7 +146,7 @@ export default async function AdminDashboard() {
             {data.lowStock.map((p) => (
               <div key={p.id} className="flex items-center justify-between py-2.5">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{p.name}</p>
+                  <p className="text-sm font-semibold truncate">{p.name}</p>
                   <p className="text-xs text-navy-900/40">{p.category.name}</p>
                 </div>
                 <span className={`text-xs font-bold px-2 py-1 rounded ${p.stockQty === 0 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>

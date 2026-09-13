@@ -207,7 +207,7 @@ export default async function AdminStockPage({
                               className="w-11 h-11 rounded-md object-cover bg-gray-50 shrink-0"
                             />
                             <div className="min-w-0">
-                              <p className="font-medium">
+                              <p className="font-semibold">
                                 {p.name}
                                 {!p.active && <span className="ms-2 text-[11px] font-bold uppercase text-gray-500">hors ligne</span>}
                               </p>

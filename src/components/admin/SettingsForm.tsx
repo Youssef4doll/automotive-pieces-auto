@@ -42,7 +42,7 @@ export default function SettingsForm({ settings }: { settings: SettingsMap }) {
         <Field label="Délai régions" name="delivery_regions" defaultValue={settings.delivery_regions} />
       </div>
 
-      {state?.ok && <p className="text-sm text-green-700 font-medium">Paramètres enregistrés ✓</p>}
+      {state?.ok && <p className="text-sm text-green-700 font-semibold">Paramètres enregistrés ✓</p>}
 
       <button
         disabled={pending}

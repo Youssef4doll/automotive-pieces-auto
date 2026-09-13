@@ -45,10 +45,17 @@ export default async function BrandBoard() {
             home page already ten screens long — where the strip this replaced
             cost 82px. Alphabetical, so the nine a phone keeps are not a
             ranking anybody has to defend; the rest are one search away, and
-            the catalogue's own brand filter lists every one of them. */}
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6 3xl:grid-cols-8">
+            the catalogue's own brand filter lists every one of them.
+
+            Eight rather than nine below 360px, where the board is two across
+            and a ninth tile would sit alone on a half-empty fifth row. The
+            count follows the column count so the board always ends square. */}
+        <ul className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6 3xl:grid-cols-8">
           {brands.map((b, i) => (
-            <li key={b.id} className={i < 9 ? "" : "hidden sm:block"}>
+            <li
+              key={b.id}
+              className={i < 8 ? "" : i === 8 ? "hidden min-[360px]:block" : "hidden sm:block"}
+            >
               {/* Search rather than a brand page: the index carries the brand
                   on every product, so this lands on everything the shop holds
                   from that maker without a route that would otherwise have to
