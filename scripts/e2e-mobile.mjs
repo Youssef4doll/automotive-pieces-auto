@@ -599,50 +599,113 @@ console.log("\n[17] THE BRANDS ARE A BOARD YOU CAN USE, NOT A STRIP THAT MOVES")
     `"${sub.trim()}" vs ${real} in the catalogue`);
   await page.close();
 
-  // The fold has a door.
+  // Every brand, at every size, without a fold.
   //
-  // A phone shows nine tiles and the heading counts every brand the shop
-  // carries, so for a while the other ten were unreachable: no control, no
-  // hint they existed, and "do you carry Valeo?" had no answer below the
-  // letter F.
-  const shown = (p) => p.locator("#brand-board li").evaluateAll(
-    (lis) => lis.filter((li) => getComputedStyle(li).display !== "none").length
-  );
+  // The board used to show nine tiles on a phone and hide the rest: the
+  // heading counted every brand the shop carries and a phone could reach nine
+  // of them, so "do you carry Valeo?" had no answer below the letter F. It
+  // pages sideways now — swipe on a phone, an arrow on a desktop — so what is
+  // checked here is that the last brand in the catalogue is genuinely
+  // reachable, not merely present in the markup.
+  const reachLast = async (p) => {
+    await p.evaluate(() => {
+      const t = document.getElementById("brand-board");
+      t.scrollTo({ left: t.scrollWidth });
+    });
+    await p.waitForTimeout(600);
+    return p.evaluate(() => {
+      const t = document.getElementById("brand-board");
+      const box = t.getBoundingClientRect();
+      const last = t.querySelector("li:last-child").getBoundingClientRect();
+      return last.left >= box.left - 1 && last.right <= box.right + 1;
+    });
+  };
+  const paging = (p) => p.evaluate(() => {
+    const t = document.getElementById("brand-board");
+    const dots = [...document.querySelectorAll("#marques [aria-hidden='true'] > span")];
+    const arrows = [...document.querySelectorAll("#marques button")];
+    return {
+      scrollable: t.scrollWidth > t.clientWidth + 1,
+      hidden: [...t.querySelectorAll("li")].filter((l) => getComputedStyle(l).display === "none").length,
+      pages: dots.length,
+      active: dots.findIndex((d) => d.className.includes("w-6")),
+      arrowsShown: arrows.filter((a) => getComputedStyle(a).display !== "none").length,
+      prevDisabled: arrows[0]?.disabled,
+      overflow: document.documentElement.scrollWidth > window.innerWidth,
+    };
+  });
+
   const phone = await (await browser.newContext({
     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
   })).newPage();
   await phone.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
   await phone.waitForTimeout(700);
-  const folded = await shown(phone);
-  const more = phone.locator("#marques button");
-  const label = ((await more.count()) ? await more.textContent() : "") ?? "";
-
-  if (real > folded) {
-    check("a phone folds the board but says how many are behind it",
-      (await more.count()) === 1 && label.includes(String(real)),
-      `${folded} of ${real} shown, control reads "${label.trim()}"`);
-    const box = (await more.count()) ? await more.boundingBox() : null;
-    check("and it is a real tap target", !!box && box.height >= 44, box ? `${Math.round(box.width)}×${Math.round(box.height)}` : "no control");
-
-    await more.click();
-    await phone.waitForTimeout(300);
-    check("tapping it shows every brand the shop carries", (await shown(phone)) === real,
-      `${await shown(phone)} of ${real}`);
-    check("and aria-expanded follows", (await more.getAttribute("aria-expanded")) === "true");
-
-    await more.click();
-    await phone.waitForTimeout(300);
-    check("tapping again folds it back", (await shown(phone)) === folded, `${await shown(phone)} of ${real}`);
-  }
-
-  // From 640px the board is already whole, so a control to expand it would do
-  // nothing — and a button that does nothing is worse than no button.
-  await phone.setViewportSize({ width: 640, height: 900 });
-  await phone.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-  await phone.waitForTimeout(600);
-  check("no expand control where nothing is folded away", (await shown(phone)) === real && !(await more.isVisible().catch(() => false)),
-    `${await shown(phone)} of ${real} shown at 640px`);
+  const onPhone = await paging(phone);
+  check("no brand is hidden from a phone", onPhone.hidden === 0, `${onPhone.hidden} tiles display:none`);
+  check("the board scrolls sideways instead", onPhone.scrollable, `track scrolls: ${onPhone.scrollable}`);
+  check("and swiping to the end reaches the last brand", await reachLast(phone),
+    `${real} brands in the catalogue`);
+  // The gesture on a phone is the swipe; a 44px arrow floating over the tiles
+  // would cover one of them to duplicate it.
+  const afterSwipe = await paging(phone);
+  check("no arrows on a phone, and the dots followed the swipe",
+    afterSwipe.arrowsShown === 0 && afterSwipe.active === afterSwipe.pages - 1,
+    `${afterSwipe.arrowsShown} arrows, dot ${afterSwipe.active + 1} of ${afterSwipe.pages}`);
+  check("and the page never scrolled sideways with it", !afterSwipe.overflow);
   await phone.close();
+
+  // The arrow is the desktop's gesture, and it starts with nowhere to go back
+  // to — the reference designs hide the left one on the first page rather than
+  // offering a control that does nothing.
+  const desk = await (await browser.newContext({ viewport: { width: 1280, height: 1000 } })).newPage();
+  await desk.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+  await desk.waitForTimeout(700);
+  const first = await paging(desk);
+  check("a desktop gets arrows", first.arrowsShown === 2, `${first.arrowsShown} shown`);
+  check("and the back arrow is inert on the first page", first.prevDisabled === true);
+  if (first.pages > 1) {
+    await desk.locator('#marques button[aria-label*="suivantes"]').click();
+    await desk.waitForTimeout(800);
+    const second = await paging(desk);
+    check("the forward arrow turns the page", second.active === 1, `dot ${second.active + 1} of ${second.pages}`);
+    check("and the back arrow wakes up once there is a page behind", second.prevDisabled === false);
+  }
+  check("the last brand is reachable on a desktop too", await reachLast(desk));
+  check("and nothing pushed the page sideways", (await paging(desk)).overflow === false);
+  await desk.close();
+}
+
+console.log("\n[18] ARABIC DOES NOT SCROLL SIDEWAYS");
+{
+  // The off-screen honeypot in FormShield was positioned with a physical
+  // `left: -9999px`. Overflow past the *start* edge is not scrollable, which
+  // is what makes that trick safe — but in RTL the start edge is the right
+  // one, so the same offset put the input 9999px the other side of the origin
+  // and turned it into real page width. Every route in Arabic had a 10,373px
+  // document against a 390px screen, and a phone answers that by zooming the
+  // whole page out until it fits: Arabic rendered at about a quarter size.
+  //
+  // French never showed it, which is why it lived so long. This checks the
+  // language the bug was actually in.
+  const ar = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await ar.addCookies([{ name: "apa_locale", value: "ar", url: BASE }]);
+  const arp = await ar.newPage();
+  for (const route of ["/", "/panier", "/contact", "/compte/connexion"]) {
+    await arp.goto(BASE + route, { waitUntil: "domcontentloaded" });
+    await arp.waitForTimeout(400);
+    const m = await arp.evaluate(() => ({
+      w: document.documentElement.scrollWidth,
+      vw: window.innerWidth,
+      dir: document.documentElement.dir,
+      trap: document.querySelectorAll('input[name="company_website"]').length,
+    }));
+    check(`${route} does not scroll sideways in Arabic`, m.dir === "rtl" && m.w <= m.vw + 1,
+      `dir=${m.dir}, ${m.w}px document on a ${m.vw}px screen`);
+    // And the trap it was hiding is still on the page — a fix that deleted the
+    // honeypot would pass the line above and lose the bot protection.
+    check(`${route} still carries the honeypot`, m.trap === 1, `${m.trap} found`);
+  }
+  await ar.close();
 }
 
 console.log("\n[X] NOTHING ON A PHONE SUMMONS A KEYBOARD, OR THE ZOOM THAT COMES WITH IT");
