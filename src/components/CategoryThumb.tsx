@@ -47,7 +47,12 @@ export default function CategoryThumb({
         alt=""
         fill
         sizes={`${size}px`}
-        className="object-contain p-[8%]"
+        // 5%, not 8%. This inset and the margin baked into the drawn fallback
+        // compound, and together they were holding the picture at about 59% of
+        // the tile — which is what "the images look small" is, measured. It is
+        // still an inset rather than nothing, because an uploaded photograph
+        // shot square would otherwise sit corner-to-corner in a rounded box.
+        className="object-contain p-[5%]"
       />
     </span>
   );

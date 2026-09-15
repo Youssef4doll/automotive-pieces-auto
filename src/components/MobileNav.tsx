@@ -125,7 +125,7 @@ export default function MobileNav({
                 onClick={onClose}
                 className="flex items-center gap-3 px-3 py-3 border-b border-gray-100 bg-navy-50/50"
               >
-                <CategoryThumb slug={openFamily.slug} imageUrl={openFamily.imageUrl} size={40} className="bg-white" />
+                <CategoryThumb slug={openFamily.slug} imageUrl={openFamily.imageUrl} size={48} className="bg-white" />
                 <span className="flex-1 min-w-0">
                   <span className="block font-display font-bold uppercase text-[13px] tracking-wide text-navy-950">
                     {t("mnav.viewAll")}
@@ -145,7 +145,7 @@ export default function MobileNav({
                       onClick={onClose}
                       className="flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 active:bg-gray-50"
                     >
-                      <CategoryThumb slug={sub.slug} imageUrl={sub.imageUrl} size={36} />
+                      <CategoryThumb slug={sub.slug} imageUrl={sub.imageUrl} size={44} />
                       <span className="flex-1 min-w-0 text-sm font-semibold text-navy-900 leading-snug">
                         {sub.name}
                       </span>
@@ -189,7 +189,7 @@ export default function MobileNav({
                       onClick={() => setOpenFamilyId(family.id)}
                       className="w-full flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 text-start active:bg-gray-50"
                     >
-                      <CategoryThumb slug={family.slug} imageUrl={family.imageUrl} size={40} />
+                      <CategoryThumb slug={family.slug} imageUrl={family.imageUrl} size={48} />
                       <span className="flex-1 min-w-0">
                         <span className="block font-display font-bold uppercase text-[13px] tracking-wide text-navy-950 leading-snug">
                           {family.name}

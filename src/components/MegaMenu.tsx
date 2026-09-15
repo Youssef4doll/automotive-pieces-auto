@@ -59,7 +59,7 @@ export default function MegaMenu({
                 i === active ? "bg-white border-red-500" : "border-transparent"
               }`}
             >
-              <CategoryThumb slug={family.slug} imageUrl={family.imageUrl} size={30} />
+              <CategoryThumb slug={family.slug} imageUrl={family.imageUrl} size={36} />
               <span className="flex-1 min-w-0 truncate">{family.name}</span>
               <span className="shrink-0 flex items-baseline gap-1.5">
                 {/* Parts, not subcategories — the same number the subcategory
@@ -89,7 +89,7 @@ export default function MegaMenu({
                   not stretch two tiles into two enormous ones. */}
               <div
                 className="mt-4 grid gap-1"
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(168px, 1fr))" }}
               >
                 {activeFamily.children.map((sub) => (
                   <SubcategoryTile
@@ -99,7 +99,7 @@ export default function MegaMenu({
                     slug={sub.slug}
                     imageUrl={sub.imageUrl}
                     name={sub.name}
-                    size={76}
+                    size={104}
                   />
                 ))}
               </div>

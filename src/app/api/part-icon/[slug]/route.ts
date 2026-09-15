@@ -32,15 +32,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   // generic part outline rather than nothing.
   const familySlug = category?.parent?.slug ?? category?.slug ?? null;
 
-  // The drawings are authored on a 24-unit grid. Scaled by 3 and offset by
-  // (96 − 24×3)/2 they sit centred and fill three quarters of the canvas.
-  // They used to fill half of it, which was fine on a 400px product card and
-  // far too timid at 40px, where these now also appear as the picture beside a
-  // category in the navigation. Slate-500 rather than slate-400 for the same
-  // reason: at thumbnail size the lighter line barely registered.
+  // The drawings are authored on a 24-unit grid. Scaled by 3.5 and offset by
+  // (96 − 24×3.5)/2 they sit centred and fill seven eighths of the canvas.
+  //
+  // They filled three quarters, and before that half. The padding baked in
+  // here compounds with the padding the tile adds around the image, and the
+  // two together were leaving the drawing at about 59% of the tile it sits in
+  // — a small grey sketch floating in a large box, where the catalogues this
+  // is modelled on fill the tile with the part. Six units of margin here and
+  // a 5% inset in CategoryThumb put it at roughly 83%, with no change to any
+  // layout: the box is the same size, the drawing inside it is not.
+  //
+  // Slate-500 rather than slate-400, for the same reason the scale keeps
+  // going up: at thumbnail size the lighter line barely registered.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Photo à venir">
 <rect width="96" height="96" fill="#f8fafc"/>
-<g transform="translate(12 12) scale(3)" fill="none" stroke="#64748b" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">${partIconMarkup(familySlug)}</g>
+<g transform="translate(6 6) scale(3.5)" fill="none" stroke="#64748b" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">${partIconMarkup(familySlug)}</g>
 </svg>`;
 
   return new Response(svg, {

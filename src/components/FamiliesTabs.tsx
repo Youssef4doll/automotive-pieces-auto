@@ -39,7 +39,11 @@ type Family = {
  *
  * The inset cannot live there with it: an absolutely positioned child is laid
  * out against its ancestor's padding box, so padding on the wrapper would move
- * neither of them. Each branch states its own p-3, and they have to match.
+ * neither of them. Each branch states its own p-2, and they have to match.
+ *
+ * p-2 and not p-3: at 12px inside a ~94px square on a phone the drawing was
+ * losing a quarter of the tile to margin before its own margin was counted,
+ * which is most of why the board read as small pictures in big boxes.
  */
 export function FamilyThumb({ slug, imageUrl }: { slug: string; imageUrl?: string | null }) {
   return (
@@ -53,13 +57,13 @@ export function FamilyThumb({ slug, imageUrl }: { slug: string; imageUrl?: strin
           alt=""
           fill
           sizes="(max-width: 640px) 40vw, (max-width: 1024px) 22vw, 150px"
-          className="object-contain p-3"
+          className="object-contain p-2"
         />
       ) : (
         // A drawing of the part rather than the family's first letter. Sixteen
         // grey letters read as sixteen identical placeholders — and "F" told a
         // shopper nothing about whether Filtres or Freinage was behind it.
-        <span className="absolute inset-0 grid place-items-center text-navy-900/35 p-3">
+        <span className="absolute inset-0 grid place-items-center text-navy-900/35 p-2">
           <FamilyIcon slug={slug} className="w-full h-full" />
         </span>
       )}
@@ -234,7 +238,7 @@ export default function FamiliesTabs({
                         two different-looking lists. */}
                     <div
                       className="grid gap-1"
-                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(116px, 1fr))" }}
+                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(136px, 1fr))" }}
                     >
                       {f.children.map((c) => (
                         <SubcategoryTile
@@ -243,7 +247,7 @@ export default function FamiliesTabs({
                           slug={c.slug}
                           imageUrl={c.imageUrl ?? null}
                           name={c.name}
-                          size={64}
+                          size={84}
                         />
                       ))}
                     </div>

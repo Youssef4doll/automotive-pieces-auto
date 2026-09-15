@@ -196,26 +196,55 @@ console.log("\n[3] THE VEHICLE BOARD IS THE SAME WEIGHT AS THE FAMILY BOARD");
     // It used to be a single line barely taller than a tap target.
     check("a vehicle card is a card, not a row", !!card && card.height >= 72, card ? `${Math.round(card.height)}px tall` : "no box");
 
-    const logo = await vehicleCard.locator("span").first().boundingBox();
-    check("its logo is big enough to recognise", !!logo && logo.width >= 48, logo ? `${Math.round(logo.width)}px` : "no box");
+    // The mark, and nothing else.
+    //
+    // The card carried the make's name under the logo and a "3 modèles" line
+    // under that, so a board whose whole job is "find your badge" was two
+    // thirds text. Both are gone from the picture — but the name is not gone
+    // from the page, and that distinction is what these check: a card with a
+    // logo renders no text and names itself through the image's alt; a make
+    // with no logo uploaded yet falls back to its name in type, because a
+    // board of anonymous empty boxes would be unusable.
+    const cards = await shopper.evaluate(() =>
+      [...document.querySelectorAll('a[href^="/pieces/"]')].map((a) => {
+        const img = a.querySelector("img");
+        const picture = (img ? img.parentElement : a.firstElementChild)?.getBoundingClientRect();
+        return {
+          text: (a.textContent || "").trim(),
+          alt: img ? img.getAttribute("alt") : null,
+          pictureW: picture ? Math.round(picture.width) : 0,
+          pictureH: picture ? Math.round(picture.height) : 0,
+        };
+      }),
+    );
+    // Only the cards that have a badge to show. In the fallback branch the
+    // first child is the name in type and measuring it here would be asking
+    // how big a picture is on a card that has none.
+    const withLogo = cards.filter((c) => c.alt);
+    check("its picture is big enough to recognise a badge in",
+      withLogo.length === 0 || withLogo.every((c) => c.pictureW >= 48 && c.pictureH >= 48),
+      withLogo.length
+        ? withLogo.map((c) => `${c.pictureW}x${c.pictureH}`).slice(0, 4).join(", ")
+        : "(no make has a logo uploaded — nothing to measure)");
+    check("a card with a logo shows the logo and no caption",
+      cards.every((c) => (c.alt ? c.text === "" : c.text.length > 0)),
+      `${cards.filter((c) => c.alt).length} with a logo, ${cards.filter((c) => !c.alt).length} falling back to the name`);
 
-    // The count was a bare number in the corner with nothing saying what it
-    // counted. The board lists makes now, so what it counts is models.
-    check("the count says what it counts", /mod[èe]le/i.test(await vehicleCard.innerText()), (await vehicleCard.innerText()).replace(/\n/g, " · "));
+    // Removed from the picture, not from the page: whichever branch a card
+    // took, the make it links to is still what names it.
+    const named = await shopper.evaluate(() =>
+      [...document.querySelectorAll('a[href^="/pieces/"]')].every((a) => {
+        const img = a.querySelector("img");
+        const label = img ? img.getAttribute("alt") : a.textContent;
+        return (label || "").trim().length > 1;
+      }),
+    );
+    check("and every card is still named for a screen reader", named);
 
-    // Not measured against the family tile: that one is a square built around
-    // a picture, and a card holding a mark and two lines of text has no
-    // business being 260px tall. What matters is that the make name is the
-    // loudest thing in the card and reads at a glance, which is what a bare
-    // 13px line in a 44px row did not do.
-    // The card is [logo, [make, modelCount]] — so the name is the first line
-    // of the last child. Taking the largest font in the card instead would
-    // have measured the logo's placeholder letter and passed on it.
-    const model = await vehicleCard.evaluate((a) => {
-      const el = a.lastElementChild?.children[0];
-      return el ? { size: parseFloat(getComputedStyle(el).fontSize), text: el.textContent.trim() } : null;
-    });
-    check("the make name reads at a glance", !!model && model.size >= 15, model ? `${model.text} at ${model.size}px` : "not found");
+    // The model count moved to the make's own page, next to the models it
+    // counts — so it must not be lurking on the board any more.
+    check("the model count is off the board", !/mod[èe]le/i.test(await vehicleCard.innerText()),
+      (await vehicleCard.innerText()).replace(/\n/g, " · ") || "(no text — logo only)");
 
     // Every phone width, not one.
     //
@@ -247,10 +276,14 @@ console.log("\n[3] THE VEHICLE BOARD IS THE SAME WEIGHT AS THE FAMILY BOARD");
     await shopper.waitForTimeout(400);
     const phone = await vehicleCard.boundingBox();
     check("it still fits two-up on a phone", !!phone && phone.width < 200, phone ? `${Math.round(phone.width)}px` : "no box");
-    // Stacked on a phone, the words get the whole card rather than what is
-    // left beside the logo — that is what stops the truncation above.
-    const stacked = await vehicleCard.evaluate((a) => getComputedStyle(a).flexDirection);
-    check("the card stacks on a phone", stacked === "column", stacked);
+    // The card is one centred thing now — a mark, or the name standing in for
+    // one — so what matters is that it is centred in its box rather than which
+    // axis it stacks on.
+    const centred = await vehicleCard.evaluate((a) => {
+      const cs = getComputedStyle(a);
+      return `${cs.alignItems}/${cs.justifyContent}`;
+    });
+    check("the mark sits centred in the card", centred === "center/center", centred);
     const tap = await vehicleCard.boundingBox();
     check("and the whole card is a comfortable tap target", !!tap && tap.height >= 44 && tap.width >= 44, tap ? `${Math.round(tap.width)}x${Math.round(tap.height)}` : "no box");
   }

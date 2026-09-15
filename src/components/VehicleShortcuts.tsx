@@ -3,7 +3,7 @@ import Link from "next/link";
 import { listVehicleMakePages } from "@/lib/data/vehicles";
 
 /**
- * "Which car?" as a browsable board, on the home page.
+ * "Which car?" as a board of manufacturer marks, on the home page.
  *
  * The finder above asks the shopper to pick make → model → engine from
  * dropdowns, which is the precise path. This is the fast one: the makes the
@@ -14,9 +14,22 @@ import { listVehicleMakePages } from "@/lib/data/vehicles";
  * **Makes, not models.** It listed make+model pairs — "Peugeot 208", "Renault
  * Clio IV" — which is a more precise answer to a question nobody starts with:
  * somebody arrives knowing they drive a Renault long before they can say which
- * Clio, and the make page one tap on is where that gets settled. It is also
- * how the big parts catalogues lay this board out, and a maker's mark is
- * recognised across a screen in a way a model name is not.
+ * Clio, and the make page one tap on is where that gets settled.
+ *
+ * **The mark, and nothing else.** The tile carried the make's name under the
+ * logo and a "3 modèles" line under that, so a board whose whole job is
+ * "find your badge" was two thirds text. A manufacturer's mark is designed to
+ * be recognised across a car park; setting its name beneath it in 15px is
+ * redundant to anyone who can see the logo and no help to anyone who cannot.
+ * The name is still the image's `alt`, so it is what a screen reader announces
+ * and what the link is called — it is removed from the picture, not from the
+ * page. The model count moves to the make's own page, where it is next to the
+ * models it counts.
+ *
+ * The name in type stays as the fallback for a make with no logo uploaded
+ * yet. That is not the same thing as a caption: it is the only label the tile
+ * has, and a board of anonymous empty boxes would be unusable. Never a drawn
+ * stand-in, which would be an invented manufacturer's badge.
  *
  * Ordered by how deeply the shop covers each make, and it disappears entirely
  * if no vehicle has parts.
@@ -40,54 +53,38 @@ export default async function VehicleShortcuts({ take = 18 }: { take?: number })
         </p>
       </div>
 
-      {/* Three across on a phone, six on a laptop, eight on a wide screen — a
-          mark is a square, so these want more columns and less height than the
-          model cards they replaced, which carried two lines of text each.
-
-          Three rather than two on a phone is worth 190px of a home page that
-          is already nine screens long: ten makes go from five rows to four,
-          and the tile loses the dead width it had around a 48px logo. Nothing
-          is hidden to pay for it — a shopper whose car is not on the board has
-          no way back, so the whole of the shop's coverage stays on screen.
-
-          The logo slot is the same size whether or not the make has a logo
-          uploaded, so the board stays even as the shop fills them in one at a
-          time. The stand-in is the make's initial, never a drawn badge: an
-          invented one would be a claim about a manufacturer. */}
-      {/* Two across on the narrowest phones, three from 360px.
-
-          Three at 320px leaves 65px of text inside the tile and "Volkswagen"
-          sets in 78px, so the make a shopper is looking for broke across two
-          lines mid-word. The families board above already steps 2 → 3 at a
-          phone breakpoint for the same reason; this matches it. */}
-      <ul className="grid grid-cols-2 min-[360px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 3xl:grid-cols-8 gap-2 sm:gap-2.5">
+      {/* The same rhythm as the parts-brand board below it — three across on a
+          phone, eight on a wide screen. Two boards of manufacturer marks on one
+          page that stepped at different widths read as two unrelated
+          components. */}
+      <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6 3xl:grid-cols-8">
         {makes.map((m) => (
           <li key={m.slug}>
             <Link
               href={`/pieces/${m.slug}`}
-              className="flex h-full flex-col items-center gap-2 rounded-xl border border-navy-900/12 bg-white p-3 text-center transition hover:-translate-y-0.5 hover:border-gold-500 hover:shadow-sm sm:p-3.5"
+              className="flex h-[92px] items-center justify-center rounded-xl border border-navy-900/10 bg-white px-3 transition hover:-translate-y-0.5 hover:border-gold-500 hover:shadow-sm sm:h-[104px]"
             >
               {m.logoUrl ? (
-                <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-50 sm:h-14 sm:w-14">
-                  <Image src={m.logoUrl} alt="" fill sizes="56px" className="object-contain p-1.5" />
+                <span className="relative block h-14 w-full sm:h-16">
+                  {/* The real slot at each breakpoint, not the widest one. A
+                      single `160px` here would have a 3× phone asking the
+                      optimiser for a 640px rendition of a badge it draws at
+                      ninety — the mistake the parts-brand board was making
+                      until it was measured. No `vw` values, so Next keeps its
+                      full candidate list instead of flooring it. */}
+                  <Image
+                    src={m.logoUrl}
+                    alt={m.name}
+                    fill
+                    sizes="(max-width: 639px) 104px, (max-width: 1023px) 136px, 168px"
+                    className="object-contain"
+                  />
                 </span>
               ) : (
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-50 font-display text-lg font-bold text-navy-900/35 sm:h-14 sm:w-14 sm:text-xl">
-                  {m.name[0]?.toUpperCase() ?? "?"}
-                </span>
-              )}
-              <span className="flex w-full min-w-0 flex-col gap-0.5">
-                <span className="block text-[15px] font-semibold leading-tight text-navy-950 [overflow-wrap:anywhere]">
+                <span className="text-center font-display text-sm font-bold uppercase leading-tight text-navy-900/70 [overflow-wrap:anywhere]">
                   {m.name}
                 </span>
-                {/* Counted from the fitment table, like everything else on this
-                    page. "6 modèles" is what a shopper is deciding with; the
-                    part count is the same fifty-odd for every make the shop
-                    covers and would read as noise. */}
-                <span className="block text-[12px] leading-none text-navy-900/50">
-                  {m.modelCount} modèle{m.modelCount > 1 ? "s" : ""}
-                </span>
-              </span>
+              )}
             </Link>
           </li>
         ))}
