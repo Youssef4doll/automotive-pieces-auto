@@ -47,3 +47,29 @@ export const CATALOG_TTL = 120;
 export function revalidateCatalog() {
   revalidateTag(CATALOG_TAG, { expire: 0 });
 }
+
+/**
+ * The deep-analysis page's read, cached across requests.
+ *
+ * Its own tag and its own lifetime because it is a different bargain from the
+ * catalogue's. The catalogue is invalidated the moment the shop changes it,
+ * because the person who made the change is the one reloading the page. An
+ * analytics window is never "wrong" in that sense — it is a summary of the
+ * last ninety days, and a summary that is ten minutes old is the same summary.
+ *
+ * What the TTL is actually protecting is the storefront. The admin runs on the
+ * same database and the same connection pool as every shopper, and a panel of
+ * aggregates re-computed on every refresh of an admin tab is capacity taken
+ * away from people trying to buy something. Ten minutes means a shop that
+ * leaves the page open all morning pays for six reads an hour rather than one
+ * per keystroke of F5.
+ *
+ * No `revalidateAnalytics()` on purpose: nothing should invalidate this. An
+ * order placed thirty seconds ago appearing in a ninety-day trend line is not
+ * worth a cache bust, and a mutation that tried would be one more thing to
+ * keep in step for no gain.
+ */
+export const ANALYTICS_TAG = "analytics";
+
+/** Ten minutes. See above — this is a capacity guard, not a freshness one. */
+export const ANALYTICS_TTL = 600;

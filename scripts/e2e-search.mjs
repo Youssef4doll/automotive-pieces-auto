@@ -173,11 +173,29 @@ console.log("\n[7] THE ADMIN SEES IT AS A BUYING LIST");
   await admin.getByRole("button", { name: "Se connecter", exact: true }).click();
   await waitForAdmin(admin, BASE);
 
+  // The list is fetched on demand now — the panel arrives with the totals and
+  // a button, and nothing is read out of the database until somebody asks for
+  // it. That is the point of the change, so the check presses the button
+  // rather than expecting the rows to be sitting in the HTML.
+  const openList = async () => {
+    const button = admin.getByRole("button", { name: /Voir la liste/i });
+    if (await button.count()) {
+      await button.first().click();
+      await admin.waitForTimeout(1200);
+    }
+  };
+
   await admin.goto(`${BASE}/admin/analytics`);
   await admin.waitForTimeout(800);
+  const header = await admin.locator("main").innerText();
+  check("unmet demand has its own block", /Demande non satisfaite/i.test(header));
+  check("and the panel says how much is waiting before opening it",
+    /référence\(s\)/.test(header) && !/zzz-inexistant/i.test(header),
+    "totals shown, no rows yet");
+
+  await openList();
   const text = await admin.locator("main").innerText();
-  check("unmet demand has its own block", /Demande non satisfaite/i.test(text));
-  check("and lists what was searched for", /zzz-inexistant/i.test(text));
+  check("and lists what was searched for once opened", /zzz-inexistant/i.test(text));
 
   const addHref = await admin.locator('a[href^="/admin/stock/nouveau?name="]').first().getAttribute("href");
   check("each line links straight into a new product", !!addHref, addHref?.slice(0, 60));
@@ -189,6 +207,7 @@ console.log("\n[7] THE ADMIN SEES IT AS A BUYING LIST");
 
   await admin.goto(`${BASE}/admin/analytics`);
   await admin.waitForTimeout(800);
+  await openList();
   await admin.getByRole("button", { name: "Traité", exact: true }).first().click();
   await admin.waitForTimeout(1500);
   const resolved = await prisma.searchMiss.findFirst({ where: { query: { contains: "zzz-inexistant" } } });

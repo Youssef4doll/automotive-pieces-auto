@@ -476,6 +476,11 @@ model Order {
   @@index([status])
   @@index([userId])
   @@index([source])
+  // Every analytics window is "the last N days of orders". Without this the
+  // deep-analysis page seq-scans the order table on each of its panels, which
+  // is fine at a few hundred rows and is exactly the thing that starts
+  // costing the storefront a shared connection once it is not.
+  @@index([createdAt])
 }
 
 model OrderItem {

@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { getAnalyticsData } from "@/lib/data/admin";
-import { topSearchMisses } from "@/lib/search";
-import UnmetDemand from "@/components/admin/UnmetDemand";
+import { getUnmetTotals } from "@/lib/data/deep-analytics";
+import UnmetDemandPaged from "@/components/admin/UnmetDemandPaged";
 
 export const metadata = { title: "Analytics" };
 
@@ -25,7 +26,7 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 export default async function AnalyticsPage() {
-  const [data, misses] = await Promise.all([getAnalyticsData(), topSearchMisses(12)]);
+  const [data, unmet] = await Promise.all([getAnalyticsData(), getUnmetTotals()]);
 
   const kpis = [
     { label: "Événements (30j)", value: data.totalEvents.toLocaleString("fr-TN") },
@@ -48,7 +49,10 @@ export default async function AnalyticsPage() {
       <div>
         <h1 className="text-2xl font-heading font-extrabold uppercase tracking-tight text-navy-950">Analytics</h1>
         <p className="text-sm text-navy-900/50 mt-1">
-          Données de première partie — aucun service tiers, aucune clé requise. 30 derniers jours.
+          Données de première partie — aucun service tiers, aucune clé requise. 30 derniers jours.{" "}
+          <Link href="/admin/analyse" className="font-semibold text-red-500 underline underline-offset-2">
+            Analyse approfondie →
+          </Link>
         </p>
       </div>
 
@@ -56,7 +60,7 @@ export default async function AnalyticsPage() {
           says what to do about it. It renders even with no analytics at all,
           because a shop can be losing sales before it has any traffic worth
           charting. */}
-      <UnmetDemand misses={misses} />
+      <UnmetDemandPaged totalLines={unmet.lines} totalSearches={unmet.searches} />
 
       {data.totalEvents === 0 ? (
         <div className="p-8 rounded-xl bg-white border border-navy-900/10 text-center">

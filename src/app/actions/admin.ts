@@ -529,16 +529,61 @@ export async function deletePromotion(id: string) {
  * made not to carry it. Kept rather than deleted: if the same thing is asked
  * for again it comes back to the top of the list with its history intact.
  */
+/**
+ * Rows per page. Not exported: a `"use server"` file may only export async
+ * functions, and Next refuses the module at runtime otherwise — the page
+ * renders an error boundary instead of a list. It travels back in the result
+ * below, where the caller needs it anyway.
+ */
+const SEARCH_MISS_PAGE = 10;
+
+/**
+ * The buying list, a page at a time.
+ *
+ * It used to be rendered whole into both analytics pages on every load. That
+ * is fine at five lines and is a wall at three hundred — and every one of
+ * those rows was read out of the database and serialised into the HTML whether
+ * or not anybody scrolled to it. Nothing is read now until the button is
+ * pressed, and then ten rows at a time.
+ *
+ * Ordered by how many people asked, not by when: one part wanted nineteen
+ * times is a purchase order, nineteen parts wanted once each are a curiosity.
+ */
+export async function pageSearchMisses(page: number) {
+  await assertAdmin();
+  const take = SEARCH_MISS_PAGE;
+  const skip = Math.max(0, Math.floor(page)) * take;
+  const [rows, total] = await Promise.all([
+    prisma.searchMiss.findMany({
+      where: { resolvedAt: null },
+      orderBy: [{ count: "desc" }, { lastSeenAt: "desc" }],
+      select: { id: true, query: true, normalized: true, count: true, lastSeenAt: true },
+      skip,
+      take,
+    }),
+    prisma.searchMiss.count({ where: { resolvedAt: null } }),
+  ]);
+  return {
+    rows: rows.map((r) => ({ ...r, lastSeenAt: r.lastSeenAt.toISOString() })),
+    total,
+    page: Math.max(0, Math.floor(page)),
+    pages: Math.max(1, Math.ceil(total / take)),
+    perPage: take,
+  };
+}
+
 export async function resolveSearchMiss(id: string) {
   await assertAdmin();
   await prisma.searchMiss.update({ where: { id }, data: { resolvedAt: new Date() } });
   revalidatePath("/admin/analytics");
+  revalidatePath("/admin/analyse");
 }
 
 export async function reopenSearchMiss(id: string) {
   await assertAdmin();
   await prisma.searchMiss.update({ where: { id }, data: { resolvedAt: null } });
   revalidatePath("/admin/analytics");
+  revalidatePath("/admin/analyse");
 }
 
 /** Rebuild the whole search index — for after a bulk edit outside the app. */
