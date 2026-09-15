@@ -598,6 +598,51 @@ console.log("\n[17] THE BRANDS ARE A BOARD YOU CAN USE, NOT A STRIP THAT MOVES")
     sub.trim().startsWith(String(real)) && !/\+\s*\d/.test(sub),
     `"${sub.trim()}" vs ${real} in the catalogue`);
   await page.close();
+
+  // The fold has a door.
+  //
+  // A phone shows nine tiles and the heading counts every brand the shop
+  // carries, so for a while the other ten were unreachable: no control, no
+  // hint they existed, and "do you carry Valeo?" had no answer below the
+  // letter F.
+  const shown = (p) => p.locator("#brand-board li").evaluateAll(
+    (lis) => lis.filter((li) => getComputedStyle(li).display !== "none").length
+  );
+  const phone = await (await browser.newContext({
+    viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
+  })).newPage();
+  await phone.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+  await phone.waitForTimeout(700);
+  const folded = await shown(phone);
+  const more = phone.locator("#marques button");
+  const label = ((await more.count()) ? await more.textContent() : "") ?? "";
+
+  if (real > folded) {
+    check("a phone folds the board but says how many are behind it",
+      (await more.count()) === 1 && label.includes(String(real)),
+      `${folded} of ${real} shown, control reads "${label.trim()}"`);
+    const box = (await more.count()) ? await more.boundingBox() : null;
+    check("and it is a real tap target", !!box && box.height >= 44, box ? `${Math.round(box.width)}×${Math.round(box.height)}` : "no control");
+
+    await more.click();
+    await phone.waitForTimeout(300);
+    check("tapping it shows every brand the shop carries", (await shown(phone)) === real,
+      `${await shown(phone)} of ${real}`);
+    check("and aria-expanded follows", (await more.getAttribute("aria-expanded")) === "true");
+
+    await more.click();
+    await phone.waitForTimeout(300);
+    check("tapping again folds it back", (await shown(phone)) === folded, `${await shown(phone)} of ${real}`);
+  }
+
+  // From 640px the board is already whole, so a control to expand it would do
+  // nothing — and a button that does nothing is worse than no button.
+  await phone.setViewportSize({ width: 640, height: 900 });
+  await phone.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+  await phone.waitForTimeout(600);
+  check("no expand control where nothing is folded away", (await shown(phone)) === real && !(await more.isVisible().catch(() => false)),
+    `${await shown(phone)} of ${real} shown at 640px`);
+  await phone.close();
 }
 
 console.log("\n[X] NOTHING ON A PHONE SUMMONS A KEYBOARD, OR THE ZOOM THAT COMES WITH IT");

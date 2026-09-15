@@ -1,6 +1,5 @@
-import Image from "next/image";
-import Link from "next/link";
 import { getPartsBrands } from "@/lib/data/catalog";
+import BrandGrid from "./BrandGrid";
 import T from "./T";
 
 /**
@@ -20,8 +19,11 @@ import T from "./T";
  * drawn stand-in, which would be an invented maker's mark.
  *
  * The subtitle counts the brands in the catalogue. It used to read "+60
- * équipementiers distribués", which was a number nobody had counted: there
- * are nineteen.
+ * équipementiers distribués", which was a number nobody had counted.
+ *
+ * The tiles and the phone's "see all" control live in BrandGrid, which is a
+ * client component because that button holds state; the query stays here on
+ * the server.
  */
 export default async function BrandBoard() {
   const brands = await getPartsBrands();
@@ -39,44 +41,12 @@ export default async function BrandBoard() {
           </span>
         </div>
 
-        {/* Nine on a phone, all of them from 640px up.
-
-            Nineteen tiles three across is seven rows and about 620px, on a
-            home page already ten screens long — where the strip this replaced
-            cost 82px. Alphabetical, so the nine a phone keeps are not a
-            ranking anybody has to defend; the rest are one search away, and
-            the catalogue's own brand filter lists every one of them.
-
-            Eight rather than nine below 360px, where the board is two across
-            and a ninth tile would sit alone on a half-empty fifth row. The
-            count follows the column count so the board always ends square. */}
-        <ul className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6 3xl:grid-cols-8">
-          {brands.map((b, i) => (
-            <li
-              key={b.id}
-              className={i < 8 ? "" : i === 8 ? "hidden min-[360px]:block" : "hidden sm:block"}
-            >
-              {/* Search rather than a brand page: the index carries the brand
-                  on every product, so this lands on everything the shop holds
-                  from that maker without a route that would otherwise have to
-                  be kept in step with the catalogue. */}
-              <Link
-                href={`/recherche?q=${encodeURIComponent(b.name)}`}
-                className="flex h-[74px] items-center justify-center rounded-lg border border-navy-900/10 bg-white px-3 transition hover:-translate-y-0.5 hover:border-gold-500 hover:shadow-sm sm:h-[82px]"
-              >
-                {b.logoUrl ? (
-                  <span className="relative block h-10 w-full">
-                    <Image src={b.logoUrl} alt={b.name} fill sizes="160px" className="object-contain" />
-                  </span>
-                ) : (
-                  <span className="text-center font-display text-sm font-bold uppercase leading-tight text-navy-900/70">
-                    {b.name}
-                  </span>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {/* Only the three fields a tile draws. The Brand row also carries the
+            admin's own bookkeeping, and this is a client component's props —
+            everything passed here is serialised into the page. */}
+        <BrandGrid
+          brands={brands.map((b) => ({ id: b.id, name: b.name, logoUrl: b.logoUrl }))}
+        />
       </div>
     </section>
   );
