@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getMegaMenu } from "@/lib/data/catalog";
 import { getSettings, publicContact, contactHref, isExternalContact } from "@/lib/settings";
 import { About, Heading, Rights, LangRow } from "./FooterClient";
-import NewsletterForm from "./NewsletterForm";
 import PaymentDeliveryBand from "./PaymentDeliveryBand";
 import T from "./T";
 
@@ -77,23 +76,41 @@ export default async function Footer() {
               </Link>
             </li>
             <li>
-              <a href={help} {...(isExternalContact(help) ? { target: "_blank", rel: "noreferrer" } : {})} className="hover:text-white min-h-11 inline-flex items-center">
+              {/* The page, not the WhatsApp deep link this used to be. The
+                  page carries WhatsApp as its first option, plus the shop's
+                  own details and a form, so nothing is lost by going through
+                  it — and a "Contact" that jumps straight out to another app
+                  is a surprise when what you wanted was an address. */}
+              <Link href="/contact" className="hover:text-white min-h-11 inline-flex items-center">
                 <T k="nav.contact" />
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
 
-        {/* Full width on a phone. The footer is two columns there, and this
-            sat in one of them: a 160px box holding an e-mail field and an OK
-            button, which left about seven characters of "Votre e-mail"
-            visible. Nothing else in the footer is a form — the link columns
-            are happy at half width, this is not. */}
+        {/* Help, where the newsletter box used to be.
+
+            A footer's last column is the one people reach when they have run
+            out of links to try, and an e-mail capture is the least useful
+            thing to meet them with — the shop had no screen to read those
+            subscribers on anyway. This says where to go instead, and /contact
+            offers WhatsApp, the shop's details and a form on one page.
+
+            Full width on a phone: the footer is two columns there, and a
+            160px box left about seven characters of the old placeholder
+            visible. The link columns are happy at half width; a heading that
+            is a whole sentence is not. */}
         <div className="col-span-2 md:col-span-1">
-          <Heading k="footer.promosCol" />
-          <div className="mt-3">
-            <NewsletterForm />
-          </div>
+          <Heading k="footer.helpCol" />
+          <Link
+            href="/contact"
+            className="mt-2 inline-flex min-h-tap items-center gap-1.5 text-sm font-semibold text-white hover:text-gold-500"
+          >
+            <T k="footer.allContacts" />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true" className="rtl-flip">
+              <path d="M8 5l8 7-8 7" />
+            </svg>
+          </Link>
         </div>
       </div>
 

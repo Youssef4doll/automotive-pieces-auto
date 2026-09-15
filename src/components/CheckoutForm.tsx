@@ -11,6 +11,7 @@ import { GOVERNORATES, GRAND_TUNIS } from "@/lib/governorates";
 import { placeOrder } from "@/app/actions/orders";
 import { track } from "@/lib/track";
 import { getAttribution } from "@/lib/attribution";
+import { useVehicle } from "@/lib/vehicle-store";
 
 export type CheckoutDefaults = {
   name: string;
@@ -41,6 +42,7 @@ export default function CheckoutForm({
   const { t } = useLocale();
   const router = useRouter();
   const items = useCart((s) => s.items);
+  const vehicle = useVehicle((s) => s.vehicle);
   const clear = useCart((s) => s.clear);
   const subtotal = cartSubtotal(items);
 
@@ -94,6 +96,11 @@ export default function CheckoutForm({
       source: attribution?.source,
       medium: attribution?.medium,
       campaign: attribution?.campaign ?? undefined,
+      // The car the basket was filtered against, so the shop can check the
+      // order against its own fitment table before picking it — and confirm
+      // it, or catch a wrong part, without ringing the customer back. The id
+      // only: the label on the order is read from our own tables server-side.
+      vehicleEngineId: vehicle?.engineId,
     });
     setSubmitting(false);
     if (!result.ok) {

@@ -701,10 +701,28 @@ console.log("\n[18] ARABIC DOES NOT SCROLL SIDEWAYS");
     }));
     check(`${route} does not scroll sideways in Arabic`, m.dir === "rtl" && m.w <= m.vw + 1,
       `dir=${m.dir}, ${m.w}px document on a ${m.vw}px screen`);
-    // And the trap it was hiding is still on the page — a fix that deleted the
-    // honeypot would pass the line above and lose the bot protection.
-    check(`${route} still carries the honeypot`, m.trap === 1, `${m.trap} found`);
   }
+
+  // The trap the offset was hiding must still be there — a "fix" that deleted
+  // the honeypot instead of moving it would pass every line above and quietly
+  // drop the bot protection.
+  //
+  // Asked of /contact, which is the one page whose form is rendered
+  // unconditionally: the signup form is behind a tab, and the password-reset
+  // form only exists once the shop has a mail transport configured. The trap
+  // in the signup form has its own check in e2e-security [5]; this one is
+  // about the RTL move not having thrown FormShield away.
+  await arp.goto(`${BASE}/contact`, { waitUntil: "domcontentloaded" });
+  await arp.waitForTimeout(400);
+  const trap = await arp.evaluate(() => {
+    const el = document.querySelector('input[name="company_website"]');
+    if (!el) return { found: false };
+    const box = el.getBoundingClientRect();
+    return { found: true, onScreen: box.right > 0 && box.left < window.innerWidth };
+  });
+  check("the honeypot survived the move", trap.found);
+  // And is still hidden, in a language where the start edge is the right one.
+  check("and is still off-screen in Arabic", trap.found && !trap.onScreen);
   await ar.close();
 }
 

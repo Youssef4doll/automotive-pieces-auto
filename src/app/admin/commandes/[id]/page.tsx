@@ -78,6 +78,53 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           </div>
         </div>
 
+        {/* The car the order was placed for, and what our own fitment table said
+            about each part on it at the time.
+
+            This is the panel the shop opens before picking. VÉRIFIÉ on every
+            line means the order can be confirmed without ringing anybody;
+            anything else names the part to check, which is the difference
+            between a phone call now and a delivery run that comes back. An
+            order placed without a vehicle says so rather than showing an empty
+            heading — plenty of shoppers know the reference and never touch the
+            picker, and that is not a problem to flag. */}
+        <div className="border-t border-navy-900/8 pt-4">
+          <h2 className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide mb-1">
+            Véhicule
+          </h2>
+          {order.vehicleLabel ? (
+            <>
+              <p className="font-semibold">{order.vehicleLabel}</p>
+              <div className="mt-2 flex flex-col gap-1">
+                {order.items.map((item) => (
+                  <div key={`fit-${item.id}`} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate text-gray-700">{item.name}</span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold ${
+                        item.fit === "VERIFIED"
+                          ? "bg-green-50 text-green-800"
+                          : item.fit === "DERIVED"
+                            ? "bg-amber-50 text-amber-800"
+                            : "bg-red-50 text-red-700"
+                      }`}
+                    >
+                      {item.fit === "VERIFIED"
+                        ? "Compatibilité vérifiée"
+                        : item.fit === "DERIVED"
+                          ? "Déduite — à confirmer"
+                          : "Non répertoriée"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Commande passée sans véhicule sélectionné — rien à vérifier automatiquement.
+            </p>
+          )}
+        </div>
+
         {order.notes && (
           <div className="border-t border-navy-900/8 pt-3">
             <h2 className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide mb-1">Note client</h2>

@@ -70,7 +70,10 @@ async function loadOrder(orderId: string): Promise<OrderForEmail | null> {
       stampDuty: true,
       total: true,
       notes: true,
-      items: { select: { name: true, sku: true, imageUrl: true, qty: true, unitPrice: true, lineTotal: true } },
+      vehicleLabel: true,
+      items: {
+        select: { name: true, sku: true, imageUrl: true, qty: true, unitPrice: true, lineTotal: true, fit: true },
+      },
     },
   });
   if (!order) return null;

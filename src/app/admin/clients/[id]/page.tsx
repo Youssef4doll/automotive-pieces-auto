@@ -40,6 +40,18 @@ export default async function AdminClientDetail({ params }: { params: Promise<{ 
           <h1 className="text-xl font-heading font-extrabold text-navy-950">{customer.name}</h1>
           <p className="text-sm text-gray-500">{customer.email}</p>
           {customer.phone && <p className="text-sm text-gray-500" dir="ltr">{customer.phone}</p>}
+          {/* When they joined. The change log below says what has moved since;
+              without this there was nothing saying when the record started, so
+              "client depuis trois ans" was a thing the shop had to remember
+              rather than read. */}
+          <p className="mt-1 text-xs text-navy-900/45">
+            Client depuis le{" "}
+            {new Date(customer.createdAt).toLocaleDateString("fr-FR", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
         </div>
         <div className="text-end">
           <p className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide">Valeur totale</p>

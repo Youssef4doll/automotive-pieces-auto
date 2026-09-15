@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import type { OrderItemFit } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { shippingFeeFor } from "@/lib/shipping";
 import { taxPolicy } from "@/lib/tax";
@@ -45,6 +46,11 @@ const placeOrderSchema = z.object({
   source: shortText.optional(),
   medium: shortText.optional(),
   campaign: shortText.optional(),
+  // The engine the shopper had selected. An id only — the label and the
+  // compatibility verdict are both read out of our own tables below, because
+  // a client-supplied "Renault Clio 1.5 dCi" is a string a client made up,
+  // and this one goes on a delivery note.
+  vehicleEngineId: z.string().min(1).max(64).optional(),
 });
 
 export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
@@ -85,6 +91,35 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const tax = taxPolicy(settings);
   const user = await getCurrentUser();
 
+  // The car, and what we already know about the parts on it.
+  //
+  // This is the whole point of asking: an order that names the vehicle can be
+  // checked against the fitment table before anyone picks it off a shelf, so
+  // the shop either confirms it without ringing the customer or catches a
+  // wrong part before it is driven across Tunis and driven back. Both reads
+  // are plain lookups and are done here rather than inside the transaction,
+  // which is holding stock rows and should stay short.
+  const engine = data.vehicleEngineId
+    ? await prisma.vehicleEngine.findUnique({
+        where: { id: data.vehicleEngineId },
+        select: { id: true, name: true, model: { select: { name: true, make: { select: { name: true } } } } },
+      })
+    : null;
+  const vehicleLabel = engine
+    ? `${engine.model.make.name} ${engine.model.name} ${engine.name}`
+    : null;
+  // Only rows for this engine, keyed by product. A part with no row here is
+  // one we hold no compatibility for — which is a different thing from a part
+  // we know does not fit, and is recorded as UNLISTED rather than guessed at.
+  const fitByProduct = new Map<string, OrderItemFit>();
+  if (engine) {
+    const rows = await prisma.productFitment.findMany({
+      where: { engineId: engine.id, productId: { in: data.items.map((i) => i.productId) } },
+      select: { productId: true, confidence: true },
+    });
+    for (const r of rows) fitByProduct.set(r.productId, r.confidence);
+  }
+
   // Two simultaneous checkouts can read the same MAX(ref) and try to write
   // the same reference. The unique index makes that fail loudly rather than
   // duplicate, so retry a couple of times before surfacing an error.
@@ -120,6 +155,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           unitPrice,
           qty: item.qty,
           lineTotal: unitPrice * item.qty,
+          // Null when no car was given: "we were not told" and "we hold no
+          // row for it" are different facts, and the shop acts on them
+          // differently.
+          fit: engine ? (fitByProduct.get(product.id) ?? "UNLISTED") : null,
         };
       });
 
@@ -177,6 +216,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           source: data.source,
           medium: data.medium,
           campaign: data.campaign,
+          vehicleEngineId: engine?.id,
+          vehicleLabel,
           subtotal,
           shippingFee,
           vatRate: tax.vatRate,

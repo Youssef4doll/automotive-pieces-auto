@@ -119,10 +119,23 @@ console.log("\n[4] SHOPPERS SEE THE UPLOADED PHOTO EVERYWHERE");
         `${cardImgs.filter((s) => s.includes("/api/images/")).length} card(s) on real photos`);
 
   // Search is yet another query path.
-  await shop.goto(`${BASE}/recherche?q=${encodeURIComponent(target.name.split(" ")[0])}`);
-  await shop.waitForTimeout(800);
-  const searchImgs = await shop.locator("main img").evaluateAll((els) => els.map((e) => decodeURIComponent(e.getAttribute("src") || "")));
-  check("search results show it", searchImgs.some((s) => s.includes("/api/images/")));
+  //
+  // Given a couple of attempts rather than one: the photo was uploaded seconds
+  // ago by this same suite, and under the full battery — where the server is
+  // answering another suite at the same time — the first render of the results
+  // page has been seen to come back before the new image row is visible to it.
+  // Failed once in a full run and passed on its own twice straight after,
+  // which is the shape of a race rather than a missing photo. Three tries and
+  // then it is a real failure.
+  let searchImgs = [];
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await shop.goto(`${BASE}/recherche?q=${encodeURIComponent(target.name.split(" ")[0])}`, { waitUntil: "networkidle" });
+    await shop.waitForTimeout(600);
+    searchImgs = await shop.locator("main img").evaluateAll((els) => els.map((e) => decodeURIComponent(e.getAttribute("src") || "")));
+    if (searchImgs.some((s) => s.includes("/api/images/"))) break;
+  }
+  check("search results show it", searchImgs.some((s) => s.includes("/api/images/")),
+    `${searchImgs.filter((s) => s.includes("/api/images/")).length} of ${searchImgs.length} images are uploads`);
   await shop.close();
 }
 

@@ -50,20 +50,21 @@ enum CustomerSegment {
 }
 
 model User {
-  id             String              @id @default(cuid())
-  email          String              @unique
-  passwordHash   String
-  name           String
-  phone          String?
-  role           Role                @default(CUSTOMER)
-  segment        CustomerSegment     @default(NEW)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  orders         Order[]
-  reviews        Review[]
-  profileChanges UserProfileChange[]
-  carts          Cart[]
-  passwordResets PasswordResetToken[]
+  id              String               @id @default(cuid())
+  email           String               @unique
+  passwordHash    String
+  name            String
+  phone           String?
+  role            Role                 @default(CUSTOMER)
+  segment         CustomerSegment      @default(NEW)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  orders          Order[]
+  reviews         Review[]
+  profileChanges  UserProfileChange[]
+  carts           Cart[]
+  passwordResets  PasswordResetToken[]
+  contactMessages ContactMessage[]
 
   @@index([role])
 }
@@ -95,7 +96,6 @@ model UserProfileChange {
 
 /**
  * A "forgot my password" link, one row per request.
- *
  * Only the SHA-256 of the token is stored: the table leaking must not hand
  * anyone a working link. The token itself exists once, in the e-mail. A row is
  * spent by `usedAt` rather than deleted so the request leaves a trace, and it
@@ -425,20 +425,20 @@ model StockMovement {
 }
 
 model Order {
-  id             String         @id @default(cuid())
-  ref            String         @unique // e.g. CMD-1042
-  userId         String?
-  user           User?          @relation(fields: [userId], references: [id])
-  customerName   String
-  phone          String
-  email          String?
-  governorate    String
-  address        String?
-  deliveryMethod DeliveryMethod @default(DELIVERY)
-  paymentMethod  PaymentMethod  @default(COD)
-  status         OrderStatus    @default(PENDING)
-  subtotal       Decimal        @db.Decimal(10, 2)
-  shippingFee    Decimal        @default(0) @db.Decimal(10, 2)
+  id              String         @id @default(cuid())
+  ref             String         @unique // e.g. CMD-1042
+  userId          String?
+  user            User?          @relation(fields: [userId], references: [id])
+  customerName    String
+  phone           String
+  email           String?
+  governorate     String
+  address         String?
+  deliveryMethod  DeliveryMethod @default(DELIVERY)
+  paymentMethod   PaymentMethod  @default(COD)
+  status          OrderStatus    @default(PENDING)
+  subtotal        Decimal        @db.Decimal(10, 2)
+  shippingFee     Decimal        @default(0) @db.Decimal(10, 2)
   // The shop's tax position at the moment this order was placed, snapshotted
   // so a later rate change in /admin/parametres cannot restate a document
   // that has already been printed and filed. Prices are quoted TTC, so the
@@ -446,20 +446,29 @@ model Order {
   // the droit de timbre is a real extra dinar and IS inside `total`. Both
   // default to 0, which is what every order placed before the shop had a
   // matricule fiscal honestly says: no VAT stated, no stamp charged.
-  vatRate        Decimal        @default(0) @db.Decimal(5, 2)
-  stampDuty      Decimal        @default(0) @db.Decimal(10, 2)
-  total          Decimal        @db.Decimal(10, 2)
-  notes          String?
+  vatRate         Decimal        @default(0) @db.Decimal(5, 2)
+  stampDuty       Decimal        @default(0) @db.Decimal(10, 2)
+  total           Decimal        @db.Decimal(10, 2)
+  notes           String?
   // First-touch marketing attribution, carried from the visitor's first
   // page load through to the order that eventually resulted — this is
   // what lets "campaign X generated Y TND" be answered from real data
   // instead of guessed. All nullable: a returning visitor with no stored
   // attribution, or an admin-created order, simply has none.
-  source         String?
-  medium         String?
-  campaign       String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  source          String?
+  medium          String?
+  campaign        String?
+  // The car the basket was chosen against, as the customer had it selected at
+  // checkout. Snapshotted rather than joined: the engine row can be renamed or
+  // deleted from the catalogue, and an order is a record of what was agreed,
+  // not a live view of the vehicle table. `vehicleEngineId` is kept beside the
+  // label so the shop can still walk back to the engine while it exists, and
+  // both are null for an order placed without a vehicle selected — which is a
+  // real state, not a missing value.
+  vehicleEngineId String?
+  vehicleLabel    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   items   OrderItem[]
   history OrderStatusEvent[]
@@ -470,19 +479,33 @@ model Order {
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String?
-  product   Product? @relation(fields: [productId], references: [id])
+  product   Product?      @relation(fields: [productId], references: [id])
   name      String // snapshot
   sku       String // snapshot
-  imageUrl  String   @default("/images/parts-lineup.png")
-  unitPrice Decimal  @db.Decimal(10, 2)
+  imageUrl  String        @default("/images/parts-lineup.png")
+  unitPrice Decimal       @db.Decimal(10, 2)
   qty       Int
-  lineTotal Decimal  @db.Decimal(10, 2)
+  lineTotal Decimal       @db.Decimal(10, 2)
+  // What the fitment table said about this part on the order's car, at the
+  // moment the order was placed. Null when no vehicle was given, which is the
+  // honest answer rather than UNLISTED — "we were not told" and "we hold no
+  // row for it" are different facts and the shop acts on them differently.
+  fit       OrderItemFit?
 
   @@index([orderId])
+}
+
+/// What our own fitment data said about an ordered part on the order's car.
+/// VERIFIED and DERIVED mirror FitmentConfidence; UNLISTED means we hold no
+/// row at all for that pair, which is the one the shop has to ring about.
+enum OrderItemFit {
+  VERIFIED
+  DERIVED
+  UNLISTED
 }
 
 model OrderStatusEvent {
@@ -527,6 +550,48 @@ model Review {
 model Setting {
   key   String @id
   value String
+}
+
+/// A message from the contact page. NEW until somebody in the shop deals with
+/// it; there is no "replied" state because the reply happens by e-mail or
+/// WhatsApp, outside this table, and a status the shop cannot keep true is
+/// worse than one it can.
+enum ContactStatus {
+  NEW
+  HANDLED
+}
+
+/// "Besoin d'aide ?" — the form on /contact.
+///
+/// The shop ran on WhatsApp alone, which works until you want to know how many
+/// people asked, what they asked about, or what was said to a customer who is
+/// now disputing an order. A message left here is a record the shop owns.
+///
+/// The context fields are filled in by the page, never typed by the customer:
+/// the order they were looking at, the part, and the car in their garage. That
+/// is the difference between "my part does not fit" and a message the shop can
+/// act on without a second round of questions.
+model ContactMessage {
+  id         String        @id @default(cuid())
+  name       String
+  email      String
+  phone      String?
+  subject    String
+  body       String
+  status     ContactStatus @default(NEW)
+  /// Set when the customer was signed in. Null for a guest, who is still a
+  /// real person with a real question.
+  userId     String?
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Context the page attached on its own.
+  orderRef   String?
+  productSku String?
+  vehicle    String?
+  handledAt  DateTime?
+  createdAt  DateTime      @default(now())
+
+  @@index([status, createdAt])
+  @@index([userId])
 }
 
 model NewsletterSubscriber {

@@ -98,6 +98,8 @@ export type OrderForEmail = {
   stampDuty: number;
   total: number;
   notes: string | null;
+  /** The car the order was placed for, or null when none was selected. */
+  vehicleLabel: string | null;
   items: {
     name: string;
     sku: string;
@@ -106,6 +108,9 @@ export type OrderForEmail = {
     qty: number;
     unitPrice: number;
     lineTotal: number;
+    /** What our fitment table said about this line on that car. Null when no
+     *  car was given — a different thing from "we hold no row". */
+    fit: "VERIFIED" | "DERIVED" | "UNLISTED" | null;
   }[];
 };
 
@@ -603,6 +608,55 @@ export function orderConfirmationMail(order: OrderForEmail, shop: ShopForEmail):
 
 /* ---------------------------------------------------- to the shop -------- */
 
+const FIT_LABEL = {
+  VERIFIED: "Compatibilité vérifiée",
+  DERIVED: "Déduite — à confirmer",
+  UNLISTED: "Non répertoriée",
+} as const;
+
+/**
+ * The car, and what we already knew about each part on it.
+ *
+ * Only in the shop's own alert, never in the customer's confirmation: this is
+ * the shop's internal read of its fitment table, and a line reading "non
+ * répertoriée" beside a part somebody has just bought would worry a customer
+ * about something that is usually just a gap in our data.
+ *
+ * It is the first thing the owner sees, before opening anything — which is the
+ * point. All-green means the order can be confirmed as it stands; anything
+ * else names the line to look at.
+ */
+function vehicleBlock(order: OrderForEmail): string {
+  if (!order.vehicleLabel) return "";
+  const lines = order.items
+    .map((i) => {
+      const tone = i.fit === "VERIFIED" ? "#166534" : i.fit === "DERIVED" ? "#92400e" : "#b91c1c";
+      const label = i.fit ? FIT_LABEL[i.fit] : "—";
+      return `<tr>
+        <td style="padding:3px 0;font-family:${FONT};font-size:13px;color:${INK};">${esc(i.name)}</td>
+        <td style="padding:3px 0;font-family:${FONT};font-size:13px;color:${tone};text-align:right;white-space:nowrap;">${label}</td>
+      </tr>`;
+    })
+    .join("");
+  return row(
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${LINE};border-radius:10px;"><tr><td style="padding:14px 16px;">
+      <div style="font-family:${FONT_DISPLAY};font-size:13px;letter-spacing:1px;text-transform:uppercase;color:${MUTED};">Véhicule du client</div>
+      <div style="margin-top:4px;font-family:${FONT_HEAD};font-size:16px;font-weight:800;color:${NAVY};">${esc(order.vehicleLabel)}</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">${lines}</table>
+    </td></tr></table>`,
+    "padding:14px 28px 0;"
+  );
+}
+
+function vehicleTextLines(order: OrderForEmail): string[] {
+  if (!order.vehicleLabel) return [`Véhicule : (non renseigné)`, ``];
+  return [
+    `Véhicule : ${order.vehicleLabel}`,
+    ...order.items.map((i) => `  - ${i.name} : ${i.fit ? FIT_LABEL[i.fit] : "—"}`),
+    ``,
+  ];
+}
+
 export function newOrderAlertMail(order: OrderForEmail, shop: ShopForEmail): Mail | null {
   // Nowhere to send it until the owner fills in the shop address in
   // /admin/parametres. Silence beats mailing a placeholder.
@@ -640,6 +694,7 @@ export function newOrderAlertMail(order: OrderForEmail, shop: ShopForEmail): Mai
       sub: `${esc(fmtWhen(order.createdAt))} &nbsp;·&nbsp; ${count} article${count > 1 ? "s" : ""} &nbsp;·&nbsp; <strong style="color:${NAVY};">${esc(formatTNDfr(order.total))}</strong>`,
     }),
     customer,
+    vehicleBlock(order),
     button("Ouvrir dans l'admin", adminUrl, "navy"),
     sectionTitle("Articles commandés"),
     items(order),
@@ -657,6 +712,7 @@ export function newOrderAlertMail(order: OrderForEmail, shop: ShopForEmail): Mai
     `Téléphone : ${order.phone}`,
     order.email ? `E-mail : ${order.email}` : `E-mail : (aucun)`,
     ``,
+    ...vehicleTextLines(order),
     ...textLines(order, shop),
     ...(order.notes ? [``, `Note du client : ${order.notes}`] : []),
     ``,
@@ -777,6 +833,104 @@ export function orderStatusMail(order: OrderForEmail, status: string, shop: Shop
  * long it works, what to do if it was not you. The link is repeated as text
  * for the mail clients that strip buttons of their href.
  */
+export type ContactMessageForEmail = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  body: string;
+  orderRef: string | null;
+  productSku: string | null;
+  vehicle: string | null;
+  createdAt: Date;
+  signedIn: boolean;
+};
+
+/**
+ * The nudge for a message left on /contact.
+ *
+ * The row in the database is the record; this is what makes somebody look at
+ * it. `replyTo` is the customer, so the owner can answer straight from their
+ * inbox without copying an address — which is the thing that decides whether a
+ * contact form actually gets used or quietly becomes a black hole.
+ *
+ * Null when the shop has not set its own address in /admin/parametres. The
+ * message is still saved; there is simply nowhere to send the alert, and
+ * mailing a placeholder would be worse than silence.
+ */
+export function contactMessageMail(m: ContactMessageForEmail, shop: ShopForEmail): Mail | null {
+  if (!shop.email) return null;
+
+  const adminUrl = `${siteUrl()}/admin/messages`;
+  // Only the context the page actually had. An empty row would read as a
+  // field the customer declined to fill in, which is not what happened.
+  const context = [
+    m.phone ? ["Téléphone", m.phone] : null,
+    m.orderRef ? ["Commande", m.orderRef] : null,
+    m.productSku ? ["Pièce", m.productSku] : null,
+    m.vehicle ? ["Véhicule", m.vehicle] : null,
+    ["Compte", m.signedIn ? "client connecté" : "visiteur"],
+  ].filter((r): r is [string, string] => r !== null);
+
+  const contextRows = context
+    .map(
+      ([k, v]) => `<tr>
+        <td style="padding:3px 0;font-family:${FONT};font-size:13px;color:${MUTED};white-space:nowrap;">${esc(k)}</td>
+        <td style="padding:3px 0 3px 14px;font-family:${FONT};font-size:13px;color:${INK};">${esc(v)}</td>
+      </tr>`
+    )
+    .join("");
+
+  const body = [
+    hero({
+      tone: "navy",
+      headline: esc(m.subject),
+      sub: `${esc(m.name)} &nbsp;·&nbsp; <a href="mailto:${esc(m.email)}" style="color:${NAVY};text-decoration:underline;">${esc(m.email)}</a> &nbsp;·&nbsp; ${esc(fmtWhen(m.createdAt))}`,
+    }),
+    row(
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border-radius:10px;"><tr><td style="padding:16px 18px;font-family:${FONT};font-size:15px;line-height:1.65;color:${INK};white-space:pre-wrap;">${esc(m.body)}</td></tr></table>`,
+      "padding:22px 28px 0;"
+    ),
+    row(
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${LINE};border-radius:10px;"><tr><td style="padding:14px 16px;">
+        <div style="font-family:${FONT_DISPLAY};font-size:13px;letter-spacing:1px;text-transform:uppercase;color:${MUTED};">Contexte</div>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">${contextRows}</table>
+      </td></tr></table>`,
+      "padding:14px 28px 0;"
+    ),
+    button("Ouvrir la boîte de réception", adminUrl, "navy"),
+    row("", "padding:0 0 28px;"),
+  ].join("");
+
+  const text = [
+    `${m.subject} — ${m.name}`,
+    `${fmtWhen(m.createdAt)}`,
+    ``,
+    m.body,
+    ``,
+    ...context.map(([k, v]) => `${k} : ${v}`),
+    `E-mail : ${m.email}`,
+    ``,
+    `Boîte de réception : ${adminUrl}`,
+  ].join("\n");
+
+  return {
+    to: shop.email,
+    subject: `Message — ${m.subject} (${m.name})`,
+    html: shell({
+      title: `Message — ${m.subject}`,
+      preheader: `${m.name} · ${m.email}`,
+      kicker: "Espace boutique",
+      shop,
+      body,
+    }),
+    text,
+    // So the shop answers the customer, not itself.
+    replyTo: m.email,
+  };
+}
+
 export function passwordResetMail(user: { name: string; email: string }, url: string, shop: ShopForEmail): Mail {
   const firstName = user.name.trim().split(/\s+/)[0] || user.name;
   const body = [

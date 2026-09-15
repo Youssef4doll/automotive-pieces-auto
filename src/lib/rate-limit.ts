@@ -113,6 +113,11 @@ export const LIMITS = {
   checkout: { limit: 40, windowMs: 10 * 60_000 },
   /** Newsletter, the classic spam target; the honeypot does the real work. */
   newsletter: { limit: 15, windowMs: 60 * 60_000 },
+  /** The contact form. Every message is a row in the shop's inbox and an
+   *  e-mail in the owner's, so the ceiling is lower than the newsletter's —
+   *  but not so low that a household on one carrier address cannot write
+   *  twice about two different orders. */
+  contact: { limit: 8, windowMs: 30 * 60_000 },
   /** Reference lookup, the one endpoint that can be walked for the catalogue. */
   reference: { limit: 60, windowMs: 60_000 },
   /** Type-ahead fires per keystroke (debounced), so the ceiling is higher. */
