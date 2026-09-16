@@ -101,6 +101,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           compareAtPrice: product.compareAtPrice ? String(toNumber(product.compareAtPrice)) : "",
           stockQty: String(product.stockQty),
           lowStockThreshold: String(product.lowStockThreshold),
+          supply: product.supply,
           isTopSeller: product.isTopSeller,
           active: product.active,
         }}

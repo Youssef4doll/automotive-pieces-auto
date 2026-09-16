@@ -379,7 +379,14 @@ async function resolvePackContents(specs: unknown) {
 export const getRelatedProducts = cache(async (categoryId: string, excludeId: string, take = 4) => {
   const products = await prisma.product.findMany({
     where: { categoryId, active: true, id: { not: excludeId } },
-    include: { brand: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
+    // `category` is not decoration here: serializeProduct needs it to swap the
+    // seeded hero artwork for the family drawing, and without it this row was
+    // the one place on the site that showed the wrong picture — a wiper blade
+    // illustrated with a photograph of engine oil, an air filter and a spark
+    // plug, directly under the part's own description. Every other listing
+    // includes it; this one was written without it and nothing caught it
+    // because the fallback renders perfectly well, just of something else.
+    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
     take,
   });
   return products.map(serializeProduct);
@@ -585,4 +592,90 @@ export const getProductSlugRedirect = cache(async (oldSlug: string) => {
   });
   if (!row?.product?.active) return null;
   return row.product.slug;
+})
+
+/**
+ * Everything a brand's own page needs, in three bounded reads.
+ *
+ * The site had no brand page at all: the logo wall on the home page linked to
+ * `/recherche?q=Bosch`, which finds the parts but arrives as a search result
+ * — no logo, no manufacturer details, no sense of which families the maker
+ * covers or which cars it fits, and nothing for a search engine to index as
+ * "Bosch parts". A shopper who trusts a brand is one of the strongest signals
+ * a parts shop gets, and it was being spent on a query string.
+ *
+ * The two summaries are counted in Postgres rather than by reading the rows
+ * and tallying them here — the same reason getBrandsForCategory does, and the
+ * reason both stay correct at fifty thousand products.
+ */
+export const getBrandPage = cache(async (slug: string, take = CATALOG_PAGE_SIZE) => {
+  const brand = await prisma.brand.findFirst({ where: { slug } });
+  if (!brand) return null;
+
+  const capped = Math.min(Math.max(1, take), CATALOG_MAX_SHOWN);
+  const where = { brandId: brand.id, active: true };
+  const include = {
+    brand: true,
+    category: true,
+    fitments: { select: { engineId: true } },
+    ...primaryImageSelect,
+  };
+  const orderBy = [{ isTopSeller: "desc" as const }, { name: "asc" as const }];
+
+  // Buyable parts lead, and the cap is applied per query rather than after —
+  // the same rule the category listing follows, and for the same reason: a
+  // cap on an unsorted fetch would strand an in-stock part on row 200.
+  const [inStock, rest, total, families, makes] = await Promise.all([
+    prisma.product.findMany({ where: { ...where, stockQty: { gt: 0 } }, include, orderBy, take: capped }),
+    prisma.product.findMany({ where: { ...where, stockQty: { lte: 0 } }, include, orderBy, take: capped }),
+    prisma.product.count({ where }),
+    // The families this maker covers, with a count each. Parent category when
+    // the part sits in a subcategory, so the chips read "Freinage" rather than
+    // "Kit de plaquettes de frein".
+    prisma.$queryRaw<{ name: string; slug: string; n: bigint }[]>`
+      SELECT COALESCE(parent.name, c.name) AS name,
+             COALESCE(parent.slug, c.slug) AS slug,
+             COUNT(*)                      AS n
+      FROM "Product" p
+      JOIN "Category" c ON c.id = p."categoryId"
+      LEFT JOIN "Category" parent ON parent.id = c."parentId"
+      WHERE p.active AND p."brandId" = ${brand.id}
+      GROUP BY 1, 2
+      ORDER BY n DESC, 1 ASC
+    `,
+    // The carmakers this brand's parts are listed for. DISTINCT on the
+    // product, so a part fitting eleven engines of one make counts once.
+    prisma.$queryRaw<{ name: string; slug: string; n: bigint }[]>`
+      SELECT mk.name, mk.slug, COUNT(DISTINCT p.id) AS n
+      FROM "Product" p
+      JOIN "ProductFitment" f ON f."productId" = p.id
+      JOIN "VehicleEngine" e  ON e.id = f."engineId"
+      JOIN "VehicleModel" md  ON md.id = e."modelId"
+      JOIN "VehicleMake" mk   ON mk.id = md."makeId"
+      WHERE p.active AND p."brandId" = ${brand.id}
+      GROUP BY mk.name, mk.slug
+      ORDER BY n DESC, mk.name ASC
+    `,
+  ]);
+
+  const products = [...inStock, ...rest].slice(0, capped);
+  return {
+    brand,
+    products: products.map(serializeProduct),
+    total,
+    shown: products.length,
+    families: families.map((f) => ({ name: f.name, slug: f.slug, count: Number(f.n) })),
+    makes: makes.map((m) => ({ name: m.name, slug: m.slug, count: Number(m.n) })),
+  };
+})
+
+/** Every brand that has at least one active part — for the sitemap. */
+export const getBrandSlugs = cache(async () => {
+  const rows = await prisma.$queryRaw<{ slug: string }[]>`
+    SELECT b.slug
+    FROM "Brand" b
+    WHERE EXISTS (SELECT 1 FROM "Product" p WHERE p."brandId" = b.id AND p.active)
+    ORDER BY b.slug
+  `;
+  return rows.map((r) => r.slug);
 })

@@ -102,12 +102,30 @@ console.log("\n[4] SHOPPERS SEE THE UPLOADED PHOTO EVERYWHERE");
   const thumbs = await shop.locator('button[aria-label^="Photo"]').count();
   check("a gallery strip appears for the second photo", thumbs === 2, `${thumbs} thumbnails`);
 
-  // The second thumbnail must actually swap the main image.
+  // The second thumbnail must actually change the photo you are looking at.
+  //
+  // It used to be enough to read the `src` off the one <img> the gallery
+  // rendered, because the gallery swapped that src. It does not any more: the
+  // photos are a scroll-snap track so a phone can swipe them, which means all
+  // of them are in the DOM at once and the first <img> is always photo 1.
+  // Asserting on which slide is actually in view is the stronger check anyway
+  // — it is what the shopper sees, rather than an attribute that correlates
+  // with it.
   await shop.locator('button[aria-label^="Photo 2"]').click();
-  await shop.waitForTimeout(500);
-  const swapped = await shop.locator("main img").first().getAttribute("src");
-  check("tapping a thumbnail changes the main photo",
-        decodeURIComponent(swapped || "").includes(`/api/images/${stored[1].id}`), swapped?.slice(0, 70));
+  await shop.waitForTimeout(900);
+  const viewing = await shop.evaluate(() => {
+    const track = document.querySelector('[role="group"]');
+    const slide = Math.round(track.scrollLeft / track.clientWidth);
+    const img = track.querySelectorAll("img")[slide];
+    return { slide, src: img?.currentSrc || img?.src || "" };
+  });
+  check(
+    "tapping a thumbnail changes the photo in view",
+    viewing.slide === 1 && decodeURIComponent(viewing.src).includes(`/api/images/${stored[1].id}`),
+    `slide ${viewing.slide}, ${viewing.src.slice(-40)}`,
+  );
+  const marked = await shop.locator('button[aria-label^="Photo 2"]').getAttribute("aria-current");
+  check("and the strip says which one that is", marked === "true", String(marked));
 
   // And the listing card, which is a different query path.
   const cat = await prisma.category.findUnique({ where: { id: target.categoryId }, select: { slug: true, parent: { select: { slug: true } } } });

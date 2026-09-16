@@ -8,6 +8,7 @@ import { useCart } from "@/lib/cart-store";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import { positionLabels } from "@/lib/position";
 import Price from "./Price";
+import { availabilityView, AVAILABILITY_TONE, type SupplyMode } from "@/lib/availability";
 
 export type CardProduct = {
   id: string;
@@ -20,6 +21,8 @@ export type CardProduct = {
   compareAtPrice: number | null;
   stockQty: number;
   lowStockThreshold: number;
+  /** What an empty shelf means for this part — see lib/availability. */
+  supply: SupplyMode;
   isTopSeller: boolean;
   /** The logo is the brand's own, uploaded in /admin/catalogue/marques. Null
    *  until somebody uploads one, and then the name stands in — never a
@@ -87,6 +90,12 @@ export default function ProductCard({
       : product.fitments.some((f) => f.engineId === vehicle.engineId)
         ? "yes"
         : "no";
+  // Three answers, not two. "Rupture de stock" was the card's only word for
+  // an empty shelf, and it is the wrong one for a shop that orders most of
+  // its catalogue in — see lib/availability. `outOfStock` below now means
+  // "nothing on the shelf", which is a fact about the warehouse; whether that
+  // stops a sale is `avail.buyable`, which is a different question.
+  const avail = availabilityView(product);
   const outOfStock = product.stockQty <= 0;
   const lowStock = !outOfStock && product.stockQty <= product.lowStockThreshold;
   const discount =
@@ -245,7 +254,7 @@ export default function ProductCard({
 
   const addButton = (
     <button
-      disabled={outOfStock}
+      disabled={!avail.buyable}
       onClick={addToCart}
       className="inline-flex w-full min-h-tap items-center justify-center gap-2 rounded-lg bg-gold-500 text-navy-950 font-display text-xs font-bold uppercase tracking-wide transition-transform hover:bg-gold-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-200 sm:text-[13px]"
     >
@@ -257,19 +266,18 @@ export default function ProductCard({
     </button>
   );
 
-  const stockLine = outOfStock ? (
-    <span className="min-h-4 text-xs font-semibold leading-4 text-red-600">{t("product.outOfStock")}</span>
-  ) : (
-    <span className="inline-flex min-h-4 items-center gap-1.5 text-xs font-semibold leading-4 text-green-700">
-      <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-green-500" />
-      {t("product.inStock")}
+  const tone = AVAILABILITY_TONE[avail.state];
+  const stockLine = (
+    <span className={`inline-flex min-h-4 items-center gap-1.5 text-xs font-semibold leading-4 ${tone.text}`}>
+      <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${tone.dot}`} />
+      {avail.label}
     </span>
   );
 
   const deliveryLine = delivery ? (
     <span
-      className={`inline-flex items-start gap-1.5 text-xs leading-4 text-gray-600 ${outOfStock ? "invisible" : ""}`}
-      aria-hidden={outOfStock || undefined}
+      className={`inline-flex items-start gap-1.5 text-xs leading-4 text-gray-600 ${avail.state === "IN_STOCK" ? "" : "invisible"}`}
+      aria-hidden={avail.state !== "IN_STOCK" || undefined}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="mt-px shrink-0" aria-hidden="true">
         <path d="M1 3h13v13H1zM14 8h4l4 4v4h-8z" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" />
@@ -376,7 +384,7 @@ export default function ProductCard({
                   so out-of-stock cards keep their buttons in line with their
                   neighbours'; a list row has no neighbour to line up with, so
                   reserving it just puts a gap under "Rupture de stock". */}
-              {!outOfStock && deliveryLine}
+              {avail.state === "IN_STOCK" && deliveryLine}
             </div>
 
             {/* Quantity beside the button, not on the page after it. Buying
@@ -390,11 +398,14 @@ export default function ProductCard({
               <select
                 id={`qty-${product.id}`}
                 value={qty}
-                disabled={outOfStock}
+                disabled={!avail.buyable}
                 onChange={(e) => setQty(Number(e.target.value))}
                 className="min-h-tap rounded-lg border border-gray-300 bg-white px-2 text-sm font-semibold text-navy-950 outline-none focus:border-gold-500 disabled:bg-gray-100"
               >
-                {Array.from({ length: Math.max(1, Math.min(10, product.stockQty || 1)) }, (_, i) => i + 1).map((n) => (
+                {/* A part with nothing on the shelf can still be ordered in, so the
+                    quantity list is not limited to the shelf when the shelf is
+                    empty — it was capped at 1 by `|| 1`. */}
+                {Array.from({ length: Math.max(1, Math.min(10, product.stockQty || 10)) }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>
                     {n}
                   </option>
@@ -467,8 +478,8 @@ export default function ProductCard({
             {stockLine}
             {delivery && (
               <span
-                className={`hidden min-h-8 items-start gap-1.5 text-xs leading-4 text-gray-600 @[13rem]:inline-flex ${outOfStock ? "invisible" : ""}`}
-                aria-hidden={outOfStock || undefined}
+                className={`hidden min-h-8 items-start gap-1.5 text-xs leading-4 text-gray-600 @[13rem]:inline-flex ${avail.state === "IN_STOCK" ? "" : "invisible"}`}
+                aria-hidden={avail.state !== "IN_STOCK" || undefined}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="mt-px shrink-0" aria-hidden="true">
                   <path d="M1 3h13v13H1zM14 8h4l4 4v4h-8z" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" />

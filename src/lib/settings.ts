@@ -28,6 +28,11 @@ export const DEFAULT_SETTINGS = {
   free_shipping_threshold: "150",
   delivery_grand_tunis: "24h",
   delivery_regions: "48–72h",
+  // How long the shop takes to get in a part it does not hold. Empty on
+  // purpose: a part marked "sur commande" then says that it is ordered in and
+  // stops there, rather than naming a delay nobody has committed to. Fill it
+  // in and every sur-commande part quotes it — "3 à 5 jours ouvrables".
+  supplier_lead_time: "",
 };
 
 export type SettingsMap = typeof DEFAULT_SETTINGS;

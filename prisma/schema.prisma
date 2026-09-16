@@ -230,6 +230,8 @@ model Product {
   currency          String   @default("TND")
   stockQty          Int      @default(0)
   lowStockThreshold Int      @default(5)
+  /// What an empty shelf means for this part — see SupplyMode.
+  supply            SupplyMode @default(ON_ORDER)
   isTopSeller       Boolean  @default(false)
   active            Boolean  @default(true)
   createdAt         DateTime @default(now())
@@ -279,6 +281,24 @@ enum Axle {
 enum Side {
   GAUCHE
   DROITE
+}
+
+/// What "zero in stock" means for a given part.
+///
+/// This shop does not warehouse most of its catalogue — it holds a little and
+/// telephones the supplier for the rest — so an empty shelf usually means "we
+/// can get it", not "you cannot have it". Those are completely different
+/// answers to a customer and the old page gave only the second one, refusing
+/// an order the shop would happily have fulfilled.
+///
+/// ON_ORDER is the default because it is how the shop actually works; a part
+/// that genuinely cannot be sourced any more is marked UNAVAILABLE by hand, so
+/// the page never claims a supply route the shop has not got.
+enum SupplyMode {
+  /// Out of stock is a delay, not a refusal: the shop orders it in.
+  ON_ORDER
+  /// Cannot be supplied at all — discontinued, or nobody stocks it.
+  UNAVAILABLE
 }
 
 // Photos live in Postgres rather than on disk so they survive a redeploy and
@@ -533,6 +553,11 @@ model OrderItem {
   // honest answer rather than UNLISTED — "we were not told" and "we hold no
   // row for it" are different facts and the shop acts on them differently.
   fit       OrderItemFit?
+  /// True when this line was sold with nothing on the shelf, so the shop has
+  /// to order it in before it can pick the rest. Recorded per line rather
+  /// than per order: one basket can mix what is here with what is not, and
+  /// the picking bench needs to know which is which.
+  backorder Boolean       @default(false)
 
   @@index([orderId])
 }

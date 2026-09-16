@@ -89,10 +89,15 @@ export default function CartView({
                   <span className="w-8 text-center text-sm font-semibold">{item.qty}</span>
                   {/* Disabled at the shelf's limit rather than swallowing the
                       tap: a "+" that does nothing reads as a broken button. */}
+                  {/* stockQty 0 is not a limit of zero — it is a part with
+                      nothing on the shelf that the shop orders in, and the
+                      store's own setQty has always read it that way. Here it
+                      did not, so the "+" was disabled from the first unit and
+                      the line below announced "0 en stock" underneath it. */}
                   <button
                     className="w-tap h-tap font-bold text-lg disabled:opacity-30 disabled:cursor-not-allowed"
                     aria-label={t("cart.increase")}
-                    disabled={item.qty >= item.stockQty}
+                    disabled={item.stockQty > 0 && item.qty >= item.stockQty}
                     onClick={() => setQty(item.productId, item.qty + 1)}
                   >
                     +
@@ -100,9 +105,14 @@ export default function CartView({
                 </div>
                 <Price value={item.unitPrice * item.qty} className="font-bold text-navy-900" />
               </div>
-              {item.qty >= item.stockQty && (
+              {item.stockQty > 0 && item.qty >= item.stockQty && (
                 <p className="text-xs text-gray-600 mt-1.5">
                   {item.stockQty} en stock — c&apos;est tout ce que nous avons pour le moment.
+                </p>
+              )}
+              {item.stockQty <= 0 && (
+                <p className="text-xs text-gray-600 mt-1.5">
+                  Sur commande — nous la commandons chez notre fournisseur.
                 </p>
               )}
             </div>

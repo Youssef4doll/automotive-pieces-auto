@@ -24,6 +24,7 @@ export type ProductFormValues = {
   compareAtPrice: string;
   stockQty: string;
   lowStockThreshold: string;
+  supply: string;
   isTopSeller: boolean;
   active: boolean;
 };
@@ -45,6 +46,7 @@ const BLANK: ProductFormValues = {
   compareAtPrice: "",
   stockQty: "0",
   lowStockThreshold: "5",
+  supply: "ON_ORDER",
   isTopSeller: false,
   active: true,
 };
@@ -248,9 +250,23 @@ export default function ProductForm({
         </Field>
       </div>
 
-      <Field label="Seuil stock faible">
-        <input name="lowStockThreshold" type="number" min="0" value={v.lowStockThreshold} onChange={set("lowStockThreshold")} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors max-w-32" />
-      </Field>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Field label="Seuil stock faible">
+          <input name="lowStockThreshold" type="number" min="0" value={v.lowStockThreshold} onChange={set("lowStockThreshold")} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors max-w-32" />
+        </Field>
+
+        {/* What the storefront says once the shelf is empty. The default is
+            "sur commande", because that is how this shop works — it holds a
+            little and telephones the supplier for the rest. Mark a reference
+            "indisponible" only when nobody can supply it any more: that is
+            the one setting that takes the buy button away. */}
+        <Field label="Quand le stock est à zéro">
+          <select name="supply" value={v.supply} onChange={set("supply")} className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors">
+            <option value="ON_ORDER">Disponible sur commande (nous la commandons)</option>
+            <option value="UNAVAILABLE">Indisponible (plus approvisionnée)</option>
+          </select>
+        </Field>
+      </div>
 
       {/* The default 13px checkbox is a miss-tap on a phone; the label is the
           real target, so it carries the tap height and the box is scaled up. */}

@@ -69,20 +69,54 @@ console.log("\n[2] NOTHING UNBUYABLE COMES BEFORE SOMETHING BUYABLE");
 {
   const p = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
 
-  // Every family that holds a mix of in and out of stock — the ordering only
-  // means anything where there is something to order.
+  // This test needs a family holding both a buyable part and an unbuyable one.
+  //
+  // It used to go looking for one, and skip every family that was not already
+  // mixed — which made it depend on how much stock previous suites happened to
+  // have bought. It passed for months on a half-sold database, and the moment
+  // the battery started restoring stock before each run (see run-e2e.sh) every
+  // family was uniformly in stock, nothing was mixed, and the check had
+  // nothing at all to examine. A test that only runs when the data happens to
+  // suit it is a test you cannot trust either way.
+  //
+  // So it builds the condition instead: empty the shelf on one part of one
+  // family, assert, and put it back — on every path out.
   const families = await prisma.category.findMany({
     where: { parentId: null },
     select: { slug: true, name: true },
   });
+  const emptied = [];
+  const restoreStock = async () => {
+    for (const { id, stockQty } of emptied.splice(0)) {
+      await prisma.product.update({ where: { id }, data: { stockQty } }).catch(() => {});
+    }
+  };
+
+  // A crash must not leave parts sitting at zero for every suite after this
+  // one — the exact failure mode this section exists to guard against.
+  process.on("uncaughtException", async (err) => {
+    console.error(err);
+    await restoreStock();
+    await prisma.$disconnect().catch(() => {});
+    process.exit(1);
+  });
+
   let checked = 0;
   for (const fam of families) {
-    const stock = await prisma.product.findMany({
+    const inFamily = await prisma.product.findMany({
       where: { active: true, category: { OR: [{ slug: fam.slug }, { parent: { slug: fam.slug } }] } },
-      select: { stockQty: true },
+      orderBy: { stockQty: "asc" },
+      select: { id: true, stockQty: true },
     });
-    const mixed = stock.some((s) => s.stockQty > 0) && stock.some((s) => s.stockQty <= 0);
-    if (!mixed) continue;
+    // Two parts at least, or "one comes before the other" says nothing.
+    if (inFamily.length < 2) continue;
+
+    // Take the least-stocked one off the shelf, unless one already is.
+    const victim = inFamily[0];
+    if (victim.stockQty > 0) {
+      emptied.push({ id: victim.id, stockQty: victim.stockQty });
+      await prisma.product.update({ where: { id: victim.id }, data: { stockQty: 0 } });
+    }
 
     await p.goto(`${BASE}/catalogue/${fam.slug}`, { waitUntil: "domcontentloaded" });
     await p.waitForTimeout(1100);
@@ -90,7 +124,15 @@ console.log("\n[2] NOTHING UNBUYABLE COMES BEFORE SOMETHING BUYABLE");
       [...document.querySelectorAll('a[href^="/produit/"]')]
         .map((a) => a.closest("li,article,div[class*='rounded']") || a)
         .filter((v, i, arr) => arr.indexOf(v) === i)
-        .map((c) => (/rupture/i.test(c.textContent || "") ? "X" : "o"))
+        // The card's own words, not "rupture" — that word is gone. A part
+        // with nothing on the shelf now reads "Sur commande" (the shop orders
+        // it in) or "Indisponible" (nobody can). Both are still parts that
+        // should come after the ones on the shelf, and matching on "En stock"
+        // is what keeps this check meaningful now that "rupture" would never
+        // match anything and the assertion would pass trivially.
+        // No \b around it: the card's text runs together as "…94.00 DTEn
+        // stockLivraison…", so a word boundary before "En" never matches.
+        .map((c) => (/En stock/i.test(c.textContent || "") ? "o" : "X"))
         .join(""),
     );
     // Sorted means every "o" precedes every "X".
@@ -99,6 +141,7 @@ console.log("\n[2] NOTHING UNBUYABLE COMES BEFORE SOMETHING BUYABLE");
     checked++;
   }
   check("at least one mixed family was there to check", checked > 0, `${checked} checked`);
+  await restoreStock();
   await p.context().close();
 }
 

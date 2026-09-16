@@ -42,6 +42,20 @@ export default function SettingsForm({ settings }: { settings: SettingsMap }) {
         <Field label="Délai régions" name="delivery_regions" defaultValue={settings.delivery_regions} />
       </div>
 
+      {/* Quoted on every part that is out of stock but still orderable. Left
+          empty those parts say they are ordered in and say nothing about
+          when — which is better than a delay nobody has committed to. */}
+      <Field
+        label="Délai fournisseur (pièces sur commande)"
+        name="supplier_lead_time"
+        defaultValue={settings.supplier_lead_time}
+        placeholder="ex. 3 à 5 jours ouvrables"
+      />
+      <p className="-mt-2 text-xs text-gray-500">
+        Affiché sur les pièces « disponibles sur commande ». Laissé vide, la fiche indique que la pièce
+        est commandée chez le fournisseur sans annoncer de délai.
+      </p>
+
       {state?.ok && <p className="text-sm text-green-700 font-semibold">Paramètres enregistrés ✓</p>}
 
       <button
@@ -61,12 +75,14 @@ function Field({
   type = "text",
   dir,
   step,
+  placeholder,
 }: {
   label: string;
   name: string;
   defaultValue: string;
   type?: string;
   dir?: "ltr" | "rtl";
+  placeholder?: string;
   /** Number fields default to whole steps, which refuses "0.6" as invalid. */
   step?: string;
 }) {
@@ -79,6 +95,7 @@ function Field({
         step={step}
         defaultValue={defaultValue}
         dir={dir}
+        placeholder={placeholder}
         className="px-3 py-2.5 border border-navy-900/15 rounded-lg text-sm outline-none focus:border-gold-500"
       />
     </label>

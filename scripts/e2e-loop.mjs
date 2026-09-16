@@ -467,7 +467,16 @@ console.log("\n[C5] THE CUSTOMER CREATES AN ACCOUNT AFTER BUYING");
   await shopper.fill('input[name="password"]', PASSWORD);
   await shopper.getByRole("button", { name: /Créer mon compte|Créer un compte|S'inscrire/i }).last().click();
   await shopper.waitForTimeout(2500);
-  check("the account is created and signed in", shopper.url().includes("/compte"));
+  // Staying on /compte proves nothing — a refused signup leaves you on the same
+  // URL with the reason printed above the form. Ask for something only a signed-in
+  // page carries, and quote the page when it is missing so the reason is visible.
+  const accountText = (await shopper.locator("body").innerText()).replace(/\s+/g, " ").trim();
+  const passwordFields = await shopper.locator('input[type="password"]').count();
+  check(
+    "the account is created and signed in",
+    /Bonjour,/i.test(accountText) && passwordFields === 0,
+    accountText.slice(0, 160),
+  );
 
   const user = await prisma.user.findUnique({ where: { email: EMAIL }, select: { id: true, passwordHash: true } });
   check("it is stored with a hashed password", Boolean(user) && /^\$2[aby]\$/.test(user.passwordHash));

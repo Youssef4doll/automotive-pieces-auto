@@ -78,7 +78,11 @@ check("and still offers a way to get help",
 
 console.log("\n[2] BUY SOMETHING");
 const prod = await prisma.product.findFirst({
-  where: { active: true, stockQty: { gt: 2 }, sku: { not: { startsWith: "PACK-" } } },
+  where: { active: true, stockQty: { gt: 0 }, sku: { not: { startsWith: "PACK-" } } },
+  // Most-stocked first, and only one unit is bought below. This asked for
+  // `gt: 2` and crashed twenty suites into a battery that had sold the
+  // fixtures down — see HANDOVER §2 on over-constraining.
+  orderBy: { stockQty: "desc" },
   select: { slug: true, name: true },
 });
 await p.goto(`${BASE}/produit/${prod.slug}`);

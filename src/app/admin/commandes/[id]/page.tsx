@@ -136,9 +136,20 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           <h2 className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide mb-2">Articles</h2>
           <div className="flex flex-col divide-y divide-navy-900/8">
             {order.items.map((item) => (
-              <div key={item.id} className="flex justify-between py-2 text-sm">
-                <span>{item.qty}× {item.name} <span className="text-navy-900/40">({item.sku})</span></span>
-                <span className="font-semibold">{formatTND(toNumber(item.lineTotal))}</span>
+              <div key={item.id} className="flex justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0">
+                  {item.qty}× {item.name} <span className="text-navy-900/40">({item.sku})</span>
+                  {/* The shop sells parts it does not hold — see SupplyMode.
+                      This line is the difference between picking an order and
+                      telephoning a supplier first, so the bench is told before
+                      it starts rather than when it reaches an empty shelf. */}
+                  {item.backorder && (
+                    <span className="ms-2 inline-flex items-center rounded-full bg-gold-500/15 px-2 py-0.5 text-[12px] font-semibold text-navy-900">
+                      À commander
+                    </span>
+                  )}
+                </span>
+                <span className="shrink-0 font-semibold">{formatTND(toNumber(item.lineTotal))}</span>
               </div>
             ))}
           </div>

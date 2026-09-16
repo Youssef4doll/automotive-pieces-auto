@@ -144,6 +144,13 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       const lineItems = data.items.map((item) => {
         const product = productMap.get(item.productId);
         if (!product) throw new OrderError("Un produit du panier n'existe plus.");
+        // A part the shop cannot source is the only thing that is genuinely
+        // refusable here. Everything else at zero is a part the shop orders
+        // in — see lib/availability — and refusing that turned a sale the
+        // shop wanted into a WhatsApp message it had to chase.
+        if (product.stockQty <= 0 && product.supply === "UNAVAILABLE") {
+          throw new OrderError(`${product.name} n'est plus approvisionnée.`);
+        }
         const unitPrice = toNumber(product.priceSell);
         return {
           productId: product.id,
@@ -159,6 +166,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           // row for it" are different facts, and the shop acts on them
           // differently.
           fit: engine ? (fitByProduct.get(product.id) ?? "UNLISTED") : null,
+          // Recorded per line, because one basket can mix what is on the
+          // shelf with what has to be fetched, and the picking bench needs
+          // to know which is which before it starts.
+          backorder: product.stockQty < item.qty,
         };
       });
 
@@ -169,14 +180,21 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       // where two concurrent checkouts for the last unit could both pass
       // the check and both decrement — overselling and driving stock
       // negative. `updateMany`'s matched count tells us which case we're in.
+      //
+      // Failing that claim is no longer an error. It used to be: a part with
+      // nothing on the shelf could not be bought at all, which is wrong for a
+      // shop that orders most of its catalogue in. So the claim is still
+      // attempted — it is what keeps two concurrent buyers of the last unit
+      // from both getting it — and when it does not match, the line is simply
+      // one the shop has to fetch. Stock never goes negative either way.
       for (const item of data.items) {
-        const product = productMap.get(item.productId)!;
         const { count } = await tx.product.updateMany({
           where: { id: item.productId, stockQty: { gte: item.qty } },
           data: { stockQty: { decrement: item.qty } },
         });
         if (count === 0) {
-          throw new OrderError(`Stock insuffisant pour ${product.name} (${product.stockQty} disponible(s)).`);
+          const line = lineItems.find((l) => l.productId === item.productId);
+          if (line) line.backorder = true;
         }
       }
 

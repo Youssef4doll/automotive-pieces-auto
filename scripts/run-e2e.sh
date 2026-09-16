@@ -21,12 +21,25 @@
 # Suites are independent and clean up after themselves; they run in series
 # because several of them place real orders and move real stock.
 #
-# A suite reported as CRASHED that passes on its own is usually the checkout
-# rate limiter, not a bug: it allows 40 orders per 10 minutes per caller, the
-# whole battery comes from one address, and a long run legitimately spends
-# that budget. The limiter is doing its job — 40 checkouts in ten minutes from
-# one IP is abusive for a real shop. Re-run the named suite standalone to
-# confirm before chasing it, and see lib/rate-limit.ts.
+# A suite reported as CRASHED or failing that passes on its own is usually a
+# rate limiter, not a bug. The whole battery comes from one address, so it
+# spends one caller's budget, and the limiters are doing exactly their job.
+# Two of them bite:
+#
+#   checkout — 40 orders per 10 minutes. Trips inside a single long run,
+#   because the battery places roughly that many orders.
+#
+#   signup — 20 accounts per hour, and this one counts ATTEMPTS, so a refused
+#   signup still spends from it. Eight suites create accounts (a-to-z,
+#   security and loop twice each), which is around a dozen per pass: one
+#   battery is safely under, three back-to-back inside the hour are not. The
+#   symptom is a suite that needs an account failing at the moment it asks for
+#   one — server-cart "the account was not created", loop "it is stored with a
+#   hashed password" — while every suite before it passed.
+#
+# The windows live in process memory, so restarting the server clears both;
+# that is the confirmation step, not a fix. Re-run the named suite standalone
+# before chasing it, and see lib/rate-limit.ts.
 set -uo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:3000}"
@@ -38,6 +51,33 @@ if [ ! -f "$PICS_DIR/pad-front.png" ]; then
   node scripts/make-test-fixtures.mjs "$PICS_DIR" >/dev/null
 fi
 
+# Put the stock back before starting.
+#
+# The battery buys ~25 real parts per pass and nothing replaces them, so the
+# fixture products sell out over a few runs and suites begin failing on a shop
+# that is working perfectly — the first symptom is a `null` product and a
+# "Cannot read properties of null (reading 'slug')" three suites in.
+#
+# `SEED_RESET_STOCK=1` has existed for exactly this since the seed was written
+# (see the comment on the product upsert) and restores only the demo
+# quantities: prices, photos and anything edited in the admin are untouched.
+# It was never wired in here, so it depended on somebody remembering, and
+# nobody did — the database reached 11 of 55 products with any stock at all.
+#
+# Guarded to a local server. A battery is allowed to rewrite its own fixtures;
+# it is not allowed to rewrite a real shop's stock, and BASE_URL is the only
+# thing here that knows which one it is pointed at.
+case "$BASE_URL" in
+  http://localhost:*|http://127.0.0.1:*)
+    SEED_RESET_STOCK=1 npm run db:seed >/dev/null 2>&1 \
+      && echo "stock restored to the seeded quantities" \
+      || echo "WARNING: could not restore stock — suites may fail on sold-out fixtures"
+    ;;
+  *)
+    echo "non-local BASE_URL ($BASE_URL) — stock NOT restored"
+    ;;
+esac
+
 SUITES=(
   smoke
   a-to-z client-area account-space account-edit
@@ -45,7 +85,7 @@ SUITES=(
   discovery search seo security server-cart
   banners category-images svg-uploads catalog-authoring storefront-fixes
   admin-crud simple-journey mobile nav catalog-filters local-search tax emails contact analytics
-  product-depth checkout cleanup loop
+  product-depth product-page checkout cleanup loop
 )
 
 total=0; failed=0; bad=""

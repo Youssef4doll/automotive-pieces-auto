@@ -4,6 +4,7 @@ import { siteUrl } from "@/lib/site";
 import { listVehiclePages, listVehicleFamilyPages } from "@/lib/data/vehicles";
 import { listIndexableReferences } from "@/lib/data/references";
 import { listGuides } from "@/lib/data/guides";
+import { getBrandSlugs } from "@/lib/data/catalog";
 
 /**
  * Rendered per request, not at build time.
@@ -50,6 +51,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.6,
     })),
+    { url: `${base}/marques`, changeFrequency: "weekly", priority: 0.6 },
     { url: `${base}/sources`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/contact`, changeFrequency: "monthly", priority: 0.5 },
   ];
@@ -61,6 +63,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: c.parent ? 0.7 : 0.8,
     }));
+
+  // Only brands that have at least one live part — getBrandSlugs requires it,
+  // for the same reason the category filter above does: a URL in a sitemap
+  // that opens an empty aisle is a page a search engine learns to distrust.
+  const brandPages: MetadataRoute.Sitemap = (await getBrandSlugs()).map((slug) => ({
+    url: `${base}/marque/${slug}`,
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
 
   const productPages: MetadataRoute.Sitemap = products.map((p) => ({
     url: `${base}/produit/${p.slug}`,
@@ -114,6 +125,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...productPages,
     ...vehiclePages,
     ...makePages,
+    ...brandPages,
     ...referencePages,
   ];
 

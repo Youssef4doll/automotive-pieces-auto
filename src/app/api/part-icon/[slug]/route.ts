@@ -45,8 +45,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   //
   // Slate-500 rather than slate-400, for the same reason the scale keeps
   // going up: at thumbnail size the lighter line barely registered.
+  // No background rectangle.
+  //
+  // It used to paint slate-50 across the whole viewBox, which was invisible
+  // on a grey card and became the problem the moment the product page stopped
+  // being a grey card: a pale square inside the white plate, with the drawing
+  // inside that — a box inside a box, which is exactly what "trapped in a
+  // generic rectangular box" describes. Transparent, the drawing sits on
+  // whatever it is placed on and the surface is the page's decision, not this
+  // route's. The `fill="none"` on the group means nothing else fills either.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Photo à venir">
-<rect width="96" height="96" fill="#f8fafc"/>
 <g transform="translate(6 6) scale(3.5)" fill="none" stroke="#64748b" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">${partIconMarkup(familySlug)}</g>
 </svg>`;
 

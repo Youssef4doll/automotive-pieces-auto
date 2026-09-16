@@ -167,7 +167,7 @@ export default function HeaderClient({
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </button>
-            <Link href="/#marques" className="text-white hover:text-gold-500">
+            <Link href="/marques" className="text-white hover:text-gold-500">
               {t("nav.brands")}
             </Link>
             <Link href="/#magasin" className="text-white hover:text-gold-500">

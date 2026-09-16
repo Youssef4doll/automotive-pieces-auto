@@ -19,6 +19,11 @@ import OeNumbers from "@/components/product/OeNumbers";
 import ManufacturerInfo from "@/components/product/ManufacturerInfo";
 import { hasManufacturerInfo } from "@/lib/manufacturer";
 import { engineSpecLine } from "@/lib/engine";
+import { availabilityView, AVAILABILITY_TONE } from "@/lib/availability";
+import { positionLabels } from "@/lib/position";
+import BrandMark from "@/components/product/BrandMark";
+import TechnicalInfo, { type TechRow } from "@/components/product/TechnicalInfo";
+import DeliveryNote from "@/components/product/DeliveryNote";
 
 export async function generateMetadata({
   params,
@@ -91,8 +96,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     getSettings(),
   ]);
 
-  const outOfStock = product.stockQty <= 0;
-  const lowStock = !outOfStock && product.stockQty <= product.lowStockThreshold;
+  const avail = availabilityView(product, settings.supplier_lead_time);
+  const tone = AVAILABILITY_TONE[avail.state];
   const discount =
     product.compareAtPrice && product.compareAtPrice > product.priceSell
       ? Math.round((1 - product.priceSell / product.compareAtPrice) * 100)
@@ -102,7 +107,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   // a list of SKUs rendered as its own "Dans le pack" section below, not a
   // human-readable spec — so exclude it rather than print raw JSON here.
   const specEntries = Object.entries((product.specs as Record<string, unknown>) ?? {}).filter(
-    ([key]) => key !== "packContents"
+    ([key]) => key !== "packContents",
   );
 
   // The trail, built once and used for both the visible breadcrumb and the
@@ -144,18 +149,61 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   );
 
   const showManufacturer = !!product.brand && hasManufacturerInfo(product.brand);
+  const position = positionLabels(product.axle, product.side);
 
-  // Front/rear, left/right — printed only where the catalogue records it.
-  const position = [
-    product.axle === "AVANT" ? "Avant" : product.axle === "ARRIERE" ? "Arrière" : null,
-    product.side === "GAUCHE" ? "Gauche" : product.side === "DROITE" ? "Droite" : null,
-  ].filter((v): v is string => v !== null);
+  /**
+   * The specification sheet, in two piles.
+   *
+   * The identity rows — what this part *is* — are always on screen; everything
+   * else the shop has typed into the free-form spec bag goes behind a
+   * disclosure. Both piles are built by dropping anything empty, so a thinly
+   * described part shows three rows rather than eight labels with dashes after
+   * them. The names are the ones a parts catalogue uses, and each maps to a
+   * real column: nothing here is filled in from a guess.
+   */
+  const specBy = (...names: string[]) => {
+    const hit = specEntries.find(([k]) =>
+      names.some((n) => k.toLowerCase().replace(/[^a-z]/g, "") === n),
+    );
+    return hit ? String(hit[1]) : null;
+  };
+  const dimensions = specBy("dimensions", "dimension", "taille");
+  const material = specBy("materiau", "matiere", "material");
+  const partType = specBy("type", "typedepiece");
+
+  const techRows: TechRow[] = [
+    { label: "Référence", value: product.sku },
+    product.brand && {
+      label: "Fabricant",
+      value: product.brand.name,
+      href: `/marque/${product.brand.slug}`,
+    },
+    product.oemRefs.length > 0 && {
+      label: "Référence OEM",
+      value: product.oemRefs.slice(0, 2).join(" · ") + (product.oemRefs.length > 2 ? ` +${product.oemRefs.length - 2}` : ""),
+      href: "#references-oe",
+    },
+    position.length > 0 && { label: "Position", value: position.join(" · ") },
+    product.axle && { label: "Essieu", value: product.axle === "AVANT" ? "Avant" : "Arrière" },
+    dimensions && { label: "Dimensions", value: dimensions },
+    material && { label: "Matériau", value: material },
+    partType && { label: "Type", value: partType },
+    // The shop's standing warranty, the same twelve months the home page and
+    // the checkout state. Not a per-part field, because there is no per-part
+    // field — inventing one would make this row a promise nobody made.
+    { label: "Garantie", value: "12 mois" },
+  ].filter((r): r is TechRow => Boolean(r));
+
+  const shown = new Set([dimensions, material, partType].filter(Boolean));
+  const extraRows: TechRow[] = specEntries
+    .filter(([, v]) => !shown.has(String(v)))
+    .map(([k, v]) => ({ label: k, value: String(v) }));
 
   // The sections this particular part has — never a fixed menu, because a
   // link to a heading that is not on the page is worse than no link.
   const sections = [
     { id: "description", label: "Description" },
-    specEntries.length > 0 && { id: "caracteristiques", label: "Caractéristiques" },
+    (techRows.length > 0 || extraRows.length > 0) && { id: "technique", label: "Caractéristiques" },
     { id: "vehicules", label: "Compatibilité" },
     (product.oeGroups.length > 0 || product.aftermarketRefs.length > 0) && {
       id: "references-oe",
@@ -171,7 +219,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     description: product.description,
     brandName: product.brand?.name,
     price: toNumber(product.priceSell),
-    inStock: !outOfStock,
+    inStock: avail.buyable,
     images: product.gallery.length ? product.gallery.map((g) => g.src) : [product.imageUrl],
     oemRefs: product.oemRefs,
   });
@@ -188,76 +236,106 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <Breadcrumbs items={crumbs} />
 
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <ProductGallery
-          images={
-            product.gallery.length > 0
-              ? product.gallery
-              : [{ src: product.imageUrl, alt: product.name }]
-          }
-          name={product.name}
-          discount={discount}
-        />
+      {/*
+        The order a phone reads this in is the order it is written in, and the
+        order the brief asked for: brand, picture, name, compatibility, price,
+        availability, buy. The old page opened on a full-width square image and
+        then a paragraph of technical prose, so the price and the button were
+        below the fold on every phone and the first thing anybody read about a
+        part was its resolution and its refresh rate.
 
-        <div>
-          {product.brand && (
-            <span className="text-xs font-bold text-gray-600 uppercase">{product.brand.name}</span>
-          )}
-          <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mt-1 mb-2 tracking-tight">{product.name}</h1>
-          <p className="text-xs text-gray-600 mb-3">Réf. {product.sku}</p>
-
-          {/* Named makes rather than a count: "compatible avec 14 véhicules"
-              tells a shopper nothing about whether one of them is theirs.
-              Six, then a link into the full list — a paragraph of forty
-              manufacturers is read by nobody and pushes the price off a
-              phone screen. */}
-          {compatibleMakes.length > 0 && (
-            <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-              <span className="font-semibold text-navy-950">Compatible avec </span>
-              {compatibleMakes.slice(0, 6).join(", ")}
-              {compatibleMakes.length > 6 && <> et {compatibleMakes.length - 6} autre(s)</>}{" "}
-              <Link
-                href="#vehicules"
-                className="text-navy-600 hover:text-red-600 underline underline-offset-2"
-              >
-                voir la liste
-              </Link>
+        Desktop is the same DOM placed differently — three grid children with
+        explicit rows, rather than a second copy of the brand block. Duplicating
+        it would mean two elements with the maker's name on one page, which is
+        two things to keep in step and two matches for every selector.
+      */}
+      <div className="grid gap-x-8 gap-y-4 md:grid-cols-2 md:items-start">
+        {/* 1 — the maker, and a way into everything else it makes. */}
+        <div className="md:col-start-2 md:row-start-1">
+          {product.brand ? (
+            <Link
+              href={`/marque/${product.brand.slug}`}
+              className="group inline-flex items-center gap-2.5 rounded-lg py-0.5 transition"
+            >
+              <BrandMark name={product.brand.name} logoUrl={product.brand.logoUrl} />
+              <span className="inline-flex items-center gap-1 font-display text-[11px] font-bold uppercase tracking-wide text-navy-900/40 group-hover:text-red-600">
+                Voir tout
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6" />
+                </svg>
+              </span>
+            </Link>
+          ) : (
+            <p className="font-display text-[11px] font-bold uppercase tracking-wide text-navy-900/40">
+              {product.category.name}
             </p>
           )}
+        </div>
 
-          <div className="flex items-baseline gap-3 mb-3">
-            {product.compareAtPrice && product.compareAtPrice > product.priceSell && (
-              <Price value={product.compareAtPrice} className="text-gray-600 line-through" />
-            )}
-            <Price value={product.priceSell} className="text-2xl font-extrabold text-navy-900" />
-          </div>
+        {/* 2 — the part. */}
+        <div className="md:col-start-1 md:row-span-2 md:row-start-1">
+          <ProductGallery
+            images={
+              product.gallery.length > 0
+                ? product.gallery
+                : [{ src: product.imageUrl, alt: product.name }]
+            }
+            name={product.name}
+            discount={discount}
+            badge={product.isTopSeller ? "Top vente" : null}
+          />
+        </div>
 
-          <div className="mb-4">
-            {outOfStock ? (
-              <span className="text-sm text-red-600 font-semibold">Rupture de stock</span>
-            ) : lowStock ? (
-              <span className="text-sm text-amber-600 font-semibold">⚠ Stock limité · {product.stockQty} disponible(s)</span>
-            ) : (
-              <span className="text-sm text-green-700 font-semibold">● En stock · prête aujourd&rsquo;hui</span>
-            )}
-          </div>
-
-          {/* Where on the car it goes. Structured fields, never parsed out of
-              the name, and plain server-rendered text: it does not change
-              while the page is open, so it costs no JavaScript. */}
-          {position.length > 0 && (
-            <p className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-gray-500">Position :</span>
-              {position.map((p) => (
-                <span
-                  key={p}
-                  className="rounded bg-navy-900 px-2 py-1 text-xs font-bold uppercase tracking-wide text-white"
+        {/* 3 — name, fit, price, availability, buy. */}
+        {/* id, because this block is a destination: it is what "acheter"
+            means on this page, and it is what the sticky bar on a phone is
+            standing in for while it is off screen. */}
+        <div id="acheter" className="flex flex-col gap-3.5 md:col-start-2 md:row-start-2">
+          <div>
+            <h1 className="font-heading text-xl font-extrabold uppercase leading-tight tracking-tight text-navy-950 sm:text-2xl">
+              {product.name}
+            </h1>
+            {/* Named makes rather than a count: "compatible avec 14 véhicules"
+                tells a shopper nothing about whether one of them is theirs.
+                Six, then a link into the full list. */}
+            {compatibleMakes.length > 0 && (
+              <p className="mt-1.5 text-sm leading-relaxed text-gray-600">
+                <span className="font-semibold text-navy-950">Compatible avec </span>
+                {compatibleMakes.slice(0, 6).join(", ")}
+                {compatibleMakes.length > 6 && <> et {compatibleMakes.length - 6} autre(s)</>}{" "}
+                <Link
+                  href="#vehicules"
+                  className="text-navy-600 underline underline-offset-2 hover:text-red-600"
                 >
-                  {p}
+                  voir la liste
+                </Link>
+              </p>
+            )}
+          </div>
+
+          {/* Price and availability on one row: they are the two facts that
+              decide the purchase, they are both short, and separately they
+              cost 100px of a 664px phone screen for eight words. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+              <Price value={product.priceSell} className="text-3xl font-extrabold text-navy-900" />
+              {product.compareAtPrice && product.compareAtPrice > product.priceSell && (
+                <Price value={product.compareAtPrice} className="text-sm text-gray-500 line-through" />
+              )}
+              {discount && (
+                <span className="rounded bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">
+                  -{discount}%
                 </span>
-              ))}
-            </p>
-          )}
+              )}
+            </div>
+
+            {/* Three answers, not two — see lib/availability. */}
+            <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 ${tone.chip}`}>
+              <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${tone.dot}`} />
+              <span className="text-sm font-semibold">{avail.label}</span>
+            </div>
+          </div>
+          {avail.detail && <p className="-mt-2 text-xs text-gray-600">{avail.detail}</p>}
 
           <ProductActions
             whatsapp={publicContact(settings).whatsapp}
@@ -269,9 +347,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               imageUrl: product.imageUrl,
               priceSell: product.priceSell,
               stockQty: product.stockQty,
+              supply: product.supply,
               fitmentEngineIds: product.fitments.map((f) => f.engineId),
               hasFitmentData: product.fitments.length > 0,
             }}
+          />
+
+          <DeliveryNote
+            availability={avail.state}
+            grandTunis={settings.delivery_grand_tunis}
+            regions={settings.delivery_regions}
+            freeShippingThreshold={Number(settings.free_shipping_threshold) || 150}
+            leadTime={settings.supplier_lead_time}
           />
         </div>
       </div>
@@ -304,22 +391,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="text-sm text-gray-700 leading-relaxed">{product.description}</p>
         </section>
 
-        {specEntries.length > 0 && (
-          <section id="caracteristiques" className="scroll-mt-24">
-            <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Caractéristiques</h2>
-            <div className="grid sm:grid-cols-2 gap-2.5">
-              {specEntries.map(([key, value]) => (
-                <div
-                  key={key}
-                  className="flex justify-between gap-3 text-sm bg-gray-50 rounded-lg px-3.5 py-2.5 border border-gray-100"
-                >
-                  <span className="text-gray-500">{key}</span>
-                  <span className="font-semibold text-navy-950">{String(value)}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* The specification sheet, out of the way of the product. Eight rows
+            that identify the part, and everything else behind a native
+            <details> — see TechnicalInfo. This replaces a grid that printed
+            every key of a free-form JSON bag at the same weight as the
+            description, immediately under it. */}
+        <TechnicalInfo rows={techRows} extra={extraRows} />
 
         {product.packContents.length > 0 && (
           <section>

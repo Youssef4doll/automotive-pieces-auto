@@ -54,7 +54,8 @@ async function cleanup() {
 await cleanup();
 
 const [a, b] = await prisma.product.findMany({
-  where: { active: true, stockQty: { gt: 3 }, sku: { not: { startsWith: "PACK-" } } },
+  where: { active: true, stockQty: { gt: 0 }, sku: { not: { startsWith: "PACK-" } } },
+  orderBy: { stockQty: "desc" },
   select: { id: true, slug: true, name: true },
   take: 2,
 });

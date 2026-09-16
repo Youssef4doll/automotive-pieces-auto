@@ -7,7 +7,9 @@ import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import { contactLink, contactLinkProps } from "@/lib/contact-link";
 import Price from "./Price";
 import VehiclePicker from "./VehiclePicker";
+import StickyBuyBar from "./product/StickyBuyBar";
 import { track } from "@/lib/track";
+import { availabilityView, type SupplyMode } from "@/lib/availability";
 
 export default function ProductActions({
   product,
@@ -21,6 +23,8 @@ export default function ProductActions({
     imageUrl: string;
     priceSell: number;
     stockQty: number;
+    /** What an empty shelf means for this part — see lib/availability. */
+    supply: SupplyMode;
     fitmentEngineIds: string[];
     /** Whether the shop has recorded any compatibility for this part at all. */
     hasFitmentData: boolean;
@@ -34,7 +38,9 @@ export default function ProductActions({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [added, setAdded] = useState(false);
 
-  const outOfStock = product.stockQty <= 0;
+  // Three answers, not two. An empty shelf is usually a delay at this shop,
+  // not a refusal, and the page used to take the buy button away for both.
+  const avail = availabilityView(product);
 
   /**
    * Four states, and the fourth is the one this used to get wrong.
@@ -90,6 +96,74 @@ export default function ProductActions({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* A part nobody can supply any more is the only one with no button.
+          Everything else is buyable — including a part with nothing on the
+          shelf, which this shop orders in. The page used to replace the
+          button with a WhatsApp link for both cases, which turned a sale the
+          shop wanted into a message it had to chase. */}
+      {avail.buyable ? (
+        <>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center rounded-lg border border-gray-300">
+              <button
+                className="w-tap h-tap text-lg font-bold text-gray-600"
+                aria-label={t("cart.decrease")}
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+              >
+                −
+              </button>
+              <span className="w-10 text-center font-semibold">{qty}</span>
+              {/* stockQty 0 is not a cap of zero: it is a part that is
+                  ordered in, and the store has always read it that way. */}
+              <button
+                className="w-tap h-tap text-lg font-bold text-gray-600"
+                aria-label={t("cart.increase")}
+                onClick={() => setQty((q) => Math.min(product.stockQty || 99, q + 1))}
+              >
+                +
+              </button>
+            </div>
+            <button
+              onClick={handleAdd}
+              className="min-h-tap-primary flex-1 rounded-lg bg-gold-500 font-display text-sm font-bold uppercase tracking-wide text-navy-950 transition-transform hover:bg-gold-400 active:scale-[0.98] sm:text-base"
+            >
+              {added ? (
+                `✓ ${t("product.added")}`
+              ) : (
+                <>
+                  {t("product.addToCart")} · <Price value={product.priceSell * qty} />
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Rendered here so its sentinel sits directly under the real
+              button — the bar appears exactly when that button leaves. */}
+          <StickyBuyBar product={product} label={avail.label} />
+        </>
+      ) : (
+        <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm font-semibold text-navy-900">{avail.label}</p>
+          <p className="text-xs text-gray-600">{avail.detail}</p>
+          <a
+            href={outOfStockHref}
+            {...contactLinkProps(outOfStockHref)}
+            onClick={() => track("whatsapp_clicked", { source: "product_unavailable", sku: product.sku })}
+            className="flex min-h-tap-primary items-center justify-center gap-2 rounded-lg bg-green-700 font-display text-sm font-bold uppercase tracking-wide text-white hover:bg-green-800"
+          >
+            {t("product.checkAvailability")}
+          </a>
+        </div>
+      )}
+
+      {/* Buy first, then the vehicle check — the order the reference pages
+          use, and the reason is measured: this panel is ~197px tall, and with
+          it above the button on a phone the button landed 1.43 screens down,
+          so the one action the page exists for was never on the first screen.
+          Compatibility is still answered above the fold, by the "Compatible
+          avec …" line under the name; this is where a shopper confirms it
+          against their own car, which is a thing they do after deciding they
+          want the part. */}
       {/* One panel, four states, one place to change the car. */}
       {fit === "fits" && (
         <div className="rounded-xl bg-green-50 border border-green-200 p-3.5 sm:p-4 flex items-center gap-3">
@@ -202,76 +276,6 @@ export default function ProductActions({
           </button>
         </div>
       )}
-
-      {/* Out of stock is not a dead end. A disabled button leaves the customer
-          with nowhere to go; here the expert channel becomes the primary
-          action instead, which is also the one case where WhatsApp should
-          outrank "add to cart". */}
-      {outOfStock ? (
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 flex flex-col gap-3">
-          <p className="text-sm font-semibold text-navy-900">{t("product.outOfStockTitle")}</p>
-          <p className="text-xs text-gray-600">{t("product.outOfStockHelp")}</p>
-          {/* Built through contactLink, which falls back to e-mail and then to
-              the store section. The hand-rolled URL this replaces became
-              `https://wa.me/null?text=…` on a shop that had not entered a
-              number — a dead end offered as the only way out of one. */}
-          <a
-            href={outOfStockHref}
-            {...contactLinkProps(outOfStockHref)}
-            onClick={() => track("whatsapp_clicked", { source: "product_out_of_stock", sku: product.sku })}
-            className="flex items-center justify-center gap-2 min-h-tap-primary rounded-lg bg-green-700 hover:bg-green-800 text-white font-display font-bold uppercase tracking-wide text-sm"
-          >
-            {t("product.checkAvailability")}
-          </a>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3">
-          <div className="flex items-center border border-gray-300 rounded-lg">
-            <button
-              className="w-tap h-tap text-lg font-bold text-gray-600"
-              aria-label={t("cart.decrease")}
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
-            >
-              −
-            </button>
-            <span className="w-10 text-center font-semibold">{qty}</span>
-            <button
-              className="w-tap h-tap text-lg font-bold text-gray-600"
-              aria-label={t("cart.increase")}
-              onClick={() => setQty((q) => Math.min(product.stockQty || 99, q + 1))}
-            >
-              +
-            </button>
-          </div>
-          <button
-            onClick={handleAdd}
-            className="flex-1 min-h-tap-primary rounded-lg bg-gold-500 hover:bg-gold-400 active:scale-[0.98] transition-transform text-navy-950 font-display font-bold uppercase tracking-wide text-sm sm:text-base"
-          >
-            {added ? (
-              `✓ ${t("product.added")}`
-            ) : (
-              <>
-                {t("product.addToCart")} · <Price value={product.priceSell * qty} />
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200">
-          {t("trust.cod")}
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-gold-500/10 text-navy-900 border border-gold-500/40">
-          {t("trust.exchange")}
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-gray-100 text-navy-900 border border-gray-200">
-          {t("trust.warranty")}
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-gray-100 text-navy-900 border border-gray-200">
-          {t("trust.returns")}
-        </span>
-      </div>
 
       {pickerOpen && <VehiclePicker onClose={() => setPickerOpen(false)} />}
     </div>

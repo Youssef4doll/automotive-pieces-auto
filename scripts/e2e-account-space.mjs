@@ -51,7 +51,8 @@ async function cleanup() {
 await cleanup();
 
 const prod = await prisma.product.findFirst({
-  where: { active: true, stockQty: { gt: 3 }, sku: { not: { startsWith: "PACK-" } } },
+  where: { active: true, stockQty: { gt: 0 }, sku: { not: { startsWith: "PACK-" } } },
+  orderBy: { stockQty: "desc" },
   select: { slug: true, name: true },
 });
 

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { revalidateCatalog } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
-import { updateSettings, type SettingsMap } from "@/lib/settings";
+import { updateSettings, DEFAULT_SETTINGS, type SettingsMap } from "@/lib/settings";
 import { OrderStatus } from "@prisma/client";
 import { normalizeReference, parseOwnedReferenceList } from "@/lib/reference";
 import { readImageFile, mediaAssetIdFromUrl, assetUrl, assetUrlVariants } from "@/lib/image-upload";
@@ -53,6 +53,10 @@ const productSchema = z.object({
   compareAtPrice: z.coerce.number().optional(),
   stockQty: z.coerce.number().int().min(0),
   lowStockThreshold: z.coerce.number().int().min(0),
+  // What the storefront says once the shelf is empty. Matched against the
+  // enum rather than trusted: it arrives from a form field like everything
+  // else here, and an unknown value must not reach the database.
+  supply: z.enum(["ON_ORDER", "UNAVAILABLE"]).optional(),
   isTopSeller: z.coerce.boolean().optional(),
   active: z.coerce.boolean().optional(),
 });
@@ -205,6 +209,7 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
           compareAtPrice: data.compareAtPrice || null,
           stockQty: data.stockQty,
           lowStockThreshold: data.lowStockThreshold,
+          supply: data.supply ?? "ON_ORDER",
           isTopSeller: !!data.isTopSeller,
           active: data.active ?? true,
           axle: (data.axle || null) as never,
@@ -227,6 +232,7 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
           compareAtPrice: data.compareAtPrice || null,
           stockQty: data.stockQty,
           lowStockThreshold: data.lowStockThreshold,
+          supply: data.supply ?? "ON_ORDER",
           isTopSeller: !!data.isTopSeller,
           active: data.active ?? true,
           axle: (data.axle || null) as never,
@@ -345,23 +351,19 @@ export async function updateSiteSettings(patch: Partial<SettingsMap>) {
 
 export type SettingsFormState = { ok?: boolean } | undefined;
 
-const SETTINGS_KEYS: (keyof SettingsMap)[] = [
-  "shop_name",
-  "shop_address",
-  "shop_phone",
-  "shop_whatsapp",
-  "shop_email",
-  "shop_hours",
-  // Was missing, so the matricule fiscal field on the settings form silently
-  // discarded whatever was typed into it and the printable document could
-  // never become a facture however many times somebody filled it in.
-  "shop_tax_id",
-  "vat_rate",
-  "stamp_duty",
-  "free_shipping_threshold",
-  "delivery_grand_tunis",
-  "delivery_regions",
-];
+/**
+ * Every setting the form may write, derived rather than listed.
+ *
+ * This was a hand-kept array, and it went stale exactly the way a hand-kept
+ * array does: `shop_tax_id` was missing from it, so the matricule fiscal field
+ * silently discarded whatever was typed into it and the printable document
+ * could never become a facture however many times somebody filled it in. The
+ * keys the application reads are already enumerated once, in DEFAULT_SETTINGS,
+ * and updateSettings() checks each one against that same object before it
+ * writes — so reading the list from there cannot drift, and adding a setting is
+ * now one edit instead of two.
+ */
+const SETTINGS_KEYS = Object.keys(DEFAULT_SETTINGS) as (keyof SettingsMap)[];
 
 export async function updateSettingsAction(
   _prev: SettingsFormState,

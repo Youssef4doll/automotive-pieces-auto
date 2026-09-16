@@ -15,7 +15,7 @@ worth reading first — what is not.
 ```bash
 npm install                 # postinstall runs `prisma generate`
 cp .env.example .env        # then fill in the values below
-npm run db:migrate          # 22 migrations
+npm run db:migrate          # 23 migrations
 npm run db:seed             # catalogue, vehicles, demo customer, admin
 npm run dev                 # http://localhost:3000
 ```
@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-28 Playwright suites, ~1250 checks, driving real browsers against a real
+29 Playwright suites, ~1300 checks, driving real browsers against a real
 database. They are the main safety net and they have caught more real bugs
 than they have cost.
 
@@ -114,6 +114,55 @@ Two things that bit, both worth knowing before writing another suite:
   day of runs that family sat at zero on all sixteen products — the button was
   disabled and the suite crashed, reporting a stock problem as a mail problem.
   `scripts/lib/stocked-product.mjs` asks the database what is buyable.
+
+  **The same trap has a second shape: over-constraining the fixture.**
+  `e2e-product-page` opened by asking for a part with a brand, recorded
+  fitment *and* three in stock. It passed alone and crashed as suite 30 of 32,
+  because by then no part met all four. The stock clause was not only fragile,
+  it was wrong — a part with an empty shelf is buyable now, the shop orders it
+  in. Ask for what the test actually needs, and `orderBy` the rest.
+
+- **The battery restocks itself now, and did not before.** Each pass buys ~25
+  real parts and nothing replaced them, so the fixtures simply sold out: the
+  database reached **11 of 55 products with any stock at all**, and three
+  suites that asked for `stockQty > 3` started crashing on a shop that was
+  working perfectly. `SEED_RESET_STOCK=1` had existed for exactly this since
+  the seed was written — it restores only the demo quantities and leaves
+  prices, photos and admin edits alone — but it was never wired in, so it
+  depended on somebody remembering. `run-e2e.sh` now runs it before the first
+  suite, **guarded to a localhost BASE_URL**: a battery may rewrite its own
+  fixtures, never a real shop's stock.
+
+- **A test that waits for the data to suit it is not a test.** Restoring stock
+  immediately broke a check that had been passing for months: "buyable parts
+  lead" skipped every family that was not *already* a mix of in and out of
+  stock, so on a freshly restocked database it examined nothing and its own
+  guard caught it — 0 of 13 families checked. It builds the condition now,
+  emptying one shelf per family and restoring it on every path out, and
+  examines 13 families instead of the 6 that happened to be mixed. Prefer a
+  suite that creates its fixture to one that searches for it.
+
+- **Staying on the URL is not proof the form worked.** `e2e-loop` called an
+  account created because the browser was still on `/compte` after pressing
+  the button — which is equally true when the signup is refused and the reason
+  is printed above the form. It passed while the very next check, the one that
+  looks in the database, failed. Ask for something only the succeeded state
+  carries (here the greeting, and no password field left on the page) and pass
+  the page text as the failure detail, so the refusal explains itself instead
+  of arriving as a puzzle.
+
+- **Two rate limiters bite the battery, and neither is a bug.** They live in
+  process memory and count one caller, which is what the whole battery looks
+  like from a loopback address. `checkout` allows 40 orders per 10 minutes and
+  trips inside a single long run. `signup` allows 20 accounts an hour and
+  counts **attempts**, so a refused one still spends from it; eight suites
+  create accounts, about a dozen per pass, which means one battery is safely
+  under and three inside the hour are not. The symptom is a suite failing at
+  the exact moment it asks for an account while everything before it passed.
+  Restarting the server clears both windows — that is how you confirm the
+  diagnosis, not how you fix it. The header of `run-e2e.sh` says all of this
+  where somebody staring at a red line will actually see it.
+
 - **Assert on what was on screen, not on what is on screen now.** A flash is
   invisible to `expect(...).toBe(...)` after the fact: by the time the
   assertion runs, the wrong thing has been replaced by the right one.
@@ -135,8 +184,8 @@ Two things that bit, both worth knowing before writing another suite:
 src/app/(site)/     storefront          src/lib/data/    all database reads
 src/app/admin/      admin               src/lib/         session, search, money,
 src/app/actions/    server actions                       rate limits, shipping…
-src/app/api/        images, part icons  prisma/          schema, 22 migrations
-src/components/     UI                  scripts/         the 27 e2e suites
+src/app/api/        images, part icons  prisma/          schema, 23 migrations
+src/components/     UI                  scripts/         the 29 e2e suites
 ```
 
 **26 Prisma models.** The ones worth knowing: `Product`, `Category` (two levels
@@ -513,6 +562,13 @@ This is the biggest single problem and it is data, not code. Every product
 falls back to a family drawing, which is honest but is not a photograph. A
 parts shop where nothing has a picture will not convert.
 
+**The page is now ready for them and was not before.** The gallery used to
+crop — `object-cover` inside a square — so every landscape photograph the shop
+uploaded would have lost its ends, and on a wiper blade or a hose the shape is
+the product. It contains now, on a white plate that never changes, so
+photographs with the mixed backgrounds suppliers ship still read as one
+catalogue. Upload one and it takes the slot; nothing else has to change.
+
 **The upload works and is tested.** Admin → Stock → open a product → Photos.
 Up to 8 per product, JPEG/PNG/WebP/AVIF, 4 MB each. Nothing has been uploaded
 yet.
@@ -596,6 +652,54 @@ merchandising decision, not an engineering one.
   into CI needs a Postgres service and a built app.
 
 ---
+
+### 5.w Availability depends on one field nobody has reviewed yet
+
+Every product now carries `Product.supply`, and it defaults to **ON_ORDER** —
+"nothing on the shelf means we order it in". That is how the shop said it
+works, and it is why an empty shelf no longer takes the buy button away.
+
+It is a claim, though, and it is made on all 55 products without anyone having
+gone through them. Two things to do when there is a spare hour:
+
+1. Mark anything genuinely unsourceable as **UNAVAILABLE** in Admin → Stock →
+   the product → "Quand le stock est à zéro". That is the only setting that
+   removes the buy button, and it is the honest answer for a discontinued
+   reference.
+2. Fill in **Délai fournisseur** in Admin → Paramètres. Left empty — which is
+   the default, on purpose — a sur-commande part says it is ordered in and says
+   nothing about when. Filled in, every one of them quotes it.
+
+Orders for a part with an empty shelf are recorded with `OrderItem.backorder`
+set, and the admin order screen marks those lines **À commander** so the
+picking bench knows before it starts rather than when it reaches the shelf.
+
+### 5.x No dispatch date is printed anywhere, on purpose
+
+The reference pages this shop is measured against say *Ready for dispatch
+Friday (18.09)*. This one says the delivery window instead, and that is a
+decision rather than an omission.
+
+A date needs two things nobody has given: a **daily dispatch cut-off** and a
+**working calendar** (Sunday, jours fériés). Without them "vendredi 18.09" is
+arithmetic wearing the clothes of a commitment — and on cash on delivery a
+missed date is not a disappointed customer, it is a courier at a door with
+nobody expecting him and an order that comes back. Every figure on the product
+page today is one the shop has actually stated: the two delivery windows and
+the free-delivery threshold from /admin/parametres, the flat fee from
+`lib/shipping` (the same number the cart charges).
+
+Add a cut-off time to the settings and a date can be derived honestly. Until
+then the window is the strongest true thing available.
+
+### 5.y Reviews are not coming back by accident
+
+The brief for the product page listed "Reviews" among the sections below the
+fold. There are none, and that is not an oversight: the whole review feature
+was removed by decision, table included — see the note further down. Re-adding
+it means re-adding the moderation queue with it, because that queue was the
+only publish *and* take-down path, and a public writable surface with neither
+is worse than no reviews.
 
 ### 5.x Cloudflare — looked at, and not added
 
