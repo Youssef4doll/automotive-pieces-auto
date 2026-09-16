@@ -56,6 +56,21 @@ export default function SettingsForm({ settings }: { settings: SettingsMap }) {
         est commandée chez le fournisseur sans annoncer de délai.
       </p>
 
+      {/* The only fact on the home page that the database cannot count for
+          itself. It replaced "9 ans au service des garages", which was typed
+          into the site and checked against nothing. */}
+      <Field
+        label="Année d'ouverture (facultatif)"
+        name="shop_founded_year"
+        defaultValue={settings.shop_founded_year}
+        type="number"
+        dir="ltr"
+        placeholder="ex. 2016"
+      />
+      <p className="-mt-2 text-xs text-gray-500">
+        {yearsLabel(settings.shop_founded_year)}
+      </p>
+
       {state?.ok && <p className="text-sm text-green-700 font-semibold">Paramètres enregistrés ✓</p>}
 
       <button
@@ -66,6 +81,18 @@ export default function SettingsForm({ settings }: { settings: SettingsMap }) {
       </button>
     </form>
   );
+}
+
+/** Says what the home page will print, so the effect of the field is visible
+ *  from the field itself rather than by saving and going to look. */
+function yearsLabel(founded: string) {
+  const year = Number(founded.trim());
+  const now = new Date().getFullYear();
+  if (!Number.isInteger(year) || year < 1900 || year > now) {
+    return "Laissé vide, la page d'accueil affiche le nombre de marques au catalogue à la place.";
+  }
+  const years = Math.max(1, now - year);
+  return `La page d'accueil affichera « ${years} ans au service des garages », recalculé chaque année.`;
 }
 
 function Field({

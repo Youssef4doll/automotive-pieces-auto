@@ -10,8 +10,8 @@ import B2BBand from "@/components/B2BBand";
 import SectionHeading from "@/components/SectionHeading";
 import Eyebrow from "@/components/Eyebrow";
 import TrustBadges from "@/components/TrustBadges";
-import { getTopSellers, getActivePromotions, getTopSubcategories } from "@/lib/data/catalog";
-import { getSettings, publicContact, contactHref } from "@/lib/settings";
+import { getTopSellers, getActivePromotions, getTopSubcategories, getCatalogueScale } from "@/lib/data/catalog";
+import { getSettings, publicContact, contactHref, yearsTrading } from "@/lib/settings";
 import { requireAdmin } from "@/lib/session";
 import PromoCarousel from "@/components/PromoCarousel";
 import VehicleShortcuts from "@/components/VehicleShortcuts";
@@ -27,13 +27,14 @@ export const metadata: Metadata = pageMeta({
 });
 
 export default async function HomePage() {
-  const [topSellers, settings, promos, campaigns, admin, shortcuts] = await Promise.all([
+  const [topSellers, settings, promos, campaigns, admin, shortcuts, scale] = await Promise.all([
     getTopSellers(6),
     getSettings(),
     getActivePromotions("HERO"),
     getActivePromotions("CAMPAIGN"),
     requireAdmin(),
     getTopSubcategories(3),
+    getCatalogueScale(),
   ]);
   const contact = publicContact(settings);
   const contactUrl = contactHref(contact);
@@ -116,7 +117,12 @@ export default async function HomePage() {
         </section>
       )}
       <TrustBadges />
-      <WhyUs />
+      <WhyUs
+        products={scale.products}
+        brands={scale.brands}
+        years={yearsTrading(settings)}
+        deliveryGrandTunis={settings.delivery_grand_tunis}
+      />
       <StoreSection />
       <NotFoundBand contactUrl={contactUrl} phone={contact.phone} />
       <B2BBand contactUrl={contactUrl} />

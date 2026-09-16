@@ -33,6 +33,14 @@ export const DEFAULT_SETTINGS = {
   // stops there, rather than naming a delay nobody has committed to. Fill it
   // in and every sur-commande part quotes it — "3 à 5 jours ouvrables".
   supplier_lead_time: "",
+  // The year the shop opened, as four digits. Empty on purpose, and this one
+  // replaces a claim that was simply typed in: the home page said "9 ans au
+  // service des garages" with nothing behind it. How long a shop has been
+  // trading is a real selling point and it is also a fact only the owner
+  // knows, so it is asked for here rather than guessed. Filled in, the home
+  // page counts the years and keeps counting; left empty, it says nothing and
+  // shows how many brands the catalogue carries instead.
+  shop_founded_year: "",
 };
 
 export type SettingsMap = typeof DEFAULT_SETTINGS;
@@ -131,6 +139,19 @@ export function publicContact(settings: SettingsMap) {
 }
 
 export type PublicContact = ReturnType<typeof publicContact>;
+
+/**
+ * How many full years the shop has been trading, or null if it has not said.
+ *
+ * Refuses anything that is not a plausible year so a typo in the settings form
+ * cannot put "au service des garages depuis 202 ans" on the front page. A shop
+ * that opened this year is trading, not zero years old, so the floor is 1.
+ */
+export function yearsTrading(settings: SettingsMap, now = new Date()): number | null {
+  const year = Number((settings.shop_founded_year ?? "").trim());
+  if (!Number.isInteger(year) || year < 1900 || year > now.getFullYear()) return null;
+  return Math.max(1, now.getFullYear() - year);
+}
 
 /** Re-exported so server components have one import for settings + links. */
 export { contactLink as contactHref, isExternalContact, contactLinkProps } from "@/lib/contact-link";

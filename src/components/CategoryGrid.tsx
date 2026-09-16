@@ -32,7 +32,17 @@ export default async function CategoryGrid() {
           />
         </div>
         <p className="text-sm text-gray-500 max-w-md">
-          <T k="families.subtitle" />
+          {/* Counted from the tree that is actually rendered below, so the
+              sentence and the tiles can never disagree. It used to claim
+              "Seize familles, plus de 12 000 références" from the dictionary,
+              which was two numbers nobody had checked against the catalogue. */}
+          <T
+            k="families.subtitle"
+            vars={{
+              families: familiesForTabs.length,
+              products: familiesForTabs.reduce((n, f) => n + f.productCount, 0),
+            }}
+          />
         </p>
       </div>
 

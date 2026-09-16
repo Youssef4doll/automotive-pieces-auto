@@ -679,3 +679,47 @@ export const getBrandSlugs = cache(async () => {
   `;
   return rows.map((r) => r.slug);
 })
+
+/**
+ * How big the catalogue actually is.
+ *
+ * The home page used to print "12 000+ références" and "9 ans au service des
+ * garages" — both typed into the dictionary, neither measured, against a
+ * catalogue that holds a couple of hundred parts and a shop whose founding year
+ * nobody has recorded. A visitor who reads 12 000 and then opens a family
+ * holding eleven parts has been told something untrue on the first screen, and
+ * the rest of the page pays for it.
+ *
+ * So the figures come from the database. They are small today and they will
+ * grow on their own as the shop uploads, with nothing to remember to update.
+ * Counted, never rounded up.
+ *
+ * Only what a shopper can reach: active parts, brands and families that hold
+ * at least one. Three counts in one round trip, and cached on the catalogue tag
+ * like the menu next door, because this renders on the busiest page there is.
+ */
+const readCatalogueScale = unstable_cache(
+  async () => {
+    const [row] = await prisma.$queryRaw<{ products: bigint; brands: bigint; families: bigint }[]>`
+      SELECT
+        COUNT(*)                                       AS products,
+        COUNT(DISTINCT p."brandId")                    AS brands,
+        COUNT(DISTINCT COALESCE(parent.id, c.id))      AS families
+      FROM "Product" p
+      LEFT JOIN "Category" c      ON c.id = p."categoryId"
+      LEFT JOIN "Category" parent ON parent.id = c."parentId"
+      WHERE p.active
+    `;
+    return {
+      products: Number(row?.products ?? 0),
+      brands: Number(row?.brands ?? 0),
+      families: Number(row?.families ?? 0),
+    };
+  },
+  ["catalogue-scale"],
+  { tags: [CATALOG_TAG], revalidate: CATALOG_TTL },
+);
+
+export type CatalogueScale = Awaited<ReturnType<typeof readCatalogueScale>>;
+
+export const getCatalogueScale = cache(readCatalogueScale)

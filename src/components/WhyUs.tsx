@@ -2,17 +2,43 @@
 
 import { useLocale } from "@/i18n/LocaleProvider";
 
-export default function WhyUs() {
+/** Grouped the way the rest of the site writes prices, and the same in all
+ *  three languages — the tile is already wrapped in dir="ltr". */
+const nf = (n: number) => n.toLocaleString("fr-FR");
+
+/**
+ * Every figure in this block is either counted or entered by the shop.
+ *
+ * It used to read "12 000+ références en stock" and "9 ans au service des
+ * garages", both typed into the dictionary. The catalogue holds a fraction of
+ * that, and a visitor who reads 12 000 and then opens a family of eleven parts
+ * has caught the site lying on the first screen. The counts arrive as props
+ * from the database; the years come from a setting and the tile is a real fact
+ * about the catalogue when the shop has not filled it in.
+ */
+export default function WhyUs({
+  products,
+  brands,
+  years,
+  deliveryGrandTunis,
+}: {
+  products: number;
+  brands: number;
+  years: number | null;
+  deliveryGrandTunis: string;
+}) {
   const { t } = useLocale();
 
   const checks = [t("why.check1"), t("why.check2"), t("why.check3"), t("why.check4")];
   const stats = [
-    { value: t("why.valueRefs"), label: t("why.statRefs") },
-    { value: t("why.valueDelay"), label: t("why.statDelay") },
+    { value: nf(products), label: t("why.statRefs") },
+    { value: deliveryGrandTunis, label: t("why.statDelay") },
     // Not an average customer rating: the site has no review system, so any
     // score printed here would be a number nobody measured.
     { value: t("why.valueWarranty"), label: t("why.statWarranty") },
-    { value: t("why.valueYears"), label: t("why.statYears") },
+    years === null
+      ? { value: nf(brands), label: t("why.statBrands") }
+      : { value: t("why.valueYears", { n: years }), label: t("why.statYears") },
   ];
 
   return (

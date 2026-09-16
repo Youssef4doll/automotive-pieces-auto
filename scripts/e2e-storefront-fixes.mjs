@@ -231,6 +231,121 @@ console.log("\n[4] THE PHONE GETS A SEARCH BOX IT CAN READ, AND A PAGE AT ITS OW
   await p.context().close();
 }
 
+/* ------------------------------------------------------------------ */
+console.log("\n[5] EVERY NUMBER ON THE FRONT PAGE IS ONE THE DATABASE CAN PRODUCE");
+{
+  // The home page claimed "12 000+ références en stock" in three places and
+  // "9 ans au service des garages", against a catalogue of 55 parts and no
+  // recorded founding year. A shopper who reads 12 000 and then opens a family
+  // of eleven parts has caught the site out on the first screen. These checks
+  // compare what is printed against what is in the database, so the numbers
+  // cannot drift back into being decoration.
+  const founded = await prisma.setting.findUnique({ where: { key: "shop_founded_year" } });
+  const restoreFounded = async () => {
+    if (founded) {
+      await prisma.setting.upsert({
+        where: { key: "shop_founded_year" },
+        create: { key: "shop_founded_year", value: founded.value },
+        update: { value: founded.value },
+      });
+    } else {
+      await prisma.setting.deleteMany({ where: { key: "shop_founded_year" } });
+    }
+  };
+  process.on("uncaughtException", async (err) => {
+    await restoreFounded();
+    console.error(err);
+    process.exit(1);
+  });
+
+  try {
+    const [products, brands] = await Promise.all([
+      prisma.product.count({ where: { active: true } }),
+      prisma.product
+        .findMany({ where: { active: true, brandId: { not: null } }, distinct: ["brandId"], select: { brandId: true } })
+        .then((rows) => rows.length),
+    ]);
+
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    const readHome = async () => {
+      await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(1200);
+      return (await page.locator("body").innerText()).replace(/\s+/g, " ");
+    };
+
+    await prisma.setting.deleteMany({ where: { key: "shop_founded_year" } });
+    let text = await readHome();
+
+    // The old figure, in each of the three spellings the dictionaries used.
+    const stale = ["12 000", "12,000", "12000"].filter((s) => text.includes(s));
+    check("no invented catalogue size is printed", stale.length === 0, stale.join(", ") || "none of 12 000 / 12,000 / 12000");
+
+    check(
+      "the stat tile names the real number of parts",
+      new RegExp(`${products}\\s*références au catalogue`, "i").test(text),
+      `${products} active in the database`,
+    );
+
+    // The subtitle counts the tiles beside it, so read the tiles and add them
+    // up. Two numbers derived from the same tree can still be printed from
+    // different places; this is the check that they never disagree on screen.
+    const tiles = (await page.locator("#symptomes button").allInnerTexts())
+      .map((t) => t.match(/(\d+)\s+pièces?/))
+      .filter(Boolean)
+      .map((m) => Number(m[1]));
+    const sub = text.match(/(\d+)\s+familles,\s*([\d\s]+)\s*références/);
+    check("the families subtitle counts what is on the page", !!sub, sub ? sub[0] : "subtitle not found");
+    if (sub) {
+      const claimedFamilies = Number(sub[1]);
+      const claimedParts = Number(sub[2].replace(/\s/g, ""));
+      check(
+        "it names as many families as there are tiles",
+        claimedFamilies === tiles.length && tiles.length > 0,
+        `says ${claimedFamilies}, ${tiles.length} tile(s) rendered`,
+      );
+      check(
+        "and its parts figure is the tiles added up",
+        claimedParts === tiles.reduce((n, t) => n + t, 0),
+        `says ${claimedParts}, tiles hold ${tiles.reduce((n, t) => n + t, 0)}`,
+      );
+      check(
+        "and no more than the catalogue actually holds",
+        claimedParts <= products,
+        `says ${claimedParts}, catalogue holds ${products}`,
+      );
+    }
+
+    // With no founding year recorded, the shop says nothing about its age.
+    check("with no founding year set, no claim about years is made", !/au service des garages/i.test(text));
+    check(
+      "and the fourth tile is a fact instead — the brands carried",
+      new RegExp(`${brands}\\s*marques au catalogue`, "i").test(text),
+      `${brands} distinct brands`,
+    );
+
+    // Filled in, it is counted rather than typed — and stays right next year.
+    const year = new Date().getFullYear() - 7;
+    await prisma.setting.upsert({
+      where: { key: "shop_founded_year" },
+      create: { key: "shop_founded_year", value: String(year) },
+      update: { value: String(year) },
+    });
+    text = await readHome();
+    check("a recorded founding year is counted, not typed", /7 ans au service des garages/i.test(text), `opened ${year}`);
+
+    // A typo in one settings field must not put nonsense on the front page.
+    for (const bad of ["abcd", "20", "3000"]) {
+      await prisma.setting.update({ where: { key: "shop_founded_year" }, data: { value: bad } });
+      text = await readHome();
+      check(`an implausible year (${bad}) is refused`, !/au service des garages/i.test(text));
+    }
+
+    await page.context().close();
+  } finally {
+    await restoreFounded();
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await browser.close();
 await prisma.$disconnect();

@@ -74,9 +74,9 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-29 Playwright suites, ~1300 checks, driving real browsers against a real
-database. They are the main safety net and they have caught more real bugs
-than they have cost.
+33 Playwright suites, 1,315 checks at the last full green run, driving real
+browsers against a real database. They are the main safety net and they have
+caught more real bugs than they have cost.
 
 ```bash
 npm run build && npm start     # one terminal
@@ -591,10 +591,13 @@ first screen most shoppers touch.
 
 ### 5.2 The catalogue is thin
 
-55 active products, 44 in stock, across 16 families and 128 subcategories — 99
-of those subcategories hold nothing. Empty ones are hidden from shoppers so
-there are no dead ends, but a customer who opens two categories sees the same
-handful of parts. Vehicle coverage is 10 makes / 22 models / 25 engines, which
+55 active products across 16 families and 128 subcategories — 99 of those
+subcategories hold nothing. Empty ones are hidden from shoppers so there are
+no dead ends, but a customer who opens two categories sees the same handful of
+parts. **The home page now prints these figures rather than an invented one**
+(§5.aa), so how thin the catalogue is is visible on the front page instead of
+being covered up by it. That is the right way round, and it is also the
+argument for filling it: the number goes up the moment parts are uploaded. Vehicle coverage is 10 makes / 22 models / 25 engines, which
 is narrow for Tunisia. Fitment data itself is good: 1,159 rows covering 52 of
 55 products.
 
@@ -701,7 +704,7 @@ it means re-adding the moderation queue with it, because that queue was the
 only publish *and* take-down path, and a public writable surface with neither
 is worse than no reviews.
 
-### 5.x Cloudflare — looked at, and not added
+### 5.z Cloudflare — looked at, and not added
 
 Asked for directly. The answer is no, for a reason that is not a judgement
 call: **Cloudflare proxies domains whose nameservers you control, and this
@@ -745,6 +748,35 @@ flipping a switch in a dashboard on a Friday.
 
 ---
 
+### 5.aa The shop has not said how long it has been trading
+
+The home page used to end with **"9 ans au service des garages"**, and three
+other places claimed **"12 000+ références"**. Neither number came from
+anywhere: they were typed into `dictionaries.ts` in all three languages when
+the page was laid out, and a shopper who read 12 000 and then opened a family
+holding eleven parts had caught the site out on the first screen.
+
+The counts are read from the database now (`getCatalogueScale`, cached on the
+catalogue tag like the menu), and the families subtitle counts the tiles
+rendered underneath it, so the sentence and the tiles cannot disagree. Today
+that reads 55 références, 16 familles, 16 marques. Small, and true, and it
+grows on its own as the shop uploads — there is nothing to remember to change.
+
+The years are the one figure the database cannot produce, so there is now a
+`shop_founded_year` setting in `/admin/parametres`, **empty by default**. Left
+empty the page says nothing about the shop's age and shows the number of
+brands carried instead; filled in, it counts the years and keeps counting, and
+refuses anything that is not a plausible four-digit year so a typo cannot put
+"202 ans" on the front page. **This is the one open item here: ask the owner
+what year they opened and enter it.** It is a genuine selling point going
+unused, and it is the only one of these numbers that needed a human.
+
+`e2e-storefront-fixes` section [5] holds it in place — twelve checks that
+compare what is printed against `prisma.product.count`, including that none of
+the three old spellings of 12 000 has come back.
+
+---
+
 ## 6. Working on it
 
 **Read the comments.** The codebase explains *why* far more than *what* —
@@ -779,6 +811,12 @@ These came from the shop owner and are worth keeping:
   delivery dates, payment status, compatibility, vehicle specs, tracking
   numbers, phone numbers or customer details. Render what exists; show an empty
   state when nothing does.
+- **A number in the copy is data too.** This is the one that got past everyone:
+  "12 000+ références" and "9 ans au service des garages" sat in the
+  dictionaries for months because marketing copy does not look like a claim
+  about the database until you check it against one. If a sentence contains a
+  figure, it comes from a query or from a setting the owner filled in — see
+  §5.aa.
 - **No fake urgency and no fake discounts.** A promotion appears only when it
   is backed by a real record. "Best seller" appears only when real sales data
   says so.
