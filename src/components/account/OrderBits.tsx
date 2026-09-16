@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatTNDfr } from "@/lib/money";
-import { IconArrowRight, IconShield, IconCheck, IconWhatsApp, IconPhone, IconHelp } from "./icons";
+import { IconArrowRight, IconShield, IconCheck, IconWhatsApp, IconPhone, IconHelp } from "@/components/icons";
 import { contactLink } from "@/lib/contact-link";
 
 export const STATUS_LABEL: Record<string, string> = {

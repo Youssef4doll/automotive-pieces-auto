@@ -7,7 +7,7 @@ import { initialsOf } from "@/lib/initials";
 import AccountMenu, { LogoutButton, type AccountUser } from "./AccountMenu";
 import {
   IconHome, IconOrders, IconCar, IconHelp, IconUser, IconPackage, IconWhatsApp,
-} from "./icons";
+} from "@/components/icons";
 
 type Item = {
   href: string;

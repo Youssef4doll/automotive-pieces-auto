@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useVehicle } from "@/lib/vehicle-store";
-import { IconSearch, IconArrowRight } from "./icons";
+import { IconSearch, IconArrowRight } from "@/components/icons";
 
 export type CategoryChip = { name: string; slug: string };
 

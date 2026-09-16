@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useCart } from "@/lib/cart-store";
 import { useVehicle } from "@/lib/vehicle-store";
 import { formatTNDfr } from "@/lib/money";
-import { IconRepeat, IconCheck, IconArrowRight } from "./icons";
+import { IconRepeat, IconCheck, IconArrowRight } from "@/components/icons";
 
 export type BuyAgainItem = {
   productId: string;

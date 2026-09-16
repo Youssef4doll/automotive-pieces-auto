@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useVehicle } from "@/lib/vehicle-store";
-import { IconSearch, IconCar, IconRepeat, IconChat } from "./icons";
+import { IconSearch, IconCar, IconRepeat, IconChat } from "@/components/icons";
 
 /**
  * Four next actions, always in the same place. Whatever state the account is

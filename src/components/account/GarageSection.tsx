@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useVehicle } from "@/lib/vehicle-store";
 import VehiclePicker from "@/components/VehiclePicker";
-import { IconCar, IconCheck, IconPlus, IconTrash, IconArrowRight } from "./icons";
+import { IconCar, IconCheck, IconPlus, IconTrash, IconArrowRight } from "@/components/icons";
 
 /**
  * The garage is the centre of an automotive account: the stored vehicle is what

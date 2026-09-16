@@ -12,7 +12,7 @@ import AccountShell from "@/components/account/AccountShell";
 import OrderTracker from "@/components/account/OrderTracker";
 import ReorderButton, { type ReorderItem } from "@/components/ReorderButton";
 import { StatusBadge, NEXT_STEP, HelpPanel } from "@/components/account/OrderBits";
-import { IconArrowRight, IconTruck } from "@/components/account/icons";
+import { IconArrowRight, IconTruck } from "@/components/icons";
 
 export async function generateMetadata({ params }: { params: Promise<{ ref: string }> }): Promise<Metadata> {
   const { ref } = await params;

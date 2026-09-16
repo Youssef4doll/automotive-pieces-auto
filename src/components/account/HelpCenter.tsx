@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { IconSearch, IconWhatsApp } from "./icons";
+import { IconSearch, IconWhatsApp } from "@/components/icons";
 import { contactLink, contactLinkProps } from "@/lib/contact-link";
 
 export type Faq = { q: string; a: string; cat: string };

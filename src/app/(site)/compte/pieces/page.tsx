@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getOrderCounts, contactFrom, getBuyAgain } from "@/lib/data/account";
 import AccountShell from "@/components/account/AccountShell";
 import BuyAgain from "@/components/account/BuyAgain";
-import { IconPackage } from "@/components/account/icons";
+import { IconPackage } from "@/components/icons";
 
 export const metadata = { title: "Mes pièces" };
 

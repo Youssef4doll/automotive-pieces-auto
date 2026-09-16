@@ -6,6 +6,7 @@ import { sendContactMessage, type ContactState } from "@/app/actions/contact";
 import { CONTACT_SUBJECTS } from "@/lib/contact-subjects";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import FormShield from "@/components/FormShield";
+import { IconCheck } from "@/components/icons";
 
 /**
  * The form on /contact.
@@ -22,8 +23,13 @@ import FormShield from "@/components/FormShield";
  */
 export default function ContactForm({
   defaults,
+  hasWhatsApp = false,
 }: {
   defaults: { name: string; email: string; phone: string };
+  /** Whether the shop has actually entered a WhatsApp number. The
+   *  confirmation below used to point at WhatsApp unconditionally, on shops
+   *  where the page offers no WhatsApp link anywhere. */
+  hasWhatsApp?: boolean;
 }) {
   const [state, action, pending] = useActionState<ContactState, FormData>(sendContactMessage, undefined);
   const params = useSearchParams();
@@ -45,12 +51,13 @@ export default function ContactForm({
   if (state?.ok) {
     return (
       <div className="rounded-xl border border-green-200 bg-green-50 p-6">
-        <h2 className="font-heading text-lg font-extrabold uppercase tracking-tight text-green-900">
+        <h2 className="flex items-center gap-2 font-heading text-lg font-extrabold uppercase tracking-tight text-green-900">
+          <IconCheck className="text-green-600" />
           Message envoyé
         </h2>
         <p className="mt-2 text-sm text-green-900/80">
-          Nous vous répondons sur l&apos;adresse que vous avez indiquée. Si c&apos;est urgent, WhatsApp est
-          plus rapide.
+          Nous vous répondons sur l&apos;adresse que vous avez indiquée.
+          {hasWhatsApp && " Si c'est urgent, WhatsApp est plus rapide."}
         </p>
       </div>
     );
@@ -82,7 +89,14 @@ export default function ContactForm({
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-semibold text-navy-900">Sujet *</span>
-        <select name="subject" required defaultValue={subject} className={field}>
+        {/* key, not just defaultValue: the shortcut cards at the top of
+            /contact link back to /contact with a different ?sujet=, which is a
+            client-side navigation into the same mounted component. An
+            uncontrolled <select> reads defaultValue once, so without this the
+            cards would scroll the shopper to a form still showing the previous
+            subject — worse than not prefilling at all. Remounting also throws
+            away nothing they have typed: the subject is the first field. */}
+        <select key={subject} name="subject" required defaultValue={subject} className={field}>
           {CONTACT_SUBJECTS.map((s) => (
             <option key={s} value={s}>
               {s}

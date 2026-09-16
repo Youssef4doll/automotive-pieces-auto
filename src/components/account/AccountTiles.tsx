@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useVehicle } from "@/lib/vehicle-store";
-import { IconOrders, IconCar, IconPackage, IconHelp, IconUser, IconArrowRight } from "./icons";
+import { IconOrders, IconCar, IconPackage, IconHelp, IconUser, IconArrowRight } from "@/components/icons";
 
 type Tile = {
   href: string;

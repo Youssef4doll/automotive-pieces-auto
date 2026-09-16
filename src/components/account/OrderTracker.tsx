@@ -1,4 +1,4 @@
-import { IconCheck } from "./icons";
+import { IconCheck } from "@/components/icons";
 
 const STEPS = [
   { key: "CONFIRMED", label: "Confirmée" },

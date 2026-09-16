@@ -1,4 +1,4 @@
-import { getSettings } from "@/lib/settings";
+import { getSettings, publicContact } from "@/lib/settings";
 import { taxPolicy } from "@/lib/tax";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -27,9 +27,16 @@ export default async function CheckoutPage() {
       })
     : null;
 
+  // Only for the "retrait en magasin" card, so it can say where the magasin
+  // is. publicContact returns null for anything still on its placeholder, so
+  // an unconfigured shop shows no address rather than "⚠ à compléter".
+  const contact = publicContact(settings);
+
   return (
     <CheckoutForm
       signedIn={Boolean(user)}
+      storeAddress={contact.address}
+      storeHours={contact.hours}
       freeShippingThreshold={Number(settings.free_shipping_threshold) || 150}
       stampDuty={taxPolicy(settings).stampDuty}
       deliveryGrandTunis={settings.delivery_grand_tunis}

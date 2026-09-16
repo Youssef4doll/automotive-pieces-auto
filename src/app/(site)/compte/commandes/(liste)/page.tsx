@@ -11,7 +11,7 @@ import AccountShell from "@/components/account/AccountShell";
 import OrderTracker from "@/components/account/OrderTracker";
 import ReorderButton, { type ReorderItem } from "@/components/ReorderButton";
 import { StatusBadge, NEXT_STEP, HelpPanel } from "@/components/account/OrderBits";
-import { IconArrowRight, IconPackage, IconWhatsApp } from "@/components/account/icons";
+import { IconArrowRight, IconPackage, IconWhatsApp } from "@/components/icons";
 
 export const metadata = { title: "Mes commandes" };
 

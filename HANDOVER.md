@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-27 Playwright suites, ~1100 checks, driving real browsers against a real
+28 Playwright suites, ~1250 checks, driving real browsers against a real
 database. They are the main safety net and they have caught more real bugs
 than they have cost.
 
@@ -114,6 +114,13 @@ Two things that bit, both worth knowing before writing another suite:
   day of runs that family sat at zero on all sixteen products — the button was
   disabled and the suite crashed, reporting a stock problem as a mail problem.
   `scripts/lib/stocked-product.mjs` asks the database what is buyable.
+- **Assert on what was on screen, not on what is on screen now.** A flash is
+  invisible to `expect(...).toBe(...)` after the fact: by the time the
+  assertion runs, the wrong thing has been replaced by the right one.
+  `e2e-checkout` installs a sampler in an init script that records the rendered
+  text 125 times a second, and asks afterwards whether the sentence was *ever*
+  shown. A slower machine makes that check stricter rather than flakier, which
+  is the correct direction for a timing bug.
 - **A suite that edits shared state must restore it on every path out.**
   `e2e-emails` sets `shop_email`, crashed before its cleanup once, and left a
   test address in the settings — which flipped the site's contact link from the
@@ -467,7 +474,15 @@ Working and covered by tests:
 - Vehicle picker: "I know my car" / "I don't know which it is", saved to a
   garage, used to filter compatibility across the site.
 - Cart, guest checkout, cash on delivery, order tracking with per-step
-  timestamps, reorder.
+  timestamps, reorder. The checkout is three numbered decisions — who you are,
+  how you receive it, how you pay — and **never claims the basket is empty
+  until it has read the basket**: it lives in localStorage, so the server
+  renders that page knowing nothing, and the empty-basket branch used to reach
+  the screen for a measured 301ms on /panier and 35ms on /commande before the
+  JavaScript could contradict it. Both now render an outline until the store
+  has rehydrated, and a placed order outranks the emptied basket, so the gap
+  between confirming and the receipt says "Commande enregistrée" with its
+  reference rather than "votre panier est vide".
 - Customer account: dashboard, orders, garage, previously-bought parts, profile
   with a change history, help.
 - Admin: products with photos, categories with pictures, brands with logos,
@@ -579,6 +594,50 @@ merchandising decision, not an engineering one.
   funnel reporting beyond what `/admin/analytics` shows.
 - **No automated CI.** The battery is run by hand. Wiring `scripts/run-e2e.sh`
   into CI needs a Postgres service and a built app.
+
+---
+
+### 5.x Cloudflare — looked at, and not added
+
+Asked for directly. The answer is no, for a reason that is not a judgement
+call: **Cloudflare proxies domains whose nameservers you control, and this
+shop is on `automotive-pieces-auto.vercel.app`.** That subdomain belongs to
+Vercel. There is nothing to put Cloudflare in front of until the shop buys a
+domain and points it here.
+
+If that changes, here is the whole picture, so the decision is not re-derived
+from scratch:
+
+**What it would actually buy.** Not caching — every route is `ƒ` dynamic
+because `proxy.ts` mints a per-request CSP nonce, so a CDN in front has
+nothing to hold. Not DDoS cover that isn't already there; Vercel mitigates
+at the edge on every plan. The real gain is narrower and worth naming:
+**TLS would terminate in Tunis instead of Europe**, saving a Tunisian shopper
+a round trip or two on the first connection of a session. On a phone over
+3G that is not nothing. Everything after that first handshake still travels
+to Vercel and back.
+
+**What it would cost, concretely — two failure modes, both nameable.**
+
+1. **The rate limiter goes global.** `callerKey()` reads the leftmost
+   `x-forwarded-for` hop. Behind a second proxy that hop can become
+   Cloudflare's edge rather than the shopper, and then the limits in `LIMITS`
+   stop being per-visitor: the whole country shares one bucket and the shop
+   starts refusing genuine orders at 40 checkouts per ten minutes *between
+   them*. The fix is already in the file and is off by default —
+   `TRUST_CLOUDFLARE_IP=1` makes it read `CF-Connecting-IP` instead. It is
+   opt-in because that header is only meaningful when Cloudflare wrote it:
+   set it on a directly reachable origin and anyone can spoof a fresh bucket
+   per request, which switches the limiter off while leaving it looking on.
+   **Set the flag in the same change that turns the proxy on, not after.**
+2. **A redirect loop, if the SSL mode is wrong.** `proxy.ts` 308s any request
+   arriving with `x-forwarded-proto: http` up to https. Cloudflare's
+   "Flexible" mode speaks https to the browser and **http to the origin**, so
+   the origin redirects, Cloudflare re-fetches over http, and round it goes.
+   **Full (strict)** is the only correct setting here.
+
+Neither is a reason it can't be done; both are reasons not to do it by
+flipping a switch in a dashboard on a Friday.
 
 ---
 

@@ -8,7 +8,7 @@ import AuthForms from "@/components/AuthForms";
 import AccountShell from "@/components/account/AccountShell";
 import AccountTiles from "@/components/account/AccountTiles";
 import { StatusBadge, NEXT_STEP } from "@/components/account/OrderBits";
-import { IconArrowRight } from "@/components/account/icons";
+import { IconArrowRight } from "@/components/icons";
 
 export const metadata = { title: "Mon compte" };
 

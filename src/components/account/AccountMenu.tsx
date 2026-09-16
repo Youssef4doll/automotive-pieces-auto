@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { logout } from "@/app/actions/auth";
-import { IconUser } from "./icons";
+import { IconUser } from "@/components/icons";
 
 export type AccountUser = { name: string; email: string; role: "CUSTOMER" | "ADMIN" };
 

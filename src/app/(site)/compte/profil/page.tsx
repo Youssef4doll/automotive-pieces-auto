@@ -8,7 +8,7 @@ import { logout } from "@/app/actions/auth";
 import AccountShell from "@/components/account/AccountShell";
 import GarageSection from "@/components/account/GarageSection";
 import { ProfileCard, PasswordCard } from "@/components/account/ProfileForms";
-import { IconArrowRight, IconWhatsApp } from "@/components/account/icons";
+import { IconArrowRight, IconWhatsApp } from "@/components/icons";
 
 export const metadata = { title: "Mon profil" };
 

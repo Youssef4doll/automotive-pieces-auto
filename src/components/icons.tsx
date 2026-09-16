@@ -4,6 +4,13 @@
  * The brief asks for Lucide and also for no unnecessary dependencies; these
  * follow Lucide's grid exactly (24×24, 2px stroke, round caps and joins) so the
  * set is consistent, while adding nothing to the bundle.
+ *
+ * This set started in the account area and moved out of it when the contact
+ * page and the checkout needed the same symbols. One set, one grid: an emoji
+ * is not an option, because it is a different drawing on every phone — 💳 is a
+ * blue card on Android and a grey one on iOS, and neither matches the site.
+ * Everything here is stroked in `currentColor`, so a symbol inherits the
+ * colour of the text it sits beside instead of introducing its own.
  */
 type Props = { className?: string };
 
@@ -135,6 +142,75 @@ export const IconShield = ({ className }: Props) => (
   <svg {...svg(className)}>
     <path d="M12 3l8 4v5.5c0 4.8-3.3 8.4-8 9.5-4.7-1.1-8-4.7-8-9.5V7l8-4Z" />
     <path d="m9 12 2 2 4-4" />
+  </svg>
+);
+
+export const IconAlert = ({ className }: Props) => (
+  <svg {...svg(className)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7.5v5" />
+    <path d="M12 16.5h.01" />
+  </svg>
+);
+
+export const IconMapPin = ({ className }: Props) => (
+  <svg {...svg(className)}>
+    <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z" />
+    <circle cx="12" cy="10" r="2.5" />
+  </svg>
+);
+
+export const IconClock = ({ className }: Props) => (
+  <svg {...svg(className)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5.2l3.2 2" />
+  </svg>
+);
+
+export const IconMail = ({ className }: Props) => (
+  <svg {...svg(className)}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m3.5 7 8.5 6 8.5-6" />
+  </svg>
+);
+
+/** Cash on delivery — a banknote, not a card. */
+export const IconBanknote = ({ className }: Props) => (
+  <svg {...svg(className)}>
+    <rect x="2" y="6" width="20" height="12" rx="2" />
+    <circle cx="12" cy="12" r="2.5" />
+    <path d="M6 12h.01M18 12h.01" />
+  </svg>
+);
+
+export const IconCard = ({ className }: Props) => (
+  <svg {...svg(className)}>
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <path d="M2 10h20" />
+    <path d="M6 15h3" />
+  </svg>
+);
+
+export const IconStore = ({ className }: Props) => (
+  <svg {...svg(className)}>
+    <path d="M4 9h16v11H4z" />
+    <path d="M3 9 5 4h14l2 5" />
+    <path d="M9.5 20v-5h5v5" />
+  </svg>
+);
+
+export const IconLock = ({ className }: Props) => (
+  <svg {...svg(className)}>
+    <rect x="4" y="10" width="16" height="11" rx="2" />
+    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+  </svg>
+);
+
+/** A return or an exchange: back the way it came. */
+export const IconReturn = ({ className }: Props) => (
+  <svg {...svg(className)}>
+    <path d="M3 12a9 9 0 1 1 3 6.7" />
+    <path d="M3 6v6h6" />
   </svg>
 );
 

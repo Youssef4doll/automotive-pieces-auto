@@ -45,7 +45,7 @@ SUITES=(
   discovery search seo security server-cart
   banners category-images svg-uploads catalog-authoring storefront-fixes
   admin-crud simple-journey mobile nav catalog-filters local-search tax emails contact analytics
-  product-depth cleanup loop
+  product-depth checkout cleanup loop
 )
 
 total=0; failed=0; bad=""

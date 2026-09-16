@@ -1,18 +1,34 @@
 import T from "./T";
+import { IconShield, IconTruck, IconBanknote, IconReturn } from "./icons";
 
-const ITEMS = [1, 2, 3, 4] as const;
+/**
+ * The four promises, each with the symbol for the thing it promises.
+ *
+ * These badges used to be numbered 1–4 inside the hexagon. A number is not a
+ * symbol: it says "there are four of these" and nothing about what any of them
+ * is, and it made the row read as an ordered procedure rather than four
+ * independent facts. The hexagon stays — it is the site's own device, used on
+ * the family tiles too — and now holds the drawing that matches the sentence
+ * beside it. Order is fixed, so the icon and the phrase can never drift apart.
+ */
+const ITEMS = [
+  { n: 1, Icon: IconShield },
+  { n: 2, Icon: IconTruck },
+  { n: 3, Icon: IconBanknote },
+  { n: 4, Icon: IconReturn },
+] as const;
 
 export default function TrustBadges() {
   return (
     <section className="bg-white px-4 pb-2 pt-5 sm:pt-8">
       <div className="mx-auto shell-w grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {ITEMS.map((n) => (
+        {ITEMS.map(({ n, Icon }) => (
           <div key={n} className="flex items-center gap-3.5 p-4.5 rounded-lg bg-gray-50">
             <div
-              className="shrink-0 w-11 h-11 bg-navy-900 flex items-center justify-center text-gold-500 font-heading font-extrabold text-lg"
+              className="shrink-0 w-11 h-11 bg-navy-900 flex items-center justify-center text-gold-500"
               style={{ clipPath: "polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0% 50%)" }}
             >
-              {n}
+              <Icon className="h-5 w-5" />
             </div>
             <div>
               <div className="font-display font-bold uppercase tracking-wide text-sm text-navy-950">
