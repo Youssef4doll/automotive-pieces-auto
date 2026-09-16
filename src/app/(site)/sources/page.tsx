@@ -185,7 +185,8 @@ export default async function SourcesPage() {
               catalogues fournisseurs et peuvent être incomplètes.
             </li>
             <li>
-              Nous ne publions pas d&apos;avis clients tant que nous n&apos;en avons pas de véritables.
+              Nous ne publions pas d&apos;avis clients : le site n&apos;en collecte pas, plutôt que
+              d&apos;en afficher que personne n&apos;a écrits.
             </li>
             <li>
               Nous n&apos;affichons pas de délai de livraison à la journée près : les délais annoncés

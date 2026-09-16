@@ -44,8 +44,8 @@ SUITES=(
   catalog-admin catalog-pipeline product-photos
   discovery search seo security server-cart
   banners category-images svg-uploads catalog-authoring storefront-fixes
-  admin-crud simple-journey mobile nav catalog-filters local-search tax emails reviews contact analytics
-  product-depth loop
+  admin-crud simple-journey mobile nav catalog-filters local-search tax emails contact analytics
+  product-depth cleanup loop
 )
 
 total=0; failed=0; bad=""

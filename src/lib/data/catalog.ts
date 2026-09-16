@@ -155,6 +155,24 @@ export function serializeProduct<
   };
 }
 
+/**
+ * How many parts a listing hands over at once.
+ *
+ * The listing used to have no limit at all: it read every active product in
+ * the family, with each one's fitment ids joined on, and rendered the lot.
+ * At fifty-five parts nobody notices; at five thousand it is the page that
+ * falls over first, and it takes the browser with it, because CatalogView is
+ * a client component and every card crosses the wire as props. Search has
+ * been capped at 40 since it was written — this brings the aisle into line.
+ *
+ * Forty-eight is four full rows of the twelve-across desktop grid and
+ * twenty-four of the phone's two-across, so the cap never lands mid-row.
+ */
+export const CATALOG_PAGE_SIZE = 48;
+
+/** The ceiling on `?n=`, so a crafted URL cannot ask for the whole table. */
+export const CATALOG_MAX_SHOWN = 480;
+
 export async function getProductsForCategory(
   categoryId: string,
   opts: {
@@ -167,8 +185,11 @@ export async function getProductsForCategory(
     maxPrice?: number;
     /** Only what can be bought right now. */
     inStockOnly?: boolean;
+    /** How many to return. Bounded — see CATALOG_PAGE_SIZE. */
+    take?: number;
   } = {}
 ) {
+  const take = Math.min(Math.max(1, opts.take ?? CATALOG_PAGE_SIZE), CATALOG_MAX_SHOWN);
   let categoryIds = [categoryId];
   if (opts.includeDescendants) {
     const children = await prisma.category.findMany({ where: { parentId: categoryId }, select: { id: true } });
@@ -181,46 +202,61 @@ export async function getProductsForCategory(
         ? [{ priceSell: "desc" as const }]
         : [{ isTopSeller: "desc" as const }, { createdAt: "desc" as const }];
 
-  const products = await prisma.product.findMany({
-    where: {
-      categoryId: { in: categoryIds },
-      active: true,
-      ...(opts.brandSlugs?.length ? { brand: { slug: { in: opts.brandSlugs } } } : {}),
-      ...(opts.minPrice !== undefined || opts.maxPrice !== undefined
-        ? {
-            priceSell: {
-              ...(opts.minPrice !== undefined ? { gte: opts.minPrice } : {}),
-              ...(opts.maxPrice !== undefined ? { lte: opts.maxPrice } : {}),
-            },
-          }
-        : {}),
-      ...(opts.inStockOnly ? { stockQty: { gt: 0 } } : {}),
-    },
-    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
-    orderBy,
-  });
+  const where = {
+    categoryId: { in: categoryIds },
+    active: true,
+    ...(opts.brandSlugs?.length ? { brand: { slug: { in: opts.brandSlugs } } } : {}),
+    ...(opts.minPrice !== undefined || opts.maxPrice !== undefined
+      ? {
+          priceSell: {
+            ...(opts.minPrice !== undefined ? { gte: opts.minPrice } : {}),
+            ...(opts.maxPrice !== undefined ? { lte: opts.maxPrice } : {}),
+          },
+        }
+      : {}),
+    ...(opts.inStockOnly ? { stockQty: { gt: 0 } } : {}),
+  };
+  const include = {
+    brand: true,
+    category: true,
+    fitments: { select: { engineId: true } },
+    ...primaryImageSelect,
+  };
 
-  // What can be bought comes first, whatever the sort.
+  // Two bounded queries rather than one unbounded one.
   //
-  // Freinage held eight parts with two of them in stock, and the order above
-  // — top sellers, then newest — put six unbuyable ones at the top: the first
-  // three things a customer saw in the brake aisle were all "Rupture de
-  // stock". A part that cannot be bought is not a better answer than one that
-  // can, and that holds when the shopper has asked for cheapest-first too,
-  // which is why this sits outside the sort rather than inside it.
+  // "What can be bought comes first" was a sort done in JavaScript after
+  // fetching everything, which is exactly what stops a listing being pageable:
+  // a cap applied to an unsorted fetch would show the first forty-eight rows
+  // the database happened to return and then reorder only those, so an
+  // in-stock part on row 200 would never reach the first page. Asking for the
+  // buyable ones and the unbuyable ones separately keeps that promise with a
+  // LIMIT on each, and the only extra cost is a second indexed query — skipped
+  // entirely when the shopper has already ticked "en stock".
+  const [inStock, outOfStock, total] = await Promise.all([
+    prisma.product.findMany({ where: { ...where, stockQty: { gt: 0 } }, include, orderBy, take }),
+    opts.inStockOnly
+      ? Promise.resolve([])
+      : prisma.product.findMany({ where: { ...where, stockQty: { lte: 0 } }, include, orderBy, take }),
+    prisma.product.count({ where }),
+  ]);
+  const products = [...inStock, ...outOfStock].slice(0, take);
+
+  // Why the buyable ones lead, whatever the sort: Freinage held eight parts
+  // with two of them in stock, and "top sellers, then newest" put six
+  // unbuyable ones at the top — the first three things a customer saw in the
+  // brake aisle were all "Rupture de stock". A part that cannot be bought is
+  // not a better answer than one that can, and that holds when the shopper
+  // has asked for cheapest-first too.
   //
   // Out-of-stock parts stay on the page. They are real references the shop
   // carries, they say plainly that they are out, and hiding them would lose
   // the customer who wants to know we stock the part at all. They just stop
   // going first.
   //
-  // Sorted here rather than in the query because Prisma cannot order by an
-  // expression, and a category holds tens of rows, not thousands.
-  const ranked = [
-    ...products.filter((p) => p.stockQty > 0),
-    ...products.filter((p) => p.stockQty <= 0),
-  ];
-  return ranked.map(serializeProduct);
+  // `total` is every part the filters match, not the number returned, so the
+  // page can say how many are left rather than pretend this is all of them.
+  return { products: products.map(serializeProduct), total, shown: products.length };
 }
 
 /**
@@ -260,18 +296,20 @@ export const getBrandsForCategory = cache(async (categoryId: string, includeDesc
     const children = await prisma.category.findMany({ where: { parentId: categoryId }, select: { id: true } });
     categoryIds = [categoryId, ...children.map((c) => c.id)];
   }
-  const products = await prisma.product.findMany({
-    where: { categoryId: { in: categoryIds }, active: true },
-    select: { brand: true },
-  });
-  const counts = new Map<string, { name: string; slug: string; count: number }>();
-  for (const p of products) {
-    if (!p.brand) continue;
-    const existing = counts.get(p.brand.slug);
-    if (existing) existing.count += 1;
-    else counts.set(p.brand.slug, { name: p.brand.name, slug: p.brand.slug, count: 1 });
-  }
-  return [...counts.values()].sort((a, b) => b.count - a.count);
+  // Counted by Postgres. This used to read every active product in the family
+  // — with its brand joined on — and tally them in a Map here, which is a few
+  // dozen rows today and the whole aisle at fifty thousand: a sidebar listing
+  // nineteen brand names paid for by dragging every part in the family across
+  // the wire. The answer is nineteen rows either way.
+  const rows = await prisma.$queryRaw<{ name: string; slug: string; n: bigint }[]>`
+    SELECT b.name, b.slug, COUNT(*) AS n
+    FROM "Product" p
+    JOIN "Brand" b ON b.id = p."brandId"
+    WHERE p.active AND p."categoryId" = ANY(${categoryIds})
+    GROUP BY b.name, b.slug
+    ORDER BY n DESC, b.name ASC
+  `;
+  return rows.map((r) => ({ name: r.name, slug: r.slug, count: Number(r.n) }));
 })
 
 /**
@@ -289,11 +327,6 @@ export const getProductBySlug = cache(async (slug: string) => {
       brand: true,
       category: { include: { parent: true } },
       fitments: { include: { engine: { include: { model: { include: { make: true } } } } } },
-      // Published only. An unmoderated review is written by a member of the
-      // public and has not been read by anybody at the shop yet — it must not
-      // reach the storefront, and it must not move the rating average that
-      // goes into the structured data either.
-      reviews: { where: { published: true }, orderBy: { createdAt: "desc" }, take: 10 },
       // The product page shows a gallery, so it needs every photo, not just
       // the primary one the listings use.
       images: { orderBy: { order: "asc" }, select: { id: true, alt: true } },
@@ -437,7 +470,7 @@ export const getPartsBrands = cache(async () => {
  * shopper makes.
  */
 export const getVehicleMakes = cache(async () => {
-  const [makes, fitments] = await Promise.all([
+  const [makes, counts] = await Promise.all([
     prisma.vehicleMake.findMany({
       orderBy: { name: "asc" },
       select: {
@@ -472,21 +505,26 @@ export const getVehicleMakes = cache(async () => {
         },
       },
     }),
-    prisma.productFitment.findMany({
-      where: { product: { active: true } },
-      select: { productId: true, engine: { select: { model: { select: { makeId: true } } } } },
-    }),
+    // How many distinct parts each make has, counted by Postgres.
+    //
+    // This used to pull every row of ProductFitment — product id and make id,
+    // one row per part per engine — and de-duplicate them into a Map of Sets
+    // here. That is the compatibility table itself, in full, on every open of
+    // the car picker: about a thousand rows in this catalogue and the product
+    // of parts × engines in a real one, fetched to produce one small integer
+    // per manufacturer.
+    prisma.$queryRaw<{ makeId: string; n: bigint }[]>`
+      SELECT md."makeId" AS "makeId", COUNT(DISTINCT p.id) AS n
+      FROM "ProductFitment" f
+      JOIN "VehicleEngine" e ON e.id = f."engineId"
+      JOIN "VehicleModel" md ON md.id = e."modelId"
+      JOIN "Product" p ON p.id = f."productId" AND p.active
+      GROUP BY md."makeId"
+    `,
   ]);
 
-  const productsByMake = new Map<string, Set<string>>();
-  for (const f of fitments) {
-    const makeId = f.engine.model.makeId;
-    let seen = productsByMake.get(makeId);
-    if (!seen) productsByMake.set(makeId, (seen = new Set()));
-    seen.add(f.productId);
-  }
-
-  return makes.map((m) => ({ ...m, partCount: productsByMake.get(m.id)?.size ?? 0 }));
+  const partCounts = new Map(counts.map((c) => [c.makeId, Number(c.n)]));
+  return makes.map((m) => ({ ...m, partCount: partCounts.get(m.id) ?? 0 }));
 })
 
 /**

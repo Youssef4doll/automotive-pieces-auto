@@ -1,16 +1,23 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getCategoryBySlug, getProductsForCategory, getBrandsForCategory, getCategoryFacets } from "@/lib/data/catalog";
+import {
+  getCategoryBySlug,
+  getProductsForCategory,
+  getBrandsForCategory,
+  getCategoryFacets,
+  CATALOG_PAGE_SIZE,
+  CATALOG_MAX_SHOWN,
+} from "@/lib/data/catalog";
 import { priceNote } from "@/lib/tax";
 import { getSettings, publicContact } from "@/lib/settings";
-import { parseFilters } from "@/lib/catalog-filters";
+import { parseFilters, parseShown, moreHref } from "@/lib/catalog-filters";
 import CatalogView from "@/components/CatalogView";
 import { pageMeta, clampDescription } from "@/lib/seo";
 import JsonLd from "@/components/JsonLd";
 import { breadcrumbSchema, itemListSchema } from "@/lib/schema";
 
 type Sort = "popularity" | "price-asc" | "price-desc";
-type Search = { brand?: string; sort?: string; min?: string; max?: string; stock?: string };
+type Search = { brand?: string; sort?: string; min?: string; max?: string; stock?: string; n?: string };
 
 export async function generateMetadata({
   params,
@@ -39,18 +46,24 @@ export default async function SubfamilyPage({
   searchParams: Promise<Search>;
 }) {
   const { family, subfamily } = await params;
-  const filters = parseFilters(await searchParams);
+  const sp = await searchParams;
+  const filters = parseFilters(sp);
+  // How much of the aisle to hand over. The listing is capped so a family with
+  // five thousand parts does not render five thousand cards; "voir plus" is a
+  // plain link that raises it one page at a time.
+  const shown = parseShown(sp.n, CATALOG_PAGE_SIZE, CATALOG_MAX_SHOWN);
 
   const category = await getCategoryBySlug(subfamily);
   if (!category || !category.parent || category.parent.slug !== family) notFound();
 
-  const [products, brands, facets, settings, siblingCategory] = await Promise.all([
+  const [listing, brands, facets, settings, siblingCategory] = await Promise.all([
     getProductsForCategory(category.id, {
       brandSlugs: filters.brands,
       sort: filters.sort as Sort | undefined,
       minPrice: filters.min,
       maxPrice: filters.max,
       inStockOnly: filters.stock,
+      take: shown,
     }),
     getBrandsForCategory(category.id, false),
     getCategoryFacets(category.id, false),
@@ -69,14 +82,20 @@ export default async function SubfamilyPage({
       <JsonLd data={breadcrumbSchema(crumbs)} />
       {/* The parts on this page, in the order shown. Declared only when the
           page actually lists some — an empty ItemList says nothing. */}
-      {products.length > 0 && (
-        <JsonLd data={itemListSchema(products.map((p) => ({ name: p.name, path: `/produit/${p.slug}` })))} />
+      {listing.products.length > 0 && (
+        <JsonLd data={itemListSchema(listing.products.map((p) => ({ name: p.name, path: `/produit/${p.slug}` })))} />
       )}
       <CatalogView
         family={{ name: category.parent.name, slug: category.parent.slug }}
         subfamily={{ name: category.name, slug: category.slug }}
         siblings={(siblingCategory?.children ?? []).map((c) => ({ id: c.id, name: c.name, slug: c.slug, productCount: c._count.products }))}
-        products={products}
+        products={listing.products}
+        total={listing.total}
+        moreHref={
+          listing.products.length < listing.total && listing.products.length < CATALOG_MAX_SHOWN
+            ? moreHref(`/catalogue/${category.parent!.slug}/${category.slug}`, filters, shown + CATALOG_PAGE_SIZE)
+            : null
+        }
         brands={brands}
         filters={filters}
         facets={facets}

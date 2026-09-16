@@ -60,7 +60,6 @@ model User {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   orders          Order[]
-  reviews         Review[]
   profileChanges  UserProfileChange[]
   carts           Cart[]
   passwordResets  PasswordResetToken[]
@@ -263,7 +262,6 @@ model Product {
   references PartReference[]
   cartItems  CartItem[]
   orderItems OrderItem[]
-  reviews    Review[]
   stockMoves StockMovement[]
   images     ProductImage[]
 
@@ -557,34 +555,6 @@ model OrderStatusEvent {
   createdAt DateTime    @default(now())
 
   @@index([orderId])
-}
-
-model Review {
-  id         String   @id @default(cuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
-  authorName String
-  rating     Int
-  comment    String
-  /// The author actually bought this part: there is a DELIVERED order of
-  /// theirs containing it. Set by the server from the order history, never
-  /// from anything the form sends.
-  verified   Boolean  @default(false)
-  /// Moderation. A review is written by a member of the public, so it is not
-  /// on the storefront until somebody at the shop has read it — the product
-  /// page and the rating average both filter on this. Default false: the
-  /// failure mode of a missed moderation queue is a review nobody sees, not
-  /// abuse published under the shop's name.
-  published  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-
-  /// One review per customer per part. Without it, the "leave a review" form
-  /// is a submit button somebody can lean on.
-  @@unique([productId, userId])
-  @@index([productId])
-  @@index([published])
 }
 
 model Setting {

@@ -58,13 +58,12 @@ console.log("\n[1] NOTHING INVENTED WHERE THE OLD SECTIONS WERE");
   const text = await shop.locator("body").innerText();
 
   check("no fabricated testimonials", !/Ils nous font confiance|Mehdi B\.|Salma T\.|Garage Ennasr/i.test(text));
-  check("no average rating claimed with zero reviews", !/4[.,]8\s*\/\s*5/.test(text));
+  check("no average customer rating is claimed", !/4[.,]8\s*\/\s*5/.test(text));
   check("the packs pitch is gone", !/Packs prêts à commander|Tout ce qu'il faut, en une fois/i.test(text));
   check(
     "an empty campaign band shows a shopper nothing at all",
     !/Aucune bannière de campagne/i.test(text),
   );
-  check("the review table really is empty", (await prisma.review.count()) === 0);
 }
 
 console.log("\n[2] AN ADMIN IS TOLD WHERE THE EMPTY BAND IS");

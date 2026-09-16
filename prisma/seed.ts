@@ -550,12 +550,6 @@ async function main() {
     }
   }
 
-  // No reviews are seeded. Nothing in the shop can produce one yet — there is
-  // no way for a customer to leave a review — so any row here would be a
-  // testimonial nobody wrote, shown with stars and fed into the product page's
-  // aggregateRating structured data. The review sections are already
-  // data-driven and stay hidden until real reviews exist.
-
   // The search index is derived data: rebuilt from the rows above rather than
   // written alongside them, so it cannot drift out of step with what the seed
   // actually created.

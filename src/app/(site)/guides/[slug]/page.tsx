@@ -34,7 +34,11 @@ export default async function GuidePage({ params }: { params: Params }) {
   const category = family ? await getCategoryBySlug(family.slug) : null;
   // The guide ends where the shop can serve the reader. A handful of real
   // parts, not a catalogue dump — the point is to make the next step obvious.
-  const products = category ? (await getProductsForCategory(category.id, { includeDescendants: true })).slice(0, 4) : [];
+  // Four, asked for as four. This used to read the whole family and throw
+  // all but the first four away.
+  const products = category
+    ? (await getProductsForCategory(category.id, { includeDescendants: true, take: 4 })).products
+    : [];
 
   const others = (await listGuides()).filter((g) => g.slug !== guide.slug);
   const crumbs = [

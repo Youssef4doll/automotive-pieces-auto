@@ -33,6 +33,8 @@ export default function CatalogView({
   subfamily,
   siblings,
   products,
+  total,
+  moreHref,
   brands,
   filters,
   facets,
@@ -45,6 +47,10 @@ export default function CatalogView({
   subfamily?: { name: string; slug: string } | null;
   siblings: Sibling[];
   products: CardProduct[];
+  /** Everything the filters match, not just what was handed over. */
+  total: number;
+  /** Where "voir plus" goes, or null when the whole list is on the page. */
+  moreHref: string | null;
   brands: BrandFacet[];
   filters: CatalogFilters;
   facets: CategoryFacets;
@@ -300,6 +306,27 @@ export default function CatalogView({
               <NoFitState make={vehicle?.makeName ?? ""} onShowAll={() => setShowAll(true)} whatsapp={whatsapp} />
             ) : (
               <ProductGrid products={shown} layout={view} delivery={deliveryLine} priceNote={priceNote} />
+            )}
+
+            {/* The rest of the aisle, one page at a time.
+                A plain link rather than a button: the list is server-rendered,
+                so this works with JavaScript off, can be shared, and comes
+                back from the browser's history intact. It says how many are
+                left rather than "voir plus", because a shopper deciding
+                whether to keep looking wants the number. */}
+            {moreHref && shown.length > 0 && (
+              <div className="mt-6 flex flex-col items-center gap-1.5">
+                <Link
+                  href={moreHref}
+                  prefetch={false}
+                  className="inline-flex min-h-tap items-center rounded-xl border border-navy-900/20 bg-white px-6 font-display text-xs font-bold uppercase tracking-wide text-navy-900 hover:border-gold-500"
+                >
+                  Voir plus de pièces
+                </Link>
+                <p className="text-xs tabular-nums text-gray-500">
+                  {products.length} sur {total}
+                </p>
+              </div>
             )}
 
             {/* Parts the catalogue has no fitment data for. Kept out of the

@@ -108,8 +108,6 @@ export function productSchema(p: {
   inStock: boolean;
   images: string[];
   oemRefs?: string[];
-  reviewCount?: number;
-  ratingAverage?: number | null;
 }) {
   const base = siteUrl();
   const url = `${base}/produit/${p.slug}`;
@@ -135,16 +133,6 @@ export function productSchema(p: {
       availability: p.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       seller: { "@id": `${base}/#organization` },
     },
-    // Only when reviews actually exist. Google penalises a rating that the
-    // page cannot show.
-    aggregateRating:
-      p.reviewCount && p.reviewCount > 0 && p.ratingAverage
-        ? {
-            "@type": "AggregateRating",
-            ratingValue: p.ratingAverage.toFixed(1),
-            reviewCount: p.reviewCount,
-          }
-        : undefined,
   });
 }
 

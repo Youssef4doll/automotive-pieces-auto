@@ -149,7 +149,12 @@ await admin.waitForTimeout(1200);
 const adminBody = await admin.locator("main").innerText();
 check("the abandoned cart is listed", adminBody.includes("Client Panier"), adminBody.slice(0, 60).replace(/\n/g, " "));
 check("with the value at stake", /\d+\.\d\d DT/.test(adminBody));
-const wa = await admin.locator('main a[href*="wa.me"]').first().getAttribute("href");
+// This cart's row, not whichever abandoned cart happens to be listed first.
+// The list accumulates across runs of the battery, so `.first()` was asserting
+// on somebody else's follow-up message and failing on the customer's name.
+const row = admin.locator("li, tr", { hasText: "Client Panier" }).first();
+const scope = (await row.count()) > 0 ? row : admin.locator("main");
+const wa = await scope.locator('a[href*="wa.me"]').first().getAttribute("href");
 check("with a one-tap WhatsApp follow-up naming the parts",
       !!wa && decodeURIComponent(wa).includes("Client Panier"), decodeURIComponent(wa ?? "").slice(-50));
 

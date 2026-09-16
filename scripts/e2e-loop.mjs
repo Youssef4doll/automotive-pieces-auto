@@ -9,6 +9,7 @@
  */
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
+import { eventually, reloadUntil } from "./lib/eventually.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const prisma = new PrismaClient();
@@ -97,10 +98,15 @@ console.log("\n[C1] BROWSE THE CATALOGUE: A FAMILY OPENS ITS SUBCATEGORIES IN PL
   }
   check("no suggested subcategory is an empty dead end", empty === 0, `${deep.length} checked`);
 
-  await shopper.goto(`${BASE}/`);
-  await shopper.waitForTimeout(800);
+  // The family board comes from the same cached category tree, and an earlier
+  // suite may have left the entry mid-edit; wait for two families rather than
+  // for a fixed 800ms.
+  await reloadUntil(shopper, `${BASE}/`, () => true);
   const first = shopper.locator('button[aria-controls^="subs-"]').first();
   const second = shopper.locator('button[aria-controls^="subs-"]').nth(1);
+  const ready = await eventually(async () =>
+    (await shopper.locator('button[aria-controls^="subs-"]').count()) >= 2);
+  check("the family board offers more than one family to open", ready);
   await first.click();
   await shopper.waitForTimeout(250);
   await second.click();

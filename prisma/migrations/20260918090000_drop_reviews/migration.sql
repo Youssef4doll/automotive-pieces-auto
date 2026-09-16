@@ -1,0 +1,12 @@
+-- Reviews, removed.
+--
+-- The feature had one control surface — the moderation queue at /admin/avis —
+-- and nothing reached the storefront without it. Removing the queue would have
+-- left a public-writable surface with no way to publish and no way to take a
+-- post down, which is worse than not carrying reviews at all. So the whole
+-- thing goes: the queue, the form, the product-page section and this table.
+--
+-- The table is empty at the time of writing (0 rows, checked). If a deployment
+-- has collected any since, they are lost with this migration and are not
+-- recoverable from the application.
+DROP TABLE IF EXISTS "Review";

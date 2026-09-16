@@ -1,6 +1,5 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import ProductGallery from "@/components/ProductGallery";
-import FitConfidence from "@/components/FitConfidence";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getProductBySlug, getRelatedProducts, getProductSlugRedirect } from "@/lib/data/catalog";
@@ -14,9 +13,6 @@ import { pageMeta, clampDescription } from "@/lib/seo";
 import { productSchema, breadcrumbSchema } from "@/lib/schema";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { toNumber } from "@/lib/money";
-import { getCurrentUser } from "@/lib/session";
-import { hasPurchased } from "@/app/actions/reviews";
-import ReviewForm from "@/components/ReviewForm";
 import FitmentBrowser, { type FitmentRow } from "@/components/product/FitmentBrowser";
 import FitNotice from "@/components/product/FitNotice";
 import OeNumbers from "@/components/product/OeNumbers";
@@ -36,12 +32,22 @@ export async function generateMetadata({
   // Written to read as a search result rather than as a database row: the part,
   // the brand, the reference a shopper may be searching by, and the two facts
   // that decide the click — price and availability.
+  //
+  // The shop's own words come first when it has written any, and the facts are
+  // added after them rather than instead of them. It used to be one or the
+  // other, which meant a terse catalogue line — "Amortisseur arrière,
+  // compatible Peugeot 208/308", 47 characters — became the whole meta
+  // description, below the length this project holds itself to and well below
+  // what a search result has room for. Nothing here is invented: every fact
+  // appended is already on the page.
   const price = toNumber(product.priceSell);
   const brand = product.brand?.name ? `${product.brand.name} ` : "";
+  const facts =
+    `${brand}${product.name}, référence ${product.sku}. ${price.toFixed(2)} DT. ` +
+    `Livraison 24h Grand Tunis, paiement à la livraison.`;
+  const own = product.description.trim();
   const description = clampDescription(
-    product.description ||
-      `${brand}${product.name}, référence ${product.sku}. ${price.toFixed(2)} DT. ` +
-        `Livraison 24h Grand Tunis, paiement à la livraison.`,
+    !own ? facts : own.length >= 110 ? own : `${own.replace(/[.\s]+$/, "")}. ${facts}`,
   );
 
   // The part's own photo makes a far better share card than the site's generic
@@ -115,21 +121,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     { name: product.name, path: `/produit/${product.slug}` },
   ];
 
-  // Only real ratings are declared. With no reviews the field is absent
-  // entirely rather than defaulted to five stars.
-  // Who may write one: a signed-in customer with a delivered order containing
-  // this exact part, who has not already reviewed it. Checked again inside
-  // submitReview — this only decides whether to render the form.
-  const viewer = await getCurrentUser();
-  const canReview =
-    viewer !== null &&
-    !product.reviews.some((r) => r.userId === viewer.id) &&
-    (await hasPurchased(viewer.id, product.id));
-
-  const reviewCount = product.reviews.length;
-  const ratingAverage =
-    reviewCount > 0 ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : null;
-
   // The compatibility list, flattened once: one row per engine, carrying the
   // links and the spec line the browser renders. Built here rather than in the
   // client component so the phone is not sent a nested fitment tree to walk.
@@ -154,6 +145,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   const showManufacturer = !!product.brand && hasManufacturerInfo(product.brand);
 
+  // Front/rear, left/right — printed only where the catalogue records it.
+  const position = [
+    product.axle === "AVANT" ? "Avant" : product.axle === "ARRIERE" ? "Arrière" : null,
+    product.side === "GAUCHE" ? "Gauche" : product.side === "DROITE" ? "Droite" : null,
+  ].filter((v): v is string => v !== null);
+
   // The sections this particular part has — never a fixed menu, because a
   // link to a heading that is not on the page is worse than no link.
   const sections = [
@@ -165,7 +162,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       label: "Références",
     },
     showManufacturer && { id: "fabricant", label: "Fabricant" },
-    (product.reviews.length > 0 || canReview) && { id: "avis", label: "Avis" },
   ].filter((s): s is { id: string; label: string } => !!s);
 
   const jsonLd = productSchema({
@@ -178,8 +174,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     inStock: !outOfStock,
     images: product.gallery.length ? product.gallery.map((g) => g.src) : [product.imageUrl],
     oemRefs: product.oemRefs,
-    reviewCount,
-    ratingAverage,
   });
 
   return (
@@ -248,17 +242,22 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             )}
           </div>
 
-          <FitConfidence
-            whatsapp={publicContact(settings).whatsapp}
-            product={{
-              name: product.name,
-              sku: product.sku,
-              fitmentEngineIds: product.fitments.map((f) => f.engineId),
-              axle: product.axle,
-              side: product.side,
-              hasFitmentData: product.fitments.length > 0,
-            }}
-          />
+          {/* Where on the car it goes. Structured fields, never parsed out of
+              the name, and plain server-rendered text: it does not change
+              while the page is open, so it costs no JavaScript. */}
+          {position.length > 0 && (
+            <p className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-500">Position :</span>
+              {position.map((p) => (
+                <span
+                  key={p}
+                  className="rounded bg-navy-900 px-2 py-1 text-xs font-bold uppercase tracking-wide text-white"
+                >
+                  {p}
+                </span>
+              ))}
+            </p>
+          )}
 
           <ProductActions
             whatsapp={publicContact(settings).whatsapp}
@@ -271,6 +270,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               priceSell: product.priceSell,
               stockQty: product.stockQty,
               fitmentEngineIds: product.fitments.map((f) => f.engineId),
+              hasFitmentData: product.fitments.length > 0,
             }}
           />
         </div>
@@ -391,40 +391,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </Link>
         </section>
       </div>
-
-      {/* Reviews, and the way to leave one.
-
-          The section renders when there is either something to read or
-          somebody entitled to write — never as an empty "0 avis" panel, which
-          reads as a shop nobody buys from. */}
-      {(product.reviews.length > 0 || canReview) && (
-        <section id="avis" className="mt-10 scroll-mt-24">
-          <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Avis clients</h2>
-
-          {product.reviews.length > 0 && (
-            <div className="grid sm:grid-cols-3 gap-4">
-              {product.reviews.map((r) => (
-                <div key={r.id} className="p-4 rounded-xl border border-gray-200 bg-white">
-                  <div className="flex text-gold-500 text-sm mb-1.5">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</div>
-                  <p className="text-sm text-gray-700 mb-2">&ldquo;{r.comment}&rdquo;</p>
-                  <p className="text-xs font-semibold text-navy-900">
-                    {r.authorName}
-                    {/* Said because it is true and checked, not as a badge:
-                        only a delivered order of this exact part sets it. */}
-                    {r.verified && <span className="ms-2 font-normal text-green-700">Achat vérifié</span>}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {canReview && (
-            <div className={product.reviews.length > 0 ? "mt-4" : ""}>
-              <ReviewForm productId={product.id} />
-            </div>
-          )}
-        </section>
-      )}
 
       {related.length > 0 && (
         <section className="mt-10">

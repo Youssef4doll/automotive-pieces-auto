@@ -86,3 +86,25 @@ export function filterHref(basePath: string, f: CatalogFilters): string {
   const qs = params.toString();
   return qs ? `${basePath}?${qs}` : basePath;
 }
+
+/**
+ * How many parts the listing was asked to show.
+ *
+ * Deliberately not part of CatalogFilters: it rides in the URL beside them but
+ * is not one of them, so ticking a brand or changing the sort drops back to
+ * the first page instead of carrying an expanded list into a different set of
+ * results. Clamped on the way in — `?n=999999` is a request the page answers
+ * with its own ceiling, not with the whole table.
+ */
+export function parseShown(raw: string | undefined, pageSize: number, max: number): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return pageSize;
+  return Math.min(Math.max(pageSize, Math.round(n)), max);
+}
+
+/** The same filtered URL, asking for one page more. A plain link: the list
+ *  stays server-rendered, shareable and crawlable, with no client state. */
+export function moreHref(basePath: string, f: CatalogFilters, next: number): string {
+  const href = filterHref(basePath, f);
+  return `${href}${href.includes("?") ? "&" : "?"}n=${next}`;
+}

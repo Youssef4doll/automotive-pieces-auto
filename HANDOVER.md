@@ -15,7 +15,7 @@ worth reading first — what is not.
 ```bash
 npm install                 # postinstall runs `prisma generate`
 cp .env.example .env        # then fill in the values below
-npm run db:migrate          # 21 migrations
+npm run db:migrate          # 22 migrations
 npm run db:seed             # catalogue, vehicles, demo customer, admin
 npm run dev                 # http://localhost:3000
 ```
@@ -128,7 +128,7 @@ Two things that bit, both worth knowing before writing another suite:
 src/app/(site)/     storefront          src/lib/data/    all database reads
 src/app/admin/      admin               src/lib/         session, search, money,
 src/app/actions/    server actions                       rate limits, shipping…
-src/app/api/        images, part icons  prisma/          schema, 21 migrations
+src/app/api/        images, part icons  prisma/          schema, 22 migrations
 src/components/     UI                  scripts/         the 27 e2e suites
 ```
 
@@ -377,13 +377,51 @@ the document title, the reference and the payment note all vanished from the
 printout. Marking the chrome is the version that cannot reach into a page's
 content.
 
-**A review requires a delivered order for that exact part, and a human before
-it is public.** `verified` is set by the server from the order history and can
-never be sent by the form; `published` defaults to false and `/admin/avis` is
-the queue. The product page and the `aggregateRating` in its structured data
-both filter on `published`, so an unmoderated review cannot move the number a
-search engine quotes. A unique index on `(productId, userId)` is what actually
-stops a doubled submit.
+**The site carries no customer reviews, by decision.** It used to: a form for
+customers with a delivered order, and a moderation queue at `/admin/avis` that
+published them. The queue was the only control surface — nothing reached the
+storefront without it, and nothing could be taken down except through it — so
+the shop's request to drop the queue meant dropping the feature, because a
+public-writable surface with no take-down path is worse than no reviews at all.
+The form, the action, the product-page section, the `aggregateRating` in the
+structured data and the `Review` table are all gone (migration
+`20260918090000_drop_reviews`, applied against an empty table).
+
+Bringing them back is a feature, not a revert: it needs the write path, the
+queue and the table again. What survives is the principle the old code encoded
+and `/sources` still states — no star rating is ever declared that the page
+cannot show.
+
+**Every listing read is bounded, and the aisle says how much it is showing.**
+The category listing had no limit at all: it read every active part in the
+family, with each one's fitment ids joined on, and serialised the lot into
+`CatalogView` as props. Search has been capped at 40 since it was written, so
+this was the one shopper-facing read that could grow without limit. It hands
+over `CATALOG_PAGE_SIZE` (48) with a "voir plus" link carrying `?n=`, clamped
+at `CATALOG_MAX_SHOWN` (480) so a hand-typed URL cannot ask for the table.
+
+The in-stock-first rule survives the cap because it moved into the query. It
+used to be a JavaScript sort *after* fetching everything, which a limit
+silently breaks — the cap would take whichever forty-eight rows came back and
+reorder only those, leaving a buyable part on row 200 unreachable. It is two
+bounded queries now, one for the buyable and one for the rest, concatenated.
+
+**The phrase table holds only phrases that are on a screen.** All three
+languages ship in the client bundle — measured, and cheaper than sending the
+active one down with every page response — which is exactly why a string
+nobody renders is not free. 116 of 435 keys had outlived the screens that used
+them; removing them took about 3KB gzipped off the JavaScript of every route.
+`scripts/e2e-cleanup.mjs` fails if an unused key appears again. It understands
+one indirection: `<T k={`trust.title${n}`} />` builds a family of keys from an
+index, so a key whose name is a prefix plus a number counts as used.
+
+**Counts are counted by Postgres.** Two places produced a handful of small
+integers by reading whole tables into Node: the catalogue's brand sidebar
+(every active product in the family, brand joined on, tallied into a Map) and
+the car picker's per-make part counts (the entire `ProductFitment` table,
+de-duplicated into a Map of Sets, on every open of the dialog). Both are
+`GROUP BY` now. `scripts/e2e-cleanup.mjs` checks the source so the pattern
+cannot come back unnoticed.
 
 **A part with no photo is drawn, not illustrated with something else.** Every
 seeded product points at the hero artwork — a photograph of engine oil. So a
@@ -442,8 +480,6 @@ Working and covered by tests:
   it carries the TVA and the timbre fiscal broken out — sous-total HT, frais de
   livraison HT, TVA, timbre, total TTC — and the same five lines appear in the
   order e-mail, on the customer's order page and on the admin's.
-- Reviews: written only by customers who took delivery of that part, published
-  only after the shop reads them, moderated at /admin/avis.
 - Security: nonce CSP, HSTS, nosniff, frame-deny, permissions policy, bcrypt,
   `__Host-` session cookie, rate limits on login/signup/checkout/lookup,
   honeypot and timing checks on public forms, ownership checks on order access.
@@ -477,7 +513,6 @@ working upload form and an honest stand-in until it is used:
 | Vehicle-make logos | 0 of 10 | Catalogue → Véhicules | the make's initials |
 | Part references | 0 of 55 | Stock → a product → Références | reference search finds nothing |
 | Manufacturer details | 0 of 19 brands | Catalogue → Marques → Informations fabricant | no manufacturer panel on the product page |
-| Customer reviews | 0 | arrive from delivered orders | the section is simply absent |
 
 Category pictures are the cheapest win of the four: sixteen images put a real
 photograph on every row of the phone menu and the desktop flyout, which is the

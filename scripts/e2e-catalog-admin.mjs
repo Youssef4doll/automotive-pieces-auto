@@ -4,6 +4,8 @@
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
 import { waitForAdmin } from "./lib/wait-for-admin.mjs";
+import { reloadUntil } from "./lib/eventually.mjs";
+import { pickOption } from "./lib/pick-option.mjs";
 import { optionLabels } from "./lib/pick-option.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
@@ -24,7 +26,7 @@ const BRAND = "MarqueTestQA";
 
 // Leave no residue behind if a previous run died halfway.
 async function cleanup() {
-  await prisma.category.deleteMany({ where: { slug: { in: [SUB_SLUG, FAM_SLUG] } } });
+  await prisma.category.deleteMany({ where: { slug: { in: [`${SUB_SLUG}-rangement`, SUB_SLUG, FAM_SLUG] } } });
   await prisma.brand.deleteMany({ where: { name: BRAND } });
 }
 await cleanup();
@@ -70,13 +72,47 @@ console.log("\n[2] IT APPEARS ON THE PUBLIC STOREFRONT");
   check("an empty family is NOT advertised in the navigation",
         !(await shop.content()).includes(`/catalogue/${FAM_SLUG}"`));
 
-  const spare = await prisma.product.findFirst({ where: { active: true }, select: { id: true, categoryId: true } });
-  await prisma.product.update({ where: { id: spare.id }, data: { categoryId: created.id } });
-  await shop.goto(BASE);
-  await shop.waitForTimeout(900);
-  check("once it holds a product it appears in the navigation",
-        (await shop.content()).includes(FAM_SLUG));
-  await prisma.product.update({ where: { id: spare.id }, data: { categoryId: spare.categoryId } });
+  // Filing a part into it, the way the shop would.
+  //
+  // This used to write `categoryId` with prisma and then look at the
+  // navigation 900ms later. The navigation is served from a tagged cache with
+  // a two-minute backstop and is invalidated by the admin's own actions, so a
+  // write that goes around the admin leaves the test racing a cache it cannot
+  // win against — passing on a cold server and failing on a warm one, which
+  // reads as "the navigation is broken" when it is working as designed.
+  //
+  // Going through the product form is both the real workflow and the one that
+  // revalidates. The form only offers subcategories, on purpose, so the
+  // family gets one first — which is the same rule under test: a family shows
+  // up once something behind it can be bought.
+  const subForFiling = await prisma.category.create({
+    data: { name: `${SUB} Rangement`, slug: `${SUB_SLUG}-rangement`, parentId: created.id },
+    select: { id: true, name: true },
+  });
+  const spare = await prisma.product.findFirst({
+    where: { active: true },
+    select: { id: true, categoryId: true, category: { select: { name: true } } },
+  });
+  await page.goto(`${BASE}/admin/stock/${spare.id}`);
+  await page.waitForTimeout(1200);
+  await pickOption(page, "categoryId", subForFiling.name);
+  await page.getByRole("button", { name: "Enregistrer" }).first().click();
+  await page.waitForTimeout(2500);
+
+  const filed = await prisma.product.findUnique({ where: { id: spare.id }, select: { categoryId: true } });
+  check("the admin can file a part into the new family", filed?.categoryId === subForFiling.id);
+
+  const appeared = await reloadUntil(shop, BASE, (html) => html.includes(FAM_SLUG));
+  check("once it holds a product it appears in the navigation", appeared.ok);
+
+  // Back where it was, through the same form, so the storefront is left as it
+  // was found rather than stale.
+  await page.goto(`${BASE}/admin/stock/${spare.id}`);
+  await page.waitForTimeout(1200);
+  await pickOption(page, "categoryId", spare.category.name);
+  await page.getByRole("button", { name: "Enregistrer" }).first().click();
+  await page.waitForTimeout(2500);
+  await prisma.category.delete({ where: { id: subForFiling.id } }).catch(() => {});
   await shop.close();
 }
 

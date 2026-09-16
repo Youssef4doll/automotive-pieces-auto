@@ -33,7 +33,15 @@ p.on("console", (m) => {
 p.on("pageerror", (e) => consoleIssues.push({ url: p.url(), text: `pageerror: ${String(e).slice(0, 200)}` }));
 
 // A real product and a real stocked category to test against.
-const product = await prisma.product.findFirst({ where: { active: true }, select: { slug: true, name: true, sku: true } });
+// Ordered, so the suite checks the same part every run. `findFirst` with no
+// order returns rows in physical order, which shifts whenever another suite
+// updates a row — and then this one starts reporting on a different product
+// without anything having changed about the page it is testing.
+const product = await prisma.product.findFirst({
+  where: { active: true },
+  orderBy: { sku: "asc" },
+  select: { slug: true, name: true, sku: true },
+});
 const family = await prisma.category.findFirst({
   where: { parentId: null, OR: [{ products: { some: {} } }, { children: { some: { products: { some: {} } } } }] },
   select: { slug: true, children: { where: { products: { some: {} } }, select: { slug: true }, take: 1 } },
@@ -155,10 +163,10 @@ console.log("\n[6] STRUCTURED DATA IS VALID JSON AND HONEST");
   check("the product page declares a Product", Boolean(schema));
   check("with the real reference", schema.sku === product.sku, schema.sku);
   check("with a price and currency", Boolean(schema.offers?.price) && schema.offers.priceCurrency === "TND");
-  const reviewCount = await prisma.review.count({ where: { product: { slug: product.slug } } });
-  check("a rating is claimed only when reviews exist",
-        reviewCount > 0 ? Boolean(schema.aggregateRating) : !schema.aggregateRating,
-        `${reviewCount} review(s)`);
+  // The site carries no customer reviews at all, so a star rating in the
+  // structured data could only be one nobody gave. Google penalises exactly
+  // that, and it is the kind of claim this project does not make.
+  check("no star rating is declared", !schema.aggregateRating);
   check("the product page declares a BreadcrumbList", blocks.some((b) => b["@type"] === "BreadcrumbList"));
 }
 {
