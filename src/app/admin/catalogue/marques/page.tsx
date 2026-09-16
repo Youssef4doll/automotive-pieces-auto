@@ -11,17 +11,21 @@ export default async function BrandsAdminPage() {
       slug: true,
       logoUrl: true,
       isPartsBrand: true,
+      legalName: true,
+      street: true,
+      postalCode: true,
+      city: true,
+      country: true,
+      phone: true,
+      email: true,
+      website: true,
       _count: { select: { products: true } },
     },
   });
 
-  const brands: AdminBrand[] = rows.map((b) => ({
-    id: b.id,
-    name: b.name,
-    slug: b.slug,
-    logoUrl: b.logoUrl,
-    isPartsBrand: b.isPartsBrand,
-    productCount: b._count.products,
+  const brands: AdminBrand[] = rows.map(({ _count, ...b }) => ({
+    ...b,
+    productCount: _count.products,
   }));
 
   return (
@@ -29,7 +33,9 @@ export default async function BrandsAdminPage() {
       <div>
         <h1 className="text-2xl font-heading font-extrabold uppercase tracking-tight text-navy-950">Marques</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Les marques proposées dans le formulaire produit et dans les filtres du catalogue.
+          Les marques proposées dans le formulaire produit et dans les filtres du catalogue. Les
+          coordonnées du fabricant que vous saisissez ici s&apos;affichent sur chaque fiche produit
+          de la marque — laissez-les vides tant que vous ne les avez pas.
         </p>
       </div>
       <CatalogTabs />

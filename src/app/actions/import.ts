@@ -157,17 +157,34 @@ export async function applyImport(batchId: string): Promise<ImportState> {
         created++;
       }
 
+      // Whose number each one is. The file names the parts brand, and that is
+      // the owner of an aftermarket number and emphatically not the owner of
+      // an OE number — that belongs to a carmaker the column does not name
+      // unless the exporter wrote it in. An unattributed OE number is stored
+      // unattributed rather than filed under Bosch, which would put the wrong
+      // manufacturer's name over it on every product page.
       const refs = [
-        ...row.oem.map((raw) => ({ type: "OEM" as const, raw })),
-        ...row.aftermarket.map((raw) => ({ type: "AFTERMARKET" as const, raw })),
+        ...row.oem.map((r) => ({ type: "OEM" as const, raw: r.raw, owner: r.owner })),
+        ...row.aftermarket.map((raw) => ({
+          type: "AFTERMARKET" as const,
+          raw,
+          owner: row.brand?.trim().toUpperCase() ?? "",
+        })),
       ];
       for (const r of refs) {
         const normalized = normalizeReference(r.raw);
         if (!normalized) continue;
         await prisma.partReference.upsert({
-          where: { productId_type_normalized: { productId, type: r.type, normalized } },
-          create: { productId, type: r.type, raw: r.raw, normalized, brand: row.brand },
-          update: { raw: r.raw, brand: row.brand },
+          where: {
+            productId_type_brand_normalized: {
+              productId,
+              type: r.type,
+              brand: r.owner,
+              normalized,
+            },
+          },
+          create: { productId, type: r.type, raw: r.raw, normalized, brand: r.owner },
+          update: { raw: r.raw },
         });
       }
     } catch {

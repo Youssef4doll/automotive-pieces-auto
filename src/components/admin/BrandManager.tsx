@@ -11,6 +11,15 @@ export type AdminBrand = {
   logoUrl: string | null;
   isPartsBrand: boolean;
   productCount: number;
+  /** Manufacturer information, printed on every product page of this brand. */
+  legalName: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  country: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
 };
 
 export default function BrandManager({ brands }: { brands: AdminBrand[] }) {
@@ -133,6 +142,12 @@ function BrandForm({
 
   const uploaded = !!brand?.logoUrl?.startsWith("/api/images/");
 
+  const hasMakerInfo = !!(
+    brand &&
+    (brand.legalName || brand.street || brand.postalCode || brand.city ||
+      brand.country || brand.phone || brand.email || brand.website)
+  );
+
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
@@ -220,6 +235,30 @@ function BrandForm({
         )}
       </label>
 
+      {/* Who made the part, for the panel on every product page of this brand.
+          Folded, because it is eight boxes that are filled once and then left
+          alone, and unfolded on its own when there is already something in it
+          — a brand whose address is on file should show it without a hunt.
+
+          Nothing here is looked up or completed for you: it is copied from
+          what the manufacturer publishes, and a brand with nothing entered
+          simply prints no panel. */}
+      <details open={hasMakerInfo} className="w-full rounded-lg border border-gray-200 bg-gray-50/60">
+        <summary className="flex min-h-tap cursor-pointer items-center px-3 text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/60">
+          Informations fabricant {hasMakerInfo ? "· renseignées" : "· non renseignées"}
+        </summary>
+        <div className="grid gap-2 border-t border-gray-200 p-3 sm:grid-cols-2">
+          <MakerField name="legalName" label="Raison sociale" placeholder="HELLA GmbH & Co. KGaA" value={brand?.legalName} className={input} wide />
+          <MakerField name="street" label="Rue" placeholder="Rixbecker Str. 75" value={brand?.street} className={input} wide />
+          <MakerField name="postalCode" label="Code postal" placeholder="59552" value={brand?.postalCode} className={input} />
+          <MakerField name="city" label="Ville" placeholder="Lippstadt" value={brand?.city} className={input} />
+          <MakerField name="country" label="Pays" placeholder="Allemagne" value={brand?.country} className={input} />
+          <MakerField name="phone" label="Téléphone" placeholder="+49 2941 38 0" value={brand?.phone} className={input} />
+          <MakerField name="email" label="E-mail" type="email" placeholder="info@hella.com" value={brand?.email} className={input} />
+          <MakerField name="website" label="Site web" placeholder="hella.com" value={brand?.website} className={input} />
+        </div>
+      </details>
+
       <label className="flex items-center gap-2 text-sm min-h-tap">
         <input type="checkbox" name="isPartsBrand" defaultChecked={brand?.isPartsBrand ?? true} />
         Marque de pièces
@@ -234,5 +273,32 @@ function BrandForm({
         Annuler
       </button>
     </form>
+  );
+}
+
+/** One box of the manufacturer panel. Labelled, optional, never validated into
+ *  a shape we invented — a postcode is not a number everywhere. */
+function MakerField({
+  name,
+  label,
+  placeholder,
+  value,
+  className,
+  type = "text",
+  wide = false,
+}: {
+  name: string;
+  label: string;
+  placeholder: string;
+  value?: string | null;
+  className: string;
+  type?: string;
+  wide?: boolean;
+}) {
+  return (
+    <label className={`flex flex-col gap-1 ${wide ? "sm:col-span-2" : ""}`}>
+      <span className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/45">{label}</span>
+      <input name={name} type={type} defaultValue={value ?? ""} placeholder={placeholder} className={className} />
+    </label>
   );
 }

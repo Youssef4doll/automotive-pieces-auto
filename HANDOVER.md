@@ -15,7 +15,7 @@ worth reading first — what is not.
 ```bash
 npm install                 # postinstall runs `prisma generate`
 cp .env.example .env        # then fill in the values below
-npm run db:migrate          # 18 migrations
+npm run db:migrate          # 21 migrations
 npm run db:seed             # catalogue, vehicles, demo customer, admin
 npm run dev                 # http://localhost:3000
 ```
@@ -128,7 +128,7 @@ Two things that bit, both worth knowing before writing another suite:
 src/app/(site)/     storefront          src/lib/data/    all database reads
 src/app/admin/      admin               src/lib/         session, search, money,
 src/app/actions/    server actions                       rate limits, shipping…
-src/app/api/        images, part icons  prisma/          schema, 18 migrations
+src/app/api/        images, part icons  prisma/          schema, 21 migrations
 src/components/     UI                  scripts/         the 27 e2e suites
 ```
 
@@ -476,6 +476,7 @@ working upload form and an honest stand-in until it is used:
 | Parts-brand logos | 0 of 19 | Catalogue → Marques | the brand's name |
 | Vehicle-make logos | 0 of 10 | Catalogue → Véhicules | the make's initials |
 | Part references | 0 of 55 | Stock → a product → Références | reference search finds nothing |
+| Manufacturer details | 0 of 19 brands | Catalogue → Marques → Informations fabricant | no manufacturer panel on the product page |
 | Customer reviews | 0 | arrive from delivered orders | the section is simply absent |
 
 Category pictures are the cheapest win of the four: sixteen images put a real
@@ -495,9 +496,34 @@ is narrow for Tunisia. Fitment data itself is good: 1,159 rows covering 52 of
 
 Every product has an empty `oemRefs`, and `PartReference` holds nothing. The
 "J'ai la référence" search — how a mechanic, or anyone holding the old part,
-actually shops — therefore finds nothing. **The admin form already takes them**
-(Stock → a product → "Références OEM" / "Références aftermarket", comma
-separated); this is data entry, not code.
+actually shops — therefore finds nothing, and the product page's Références
+block is absent on every part. **The admin form already takes them**
+(Stock → a product → "Références OEM" / "Références équipementier"); this is
+data entry, not code.
+
+OE numbers are entered one carmaker per line, which is how the page groups
+them and how the reference page names the maker of a number:
+
+```
+RENAULT: 77 01 234 567, 8200123456
+PEUGEOT: 1611349280
+CITROËN: 1611349280
+```
+
+The same number under two carmakers is two rows on purpose — PSA really does
+stamp one part for both. A line with no name still works and is published
+unattributed rather than filed under a guess. The CSV importer accepts the
+same shape in its `oem` column.
+
+### 5.3a No brand says who made the part — 0 of 19
+
+`Brand` now carries manufacturer information — registered name, address,
+phone, e-mail, website — and every field is empty. A part whose brand has
+none prints no manufacturer panel, which is correct and is also a gap: a
+buyer holding a defective part has no manufacturer to write to, and a shop
+that ever sells into the EU is obliged to publish it. Catalogue → Marques →
+edit a brand → "Informations fabricant". Copy it from what the manufacturer
+publishes; nothing here is looked up for you, deliberately.
 
 ### 5.4 The home page is long on a phone
 
@@ -508,7 +534,7 @@ merchandising decision, not an engineering one.
 
 ### 5.5 Smaller things
 
-- **Lint has 14 pre-existing errors**, nearly all the newer
+- **Lint has 13 pre-existing errors**, nearly all the newer
   `react-hooks/set-state-in-effect` rule firing on forms that clear themselves
   after a server action settles. No test or build step gates on them. Worth a
   dedicated pass; they are not bugs today.

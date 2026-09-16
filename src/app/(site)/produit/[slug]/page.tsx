@@ -17,6 +17,12 @@ import { toNumber } from "@/lib/money";
 import { getCurrentUser } from "@/lib/session";
 import { hasPurchased } from "@/app/actions/reviews";
 import ReviewForm from "@/components/ReviewForm";
+import FitmentBrowser, { type FitmentRow } from "@/components/product/FitmentBrowser";
+import FitNotice from "@/components/product/FitNotice";
+import OeNumbers from "@/components/product/OeNumbers";
+import ManufacturerInfo from "@/components/product/ManufacturerInfo";
+import { hasManufacturerInfo } from "@/lib/manufacturer";
+import { engineSpecLine } from "@/lib/engine";
 
 export async function generateMetadata({
   params,
@@ -124,6 +130,44 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const ratingAverage =
     reviewCount > 0 ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : null;
 
+  // The compatibility list, flattened once: one row per engine, carrying the
+  // links and the spec line the browser renders. Built here rather than in the
+  // client component so the phone is not sent a nested fitment tree to walk.
+  const fitmentRows: FitmentRow[] = product.fitments.map((f) => ({
+    makeName: f.engine.model.make.name,
+    makeSlug: f.engine.model.make.slug,
+    modelName: f.engine.model.name,
+    modelSlug: f.engine.model.slug,
+    engineId: f.engineId,
+    engineName: f.engine.name,
+    engineSpec: engineSpecLine(f.engine),
+    derived: f.confidence === "DERIVED",
+  }));
+
+  // The makes this part is listed for, named at the top. "Compatible avec
+  // Renault, Dacia, Nissan" answers in one line the question the whole
+  // compatibility section answers in thirty, and it is the line that decides
+  // whether somebody scrolls to the section at all.
+  const compatibleMakes = [...new Set(fitmentRows.map((r) => r.makeName))].sort((a, b) =>
+    a.localeCompare(b, "fr"),
+  );
+
+  const showManufacturer = !!product.brand && hasManufacturerInfo(product.brand);
+
+  // The sections this particular part has — never a fixed menu, because a
+  // link to a heading that is not on the page is worse than no link.
+  const sections = [
+    { id: "description", label: "Description" },
+    specEntries.length > 0 && { id: "caracteristiques", label: "Caractéristiques" },
+    { id: "vehicules", label: "Compatibilité" },
+    (product.oeGroups.length > 0 || product.aftermarketRefs.length > 0) && {
+      id: "references-oe",
+      label: "Références",
+    },
+    showManufacturer && { id: "fabricant", label: "Fabricant" },
+    (product.reviews.length > 0 || canReview) && { id: "avis", label: "Avis" },
+  ].filter((s): s is { id: string; label: string } => !!s);
+
   const jsonLd = productSchema({
     name: product.name,
     slug: product.slug,
@@ -167,6 +211,25 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           )}
           <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 mt-1 mb-2 tracking-tight">{product.name}</h1>
           <p className="text-xs text-gray-600 mb-3">Réf. {product.sku}</p>
+
+          {/* Named makes rather than a count: "compatible avec 14 véhicules"
+              tells a shopper nothing about whether one of them is theirs.
+              Six, then a link into the full list — a paragraph of forty
+              manufacturers is read by nobody and pushes the price off a
+              phone screen. */}
+          {compatibleMakes.length > 0 && (
+            <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+              <span className="font-semibold text-navy-950">Compatible avec </span>
+              {compatibleMakes.slice(0, 6).join(", ")}
+              {compatibleMakes.length > 6 && <> et {compatibleMakes.length - 6} autre(s)</>}{" "}
+              <Link
+                href="#vehicules"
+                className="text-navy-600 hover:text-red-600 underline underline-offset-2"
+              >
+                voir la liste
+              </Link>
+            </p>
+          )}
 
           <div className="flex items-baseline gap-3 mb-3">
             {product.compareAtPrice && product.compareAtPrice > product.priceSell && (
@@ -213,14 +276,36 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </div>
 
-      <div className="flex flex-col gap-8 mt-10 max-w-3xl">
-        <section>
+      {/* Where the rest of the page is. The page has grown several sections
+          deep — compatibility, OE numbers, the manufacturer — and on a phone
+          that is a long scroll to find out whether the one you came for is
+          even here. Only the sections this part actually has are listed, so
+          the strip never points at an empty anchor. */}
+      {sections.length >= 3 && (
+        <nav aria-label="Sections de la fiche" className="mt-8 max-w-3xl">
+          <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+            {sections.map((sec) => (
+              <li key={sec.id}>
+                <a
+                  href={`#${sec.id}`}
+                  className="inline-flex min-h-tap-compact items-center rounded-lg border border-gray-200 bg-white px-3 text-[13px] font-semibold text-navy-800 hover:border-navy-900"
+                >
+                  {sec.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
+      <div className="flex flex-col gap-8 mt-6 max-w-3xl">
+        <section id="description" className="scroll-mt-24">
           <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-2">Description</h2>
           <p className="text-sm text-gray-700 leading-relaxed">{product.description}</p>
         </section>
 
         {specEntries.length > 0 && (
-          <section>
+          <section id="caracteristiques" className="scroll-mt-24">
             <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Caractéristiques</h2>
             <div className="grid sm:grid-cols-2 gap-2.5">
               {specEntries.map(([key, value]) => (
@@ -256,56 +341,56 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </section>
         )}
 
-        {product.oemRefs.length > 0 && (
-          <section>
-            <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-2">Références OEM</h2>
-            <p className="text-sm font-mono text-gray-700">{product.oemRefs.join(" · ")}</p>
-          </section>
-        )}
-      </div>
+        {/* Which cars, and what "compatible" is actually worth.
+            The two belong together: a list that names your car reads as a
+            guarantee, and the note underneath is the only thing on the page
+            that says what it really is. */}
+        <section id="vehicules" className="scroll-mt-24">
+          <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Compatibilité véhicules</h2>
+          {fitmentRows.length === 0 ? (
+            <p className="text-sm text-gray-500 mb-3">
+              Compatibilité universelle / non spécifiée — contactez-nous pour vérifier.
+            </p>
+          ) : (
+            <div className="mb-3">
+              <FitmentBrowser rows={fitmentRows} />
+            </div>
+          )}
+          <FitNotice />
+        </section>
 
-      <section className="mt-8">
-        <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Compatibilité véhicules</h2>
-        {product.fitments.length === 0 ? (
-          <p className="text-sm text-gray-500">Compatibilité universelle / non spécifiée — contactez-nous pour vérifier.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            {/* table-fixed: with auto layout the table expands to its content
-                min-width and pushes past the overflow-x-auto wrapper, making
-                the whole product page scroll sideways on a 320px phone.
-                Fixed layout splits the three columns evenly and wraps long
-                model names instead — better here than sideways scrolling. */}
-            <table className="w-full table-fixed text-sm">
-              <thead className="bg-navy-950 text-white/70">
-                <tr>
-                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Marque</th>
-                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Modèle</th>
-                  <th className="text-start px-4 py-2.5 font-display font-bold uppercase text-[11px] tracking-wider">Motorisation</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {product.fitments.map((f, i) => (
-                  <tr key={f.id} className={i % 2 ? "bg-white" : "bg-gray-50/60"}>
-                    <td className="px-4 py-2.5 font-semibold text-navy-900">{f.engine.model.make.name}</td>
-                    <td className="px-4 py-2.5">
-                      {/* Each row is a way into that car's own page: someone
-                          checking whether this fits their Clio is one tap from
-                          everything else the shop has for it. */}
-                      <Link
-                        href={`/pieces/${f.engine.model.make.slug}/${f.engine.model.slug}`}
-                        className="text-navy-600 hover:text-red-600 hover:underline underline-offset-2"
-                      >
-                        {f.engine.model.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-600">{f.engine.name}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <OeNumbers
+          groups={product.oeGroups}
+          other={product.aftermarketRefs}
+          title={product.name}
+        />
+
+        {showManufacturer && product.brand && (
+          <ManufacturerInfo name={product.brand.name} info={product.brand} />
         )}
-      </section>
+
+        {/* The question this page could not answer.
+            It goes to the shop's own inbox rather than to a phone, with the
+            reference already attached and the subject already chosen — and
+            the car too, if the shopper has told us. A question that arrives
+            saying which part it is about is a question that can be answered
+            once instead of after two rounds of "which one?". */}
+        <section className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+          <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950">
+            Une question sur cette pièce ?
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Écrivez-nous : la référence {product.sku} part avec votre message, et votre véhicule
+            aussi si vous l&apos;avez indiqué.
+          </p>
+          <Link
+            href={`/contact?ref=${encodeURIComponent(product.sku)}&sujet=${encodeURIComponent("Compatibilité d'une pièce")}`}
+            className="mt-3 inline-flex min-h-tap items-center rounded-xl border border-navy-900/20 bg-white px-4 font-display text-xs font-bold uppercase tracking-wide text-navy-900 hover:border-gold-500"
+          >
+            Poser une question
+          </Link>
+        </section>
+      </div>
 
       {/* Reviews, and the way to leave one.
 
@@ -313,7 +398,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           somebody entitled to write — never as an empty "0 avis" panel, which
           reads as a shop nobody buys from. */}
       {(product.reviews.length > 0 || canReview) && (
-        <section className="mt-10">
+        <section id="avis" className="mt-10 scroll-mt-24">
           <h2 className="font-heading font-extrabold uppercase tracking-tight text-navy-950 mb-3">Avis clients</h2>
 
           {product.reviews.length > 0 && (

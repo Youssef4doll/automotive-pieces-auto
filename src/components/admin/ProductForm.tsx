@@ -183,12 +183,22 @@ export default function ProductForm({
         <Field label="Références constructeur (OEM)">
           <textarea
             name="oemRefsText"
-            rows={2}
+            rows={4}
             value={v.oemRefsText}
             onChange={set("oemRefsText")}
-            placeholder="7701234567, 82 00 123 456"
+            placeholder={"RENAULT: 7701234567, 82 00 123 456\nDACIA: 6001549444"}
             className="w-full min-h-tap px-3 py-2.5 rounded-lg border border-navy-900/15 text-sm outline-none focus:border-gold-500 transition-colors"
           />
+          {/* An OE number without its carmaker is half an answer: it is the
+              carmaker that tells a mechanic the number is theirs, and it is
+              what the product page groups the list under. One line per
+              carmaker; a line with no name still works and is published
+              unattributed rather than filed under a guess. */}
+          <p className="mt-1 text-[11px] leading-snug text-navy-900/45">
+            Une ligne par constructeur — <code>RENAULT: 7701234567, 8200123456</code>. Chaque numéro
+            devient une page de recherche sur le site. Sans nom de constructeur, le numéro reste
+            publié mais sans regroupement.
+          </p>
         </Field>
         <Field label="Références équipementier">
           <textarea

@@ -6,9 +6,17 @@ import { useLocale } from "@/i18n/LocaleProvider";
 import { parts as partsLabel } from "@/i18n/plural";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import { decodeVinMakeSlug, isValidVinFormat } from "@/lib/vin";
+import { compareFuels, displacementLitres, engineSpecLine } from "@/lib/engine";
 import { track } from "@/lib/track";
 
-type Engine = { id: string; name: string; fuel: string | null; powerHp: number | null };
+type Engine = {
+  id: string;
+  name: string;
+  fuel: string | null;
+  powerHp: number | null;
+  engineCode: string | null;
+  displacementCc: number | null;
+};
 type Model = { id: string; name: string; slug: string; yearFrom: number | null; yearTo: number | null; engines: Engine[] };
 type Make = {
   id: string;
@@ -60,7 +68,21 @@ type Make = {
  */
 
 type Path = "choose" | "know" | "help";
-type Step = "make" | "model" | "engine";
+
+/**
+ * Four steps, the third of which only exists when it has something to ask.
+ *
+ * Picking the fuel before the motorisation is how every serious parts
+ * catalogue lays this out, and the reason is not tidiness: "which engine"
+ * is a question most drivers cannot answer, and "petrol or diesel" is a
+ * question all of them can. Answering the easy one first halves the list
+ * the hard one is chosen from, and it does it with a fact the owner knows
+ * from filling the tank.
+ *
+ * It is skipped entirely for a model recorded with one fuel, because a
+ * step with one button is not a choice, it is an extra tap.
+ */
+type Step = "make" | "model" | "fuel" | "engine";
 
 export default function VehiclePicker({
   onClose,
@@ -87,6 +109,7 @@ export default function VehiclePicker({
   const [step, setStep] = useState<Step>("make");
   const [make, setMake] = useState<Make | null>(null);
   const [model, setModel] = useState<Model | null>(null);
+  const [fuel, setFuel] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
 
   const [vin, setVin] = useState("");
@@ -213,11 +236,69 @@ export default function VehiclePicker({
    */
   const showSearch = step === "make" || (step === "model" && (make?.models.length ?? 0) >= 8);
 
+  /** The fuels this model is actually recorded with — never a fixed list. */
+  const fuelsOf = (mo: Model) =>
+    [...new Set(mo.engines.map((e) => e.fuel?.trim()).filter((f): f is string => !!f))].sort(
+      compareFuels,
+    );
+
+  const modelFuels = model ? fuelsOf(model) : [];
+
+  /**
+   * The motorisations left once the fuel is known — all of them if it is not.
+   *
+   * An engine the shop recorded without a fuel is shown whichever fuel was
+   * chosen. We do not know it is not a diesel, and hiding a motorisation the
+   * catalogue does list, because one field was left blank, would tell a
+   * shopper their car is not covered when it is.
+   */
+  const enginesFor = (mo: Model, f: string | null) =>
+    mo.engines.filter((e) => {
+      const recorded = e.fuel?.trim();
+      return !f || !recorded || recorded === f;
+    });
+
+  const enginesShown = model ? enginesFor(model, fuel) : [];
+
+  /**
+   * Under a long motorisation list, a heading per displacement.
+   *
+   * "2.0" is how an owner thinks about their engine and how the catalogues
+   * break the list up. It is only worth a heading when the list actually
+   * spans more than one, and only possible where the shop recorded the
+   * displacement — so a catalogue that has not filled that in gets one plain
+   * list rather than a row of "Autres".
+   */
+  const engineGroups = (() => {
+    const labels = new Set(
+      enginesShown.map((e) => displacementLitres(e.displacementCc)).filter(Boolean),
+    );
+    if (labels.size < 2) return [{ label: null as string | null, engines: enginesShown }];
+
+    const byLabel = new Map<string, Engine[]>();
+    for (const e of enginesShown) {
+      const key = displacementLitres(e.displacementCc) ?? "—";
+      byLabel.set(key, [...(byLabel.get(key) ?? []), e]);
+    }
+    return [...byLabel.entries()]
+      .sort(([a], [b]) => (a === "—" ? 1 : b === "—" ? -1 : a.localeCompare(b, "fr")))
+      .map(([label, engines]) => ({ label: label === "—" ? null : label, engines }));
+  })();
+
+  function openModel(mo: Model) {
+    // One fuel recorded is not a choice, so it is not a step — and no fuel is
+    // then applied either, because filtering on a value nobody chose would
+    // silently drop any motorisation recorded without one.
+    const fuels = fuelsOf(mo);
+    setModel(mo);
+    setFuel(null);
+    setStep(fuels.length > 1 ? "fuel" : "engine");
+    setFilter("");
+  }
+
   function pickModel(mk: Make, mo: Model) {
     setMake(mk);
-    setModel(mo);
-    setStep("engine");
-    setFilter("");
+    openModel(mo);
   }
 
   function pickEngine(engine: Engine) {
@@ -257,9 +338,23 @@ export default function VehiclePicker({
 
   const back = () => {
     if (path === "help") return setPath("choose");
-    if (step === "engine") { setModel(null); setStep("model"); setFilter(""); return; }
+    // Back out of the motorisations into the fuel choice, but only when there
+    // was one — otherwise it would open a screen the shopper never saw.
+    if (step === "engine" && modelFuels.length > 1) { setFuel(null); setStep("fuel"); return; }
+    if (step === "engine" || step === "fuel") { setModel(null); setFuel(null); setStep("model"); setFilter(""); return; }
     if (step === "model") { setMake(null); setStep("make"); setFilter(""); return; }
     setPath("choose");
+  };
+
+  /** The steps this car actually has. Three, or four when the fuel is asked. */
+  const steps: Step[] =
+    modelFuels.length > 1 ? ["make", "model", "fuel", "engine"] : ["make", "model", "engine"];
+
+  const stepLabel: Record<Step, string> = {
+    make: t("vp.stepMake"),
+    model: t("vp.stepModel"),
+    fuel: t("vp.stepFuel"),
+    engine: t("vp.stepEngine"),
   };
 
   const title =
@@ -267,7 +362,11 @@ export default function VehiclePicker({
       : path === "help" ? t("vp.helpShort")
         : step === "make" ? t("vp.stepMake")
           : step === "model" ? make?.name ?? t("vp.stepModel")
-            : model?.name ?? t("vp.stepEngine");
+            : step === "fuel" ? model?.name ?? t("vp.stepFuel")
+              // On the last step the fuel already chosen belongs in the title:
+              // it is the answer that got them here and the one thing that
+              // explains why half the motorisations are missing from the list.
+              : [model?.name, fuel].filter(Boolean).join(" · ") || t("vp.stepEngine");
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -312,9 +411,13 @@ export default function VehiclePicker({
         {/* Where they are in the three steps. Only on the "I know" path, where
             there are steps to be at. */}
         {path === "know" && (
-          <ol className="shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-2 border-b border-gray-100 text-[11px] font-display font-bold uppercase tracking-wide">
-            {(["make", "model", "engine"] as Step[]).map((s, i) => {
-              const done = (s === "make" && make) || (s === "model" && model);
+          // flex-wrap: a fourth chip does not fit beside the other three on a
+          // 320px screen, and a strip that scrolls sideways hides the step the
+          // shopper is on.
+          <ol className="shrink-0 flex flex-wrap items-center gap-x-1.5 gap-y-1 px-3 sm:px-4 py-2 border-b border-gray-100 text-[11px] font-display font-bold uppercase tracking-wide">
+            {steps.map((s, i) => {
+              const done =
+                (s === "make" && make) || (s === "model" && model) || (s === "fuel" && fuel);
               const here = step === s;
               return (
                 <li key={s} className="flex items-center gap-1.5">
@@ -324,7 +427,7 @@ export default function VehiclePicker({
                       here ? "bg-navy-900 text-white" : done ? "bg-green-50 text-green-800" : "text-gray-400"
                     }`}
                   >
-                    {t(s === "make" ? "vp.stepMake" : s === "model" ? "vp.stepModel" : "vp.stepEngine")}
+                    {stepLabel[s]}
                   </span>
                 </li>
               );
@@ -514,7 +617,7 @@ export default function VehiclePicker({
                     <li key={m.id}>
                       <button
                         type="button"
-                        onClick={() => { setModel(m); setStep("engine"); }}
+                        onClick={() => openModel(m)}
                         className="w-full h-full text-start px-3.5 py-2 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 active:bg-navy-50 flex items-center gap-2.5"
                       >
                         <span className="min-w-0 flex-1">
@@ -536,27 +639,75 @@ export default function VehiclePicker({
             )
           )}
 
+          {/* ---- petrol or diesel ---- */}
+          {path === "know" && !loading && step === "fuel" && model && (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-gray-600">{t("vp.fuelLead")}</p>
+              <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
+                {modelFuels.map((f) => {
+                  // Counted the same way the next screen filters, so the
+                  // number on the card is the number of rows behind it.
+                  const n = enginesFor(model, f).length;
+                  return (
+                    <li key={f}>
+                      <button
+                        type="button"
+                        onClick={() => { setFuel(f); setStep("engine"); }}
+                        className="w-full h-full text-start px-3.5 py-2.5 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 active:bg-navy-50 flex items-center gap-3"
+                      >
+                        <span className="shrink-0 grid place-items-center w-9 h-9 rounded-xl bg-gray-100 text-navy-900">
+                          <IconFuel />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[15px] font-semibold text-navy-950 leading-tight">
+                            {f}
+                          </span>
+                          <span className="block text-xs text-gray-500 tabular-nums mt-0.5">
+                            {t("vp.engineCount").replace("{n}", String(n))}
+                          </span>
+                        </span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-300 rtl:rotate-180" aria-hidden="true">
+                          <path d="m9 5 7 7-7 7" />
+                        </svg>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
           {path === "know" && !loading && step === "engine" && model && (
-            <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
-              {model.engines.map((e) => {
-                // Only what the catalogue actually records for this engine.
-                const spec = [e.fuel, e.powerHp ? `${e.powerHp} ch` : null].filter(Boolean).join(" · ");
-                return (
-                  <li key={e.id}>
-                    <button
-                      type="button"
-                      onClick={() => pickEngine(e)}
-                      className="w-full h-full text-start px-3.5 py-2 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 active:bg-navy-50 flex flex-col justify-center"
-                    >
-                      <span className="block truncate text-[15px] font-semibold text-navy-950 leading-tight">
-                        {e.name}
-                      </span>
-                      {spec && <span className="block truncate text-xs text-gray-500 mt-0.5">{spec}</span>}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="flex flex-col gap-4">
+              {engineGroups.map((group) => (
+                <section key={group.label ?? "_"}>
+                  {group.label && <SectionHead title={group.label} />}
+                  <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
+                    {group.engines.map((e) => {
+                      // Only what the catalogue actually records — and not the
+                      // fuel, which is the step they just came through.
+                      const spec = engineSpecLine(e, { withFuel: !fuel });
+                      return (
+                        <li key={e.id}>
+                          <button
+                            type="button"
+                            onClick={() => pickEngine(e)}
+                            className="w-full h-full text-start px-3.5 py-2 min-h-tap rounded-xl border border-gray-200 hover:border-navy-700 hover:bg-navy-50 active:bg-navy-50 flex flex-col justify-center"
+                          >
+                            <span className="block truncate text-[15px] font-semibold text-navy-950 leading-tight">
+                              {e.name}
+                            </span>
+                            {spec && (
+                              <span className="block truncate text-xs text-gray-500 mt-0.5">{spec}</span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
           )}
 
           {/* ---- I don't know ---- */}
@@ -798,6 +949,16 @@ function IconCamera() {
     <Stroke size={17}>
       <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z" />
       <circle cx="12" cy="13" r="3.4" />
+    </Stroke>
+  );
+}
+/** A pump: the one object every driver associates with "petrol or diesel". */
+function IconFuel() {
+  return (
+    <Stroke>
+      <path d="M4 20h9M4.5 20V5a1.5 1.5 0 0 1 1.5-1.5h5A1.5 1.5 0 0 1 12.5 5v15" />
+      <path d="M4.5 10.5h8" />
+      <path d="M15 8.5h2.5a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 0 1.5 1.5v0a1.5 1.5 0 0 0 1.5-1.5V9.2L19.5 6.5" />
     </Stroke>
   );
 }

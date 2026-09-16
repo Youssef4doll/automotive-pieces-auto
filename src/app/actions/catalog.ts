@@ -204,7 +204,29 @@ const brandSchema = z.object({
   logoUrl: z.string().trim().optional(),
   removeLogo: z.string().optional(),
   isPartsBrand: z.string().optional(),
+
+  // Manufacturer information, copied by the shop from what the manufacturer
+  // publishes. Every field optional, every field free text: a postcode is not
+  // a number everywhere, a phone is written "+49 2941 / 38 - 0" on the
+  // company's own site, and validating any of it into a shape we invented
+  // would reject the correct answer. The email is checked because a broken
+  // mailto: is worse than none, and the length caps are there to keep a paste
+  // accident out of the database, not to police the content.
+  legalName: z.string().trim().max(160).optional(),
+  street: z.string().trim().max(160).optional(),
+  postalCode: z.string().trim().max(24).optional(),
+  city: z.string().trim().max(80).optional(),
+  country: z.string().trim().max(80).optional(),
+  phone: z.string().trim().max(40).optional(),
+  email: z.union([z.string().trim().email("Adresse e-mail du fabricant invalide"), z.literal("")]).optional(),
+  website: z.string().trim().max(200).optional(),
 });
+
+/** Blank stays blank: an empty box clears the field rather than storing "". */
+function orNull(v: string | undefined): string | null {
+  const s = v?.trim();
+  return s ? s : null;
+}
 
 /** Drop a brand's uploaded logo. Never shared between rows, so no use check. */
 async function deleteBrandLogo(logoUrl: string | null | undefined) {
@@ -267,15 +289,29 @@ export async function upsertBrand(
     else if (previous && !previous.startsWith("/api/images/")) logoUrl = null;
   }
 
+  // The whole panel is written on every save, blanks included, so clearing a
+  // box actually clears the field — a manufacturer that moves must be able to
+  // lose its old address, not just gain a new one.
+  const maker = {
+    legalName: orNull(parsed.data.legalName),
+    street: orNull(parsed.data.street),
+    postalCode: orNull(parsed.data.postalCode),
+    city: orNull(parsed.data.city),
+    country: orNull(parsed.data.country),
+    phone: orNull(parsed.data.phone),
+    email: orNull(parsed.data.email),
+    website: orNull(parsed.data.website),
+  };
+
   try {
     if (id) {
       await prisma.brand.update({
         where: { id },
-        data: { name, slug, isPartsBrand, ...(logoUrl !== undefined ? { logoUrl } : {}) },
+        data: { name, slug, isPartsBrand, ...maker, ...(logoUrl !== undefined ? { logoUrl } : {}) },
       });
       if (logoUrl !== undefined && previous && previous !== logoUrl) await deleteBrandLogo(previous);
     } else {
-      await prisma.brand.create({ data: { name, slug, logoUrl: logoUrl ?? null, isPartsBrand } });
+      await prisma.brand.create({ data: { name, slug, logoUrl: logoUrl ?? null, isPartsBrand, ...maker } });
     }
   } catch (e) {
     return { error: friendlyError(e, "Erreur lors de l'enregistrement") };

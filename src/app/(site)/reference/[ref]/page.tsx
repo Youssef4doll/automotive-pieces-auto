@@ -45,7 +45,25 @@ async function load(params: Params) {
     include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
   });
 
-  return { normalized, raw, products: products.map(serializeProduct) };
+  // Whose number this is. Somebody arriving here typed a number off a part
+  // and wants to know, before anything else, that it is the right family of
+  // number — an OE number stamped by their carmaker, or an equipment
+  // manufacturer's own. Distinct owners only, and nothing at all when the
+  // shop has not recorded one: a heading that names a carmaker we guessed at
+  // would be worse than the bare number.
+  const owners = await prisma.partReference.findMany({
+    where: { normalized, type: "OEM", brand: { not: "" }, product: { active: true } },
+    select: { brand: true },
+    distinct: ["brand"],
+    orderBy: { brand: "asc" },
+  });
+
+  return {
+    normalized,
+    raw,
+    products: products.map(serializeProduct),
+    owners: owners.map((o) => o.brand),
+  };
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -69,7 +87,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function ReferencePage({ params }: { params: Params }) {
   const data = await load(params);
   if (!data) notFound();
-  const { normalized, raw, products } = data;
+  const { normalized, raw, products, owners } = data;
 
   const models = await getModelsForProduct(products[0].id);
   const crumbs = [
@@ -89,6 +107,11 @@ export default async function ReferencePage({ params }: { params: Params }) {
       <h1 className="text-xl sm:text-2xl font-heading font-extrabold uppercase text-navy-950 tracking-tight">
         Référence {normalized}
       </h1>
+      {owners.length > 0 && (
+        <p className="mt-1 text-sm font-semibold text-navy-900">
+          Numéro d&apos;origine {owners.join(" · ")}
+        </p>
+      )}
       <p className="text-sm text-gray-600 mt-1 mb-5 max-w-prose">
         {products.length === 1
           ? "Une référence correspond exactement à ce numéro."

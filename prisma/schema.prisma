@@ -120,6 +120,33 @@ model Brand {
   logoUrl      String?
   isPartsBrand Boolean   @default(true) // parts brand (Kamoka, Bosch..) vs vehicle make brand
   products     Product[]
+
+  // ---------------------------------------------------------------------
+  // Who actually made the part, and how to reach them.
+  //
+  // A buyer holding a defective part has to be able to write to the company
+  // that built it, not only to the shop that sold it — that is the point of
+  // publishing this, and it is what the European product-safety rules oblige
+  // a seller to carry for every article on the page. Tunisia imposes no such
+  // duty today, but the information is useful whatever the law says, and a
+  // catalogue that already holds it does not have to be rebuilt the day it
+  // starts exporting.
+  //
+  // Every field is optional and every one is typed in by the shop from what
+  // the manufacturer itself publishes. Nothing here is derived, looked up or
+  // filled in with a plausible guess: a brand whose address we do not have
+  // shows no address, and a brand with none of these shows no panel at all.
+  /// Full registered company name, e.g. "HELLA GmbH & Co. KGaA".
+  legalName    String?
+  street       String?
+  postalCode   String?
+  city         String?
+  /// Written as the manufacturer writes it — "DE", "Allemagne", "Tunisie".
+  country      String?
+  phone        String?
+  email        String?
+  /// Stored with its scheme; rendered without it.
+  website      String?
 }
 
 model Category {
@@ -323,16 +350,24 @@ enum ReferenceType {
 /// part and types it in. `normalized` strips separators and case so that
 /// "GDB 1330", "gdb-1330" and "GDB1330" all resolve to the same row.
 model PartReference {
-  id         String        @id @default(cuid())
-  productId  String
-  product    Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  type       ReferenceType
-  brand      String? // whose number this is (Renault, TRW, Bosch…)
+  id        String        @id @default(cuid())
+  productId String
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type      ReferenceType
+  /// Whose number this is — the carmaker for an OE number (RENAULT, PEUGEOT),
+  /// the equipment manufacturer for the rest. Empty rather than null, because
+  /// it is part of the identity of the row and Postgres treats two NULLs as
+  /// distinct, which would let the same unlabelled number be stored twice.
+  ///
+  /// The same OE number genuinely belongs to more than one carmaker inside a
+  /// group — PSA stamps 1611349280 as both a Citroën and a Peugeot part — so
+  /// it is the pair, not the number, that has to be unique.
+  brand      String       @default("")
   raw        String // exactly as printed, for display
   normalized String // uppercase alphanumerics only, for matching
-  createdAt  DateTime      @default(now())
+  createdAt  DateTime     @default(now())
 
-  @@unique([productId, type, normalized])
+  @@unique([productId, type, brand, normalized])
   @@index([normalized])
   @@index([productId])
 }

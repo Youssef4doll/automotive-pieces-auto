@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { updateSettings, type SettingsMap } from "@/lib/settings";
 import { OrderStatus } from "@prisma/client";
-import { normalizeReference, parseReferenceList } from "@/lib/reference";
+import { normalizeReference, parseOwnedReferenceList } from "@/lib/reference";
 import { readImageFile, mediaAssetIdFromUrl, assetUrl, assetUrlVariants } from "@/lib/image-upload";
 import { reindexProducts, topSearchMisses } from "@/lib/search";
 import { notifyOrderStatus } from "@/lib/order-emails";
@@ -236,8 +236,20 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
       productId = created.id;
     }
 
-    await syncReferences(productId, "OEM", data.oemRefsText ?? "");
+    const oem = await syncReferences(productId, "OEM", data.oemRefsText ?? "");
     await syncReferences(productId, "AFTERMARKET", data.aftermarketRefsText ?? "");
+
+    // `Product.oemRefs` is the older flat array that the seed and the search
+    // index both read, and until now the admin form wrote the reference rows
+    // and left it behind: a part edited here lost its OE numbers from the
+    // structured data and from the shop's own "references held" count while
+    // still showing them on the page. One box, one truth — the array is
+    // rewritten from what was just saved. The edit form is pre-filled from
+    // both sources, so nothing that was there is dropped by a save.
+    await prisma.product.update({
+      where: { id: productId },
+      data: { oemRefs: oem.map((e) => e.raw) },
+    });
     photoWarning = await attachFormPhotos(productId, formData);
     // Last, because it reads back the references that were just written. A
     // part that is saved but not indexed is a part nobody can search for.
@@ -257,22 +269,42 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
  * The textarea is the source of truth for this product's references of that
  * type: whatever is no longer listed is removed, so an admin can correct a
  * mistyped number by editing the box rather than hunting for a delete button.
+ *
+ * A line may name the carmaker whose number it is —
+ *
+ *   RENAULT: 77 01 234 567, 8200123456
+ *
+ * — and that attribution is part of the row's identity, not a label on it.
+ * The same OE number genuinely belongs to two carmakers inside one group, so
+ * removal is decided on the (owner, number) pair rather than on the number
+ * alone; dropping a `RENAULT:` prefix removes that row and leaves the same
+ * number under DACIA where it still belongs.
  */
 async function syncReferences(productId: string, type: "OEM" | "AFTERMARKET", text: string) {
-  const entries = parseReferenceList(text)
-    .map((raw) => ({ raw, normalized: normalizeReference(raw) }))
+  const entries = parseOwnedReferenceList(text)
+    .map(({ owner, raw }) => ({ owner, raw, normalized: normalizeReference(raw) }))
     .filter((r) => r.normalized.length >= 3);
 
-  await prisma.partReference.deleteMany({
-    where: { productId, type, normalized: { notIn: entries.map((e) => e.normalized) } },
+  const keep = new Set(entries.map((e) => `${e.owner} ${e.normalized}`));
+  const existing = await prisma.partReference.findMany({
+    where: { productId, type },
+    select: { id: true, brand: true, normalized: true },
   });
+  const stale = existing
+    .filter((r) => !keep.has(`${r.brand} ${r.normalized}`))
+    .map((r) => r.id);
+  if (stale.length > 0) await prisma.partReference.deleteMany({ where: { id: { in: stale } } });
+
   for (const e of entries) {
     await prisma.partReference.upsert({
-      where: { productId_type_normalized: { productId, type, normalized: e.normalized } },
-      create: { productId, type, raw: e.raw, normalized: e.normalized },
+      where: {
+        productId_type_brand_normalized: { productId, type, brand: e.owner, normalized: e.normalized },
+      },
+      create: { productId, type, brand: e.owner, raw: e.raw, normalized: e.normalized },
       update: { raw: e.raw },
     });
   }
+  return entries;
 }
 
 // A product shows up on the home page, its own page, every catalogue listing

@@ -98,23 +98,49 @@ try {
     await dlg3.getByRole("button", { name: /Je connais ma voiture/ }).click();
     await p.waitForTimeout(900);
 
-    // Make → model → engine, with nothing typed.
+    // Make → model → (fuel) → engine, with nothing typed.
+    //
+    // The fuel step is not always there: it appears only for a model the shop
+    // recorded with more than one fuel, because a step with one button is not
+    // a choice. So the walk asks the database how many this model has rather
+    // than assuming either shape.
     const make = await prisma.vehicleMake.findFirst({
       where: { models: { some: { engines: { some: {} } } } },
-      select: { name: true, models: { where: { engines: { some: {} } }, take: 1, select: { name: true, engines: { take: 1, select: { name: true } } } } },
+      select: {
+        name: true,
+        models: {
+          where: { engines: { some: {} } },
+          take: 1,
+          select: { name: true, engines: { take: 1, select: { name: true, fuel: true } } },
+        },
+      },
     });
     const model = make.models[0];
     const engine = model.engines[0];
+    const fuels = await prisma.vehicleEngine.findMany({
+      where: { model: { name: model.name, make: { name: make.name } } },
+      select: { fuel: true },
+      distinct: ["fuel"],
+    });
+    const asksFuel = fuels.filter((f) => f.fuel?.trim()).length > 1;
+    const taps = asksFuel ? "four" : "three";
+
+    const tap = (label) =>
+      dlg3.getByRole("button", { name: new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
 
     await dlg3.getByRole("button", { name: make.name }).first().click();
     await p.waitForTimeout(500);
-    await dlg3.getByRole("button", { name: new RegExp(model.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+    await tap(model.name);
     await p.waitForTimeout(500);
-    await dlg3.getByRole("button", { name: new RegExp(engine.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+    if (asksFuel) {
+      await tap(engine.fuel.trim());
+      await p.waitForTimeout(500);
+    }
+    await tap(engine.name);
     await p.waitForTimeout(1500);
 
     const saved = await p.evaluate(() => JSON.parse(localStorage.getItem("apa-vehicle") || "{}")?.state?.vehicle);
-    check("three taps and the car is known", saved?.engineName === engine.name, `${saved?.makeName} ${saved?.modelName} ${saved?.engineName}`);
+    check(`${taps} taps and the car is known`, saved?.engineName === engine.name, `${saved?.makeName} ${saved?.modelName} ${saved?.engineName}`);
 
     // And it is not asked again anywhere.
     await p.goto(BASE);
@@ -346,26 +372,48 @@ try {
     check("and does not claim the screen it is not using", box.height < vp.height * 0.75,
           `${Math.round(box.height)}px tall`);
 
-    console.log("\n[12] PATH ONE: THREE TAPS");
+    console.log("\n[12] PATH ONE: STRAIGHT THROUGH THE STEPS");
     await dlg.getByRole("button", { name: /Je connais ma voiture/ }).click();
     await p.waitForTimeout(800);
     check("the brands appear", (await dlg.locator("ul li button").count()) > 3);
-    check("with the three steps named", /MARQUE[\s\S]*MODÈLE[\s\S]*MOTORISATION/i.test(await dlg.innerText()));
+    check("with the steps named", /MARQUE[\s\S]*MODÈLE[\s\S]*MOTORISATION/i.test(await dlg.innerText()));
 
     // Typing narrows without accents mattering.
     const mk = await prisma.vehicleMake.findFirst({
       where: { models: { some: { engines: { some: {} } } } },
-      select: { name: true, models: { where: { engines: { some: {} } }, take: 1, select: { name: true, engines: { take: 1, select: { name: true } } } } },
+      select: {
+        name: true,
+        models: {
+          where: { engines: { some: {} } },
+          take: 1,
+          select: { name: true, engines: { take: 1, select: { name: true, fuel: true } } },
+        },
+      },
     });
     await dlg.locator('input[type="search"]').fill(mk.name.slice(0, 3).toLowerCase());
     await p.waitForTimeout(400);
     check("search narrows the brands", (await dlg.locator("ul li button").count()) >= 1);
 
+    // The fuel step exists only for a model recorded with more than one fuel.
+    const mkFuels = await prisma.vehicleEngine.findMany({
+      where: { model: { name: mk.models[0].name, make: { name: mk.name } } },
+      select: { fuel: true },
+      distinct: ["fuel"],
+    });
+    const mkAsksFuel = mkFuels.filter((f) => f.fuel?.trim()).length > 1;
+    const step = (label) =>
+      dlg.getByRole("button", { name: new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+
     await dlg.getByRole("button", { name: mk.name, exact: false }).first().click();
     await p.waitForTimeout(600);
-    await dlg.getByRole("button", { name: new RegExp(mk.models[0].name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+    await step(mk.models[0].name);
     await p.waitForTimeout(600);
-    await dlg.getByRole("button", { name: new RegExp(mk.models[0].engines[0].name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }).first().click();
+    if (mkAsksFuel) {
+      await step(mk.models[0].engines[0].fuel.trim());
+      await p.waitForTimeout(600);
+      check("the fuel step names itself in the trail", /CARBURANT/i.test(await dlg.innerText()));
+    }
+    await step(mk.models[0].engines[0].name);
     await p.waitForTimeout(1400);
 
     const saved = await p.evaluate(() => JSON.parse(localStorage.getItem("apa-vehicle") || "{}")?.state?.vehicle);

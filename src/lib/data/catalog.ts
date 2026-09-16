@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { CATALOG_TAG, CATALOG_TTL } from "@/lib/cache";
 import { toNumber } from "@/lib/money";
-import { normalizeReference } from "@/lib/reference";
+import { normalizeReference, groupOeReferences } from "@/lib/reference";
 import { parseQuery, rankProducts } from "@/lib/search";
 
 /**
@@ -297,11 +297,29 @@ export const getProductBySlug = cache(async (slug: string) => {
       // The product page shows a gallery, so it needs every photo, not just
       // the primary one the listings use.
       images: { orderBy: { order: "asc" }, select: { id: true, alt: true } },
+      // The numbers this part answers to. The page prints the constructor's
+      // own ones grouped by carmaker — that is the highest-intent thing on a
+      // parts page, because somebody holding the old part types its number.
+      references: {
+        select: { type: true, brand: true, raw: true, normalized: true },
+        orderBy: [{ brand: "asc" }, { raw: "asc" }],
+      },
     },
   });
   if (!product) return null;
   const gallery = product.images.map((i) => ({ src: `/api/images/${i.id}`, alt: i.alt }));
-  return { ...serializeProduct(product), gallery, packContents: await resolvePackContents(product.specs) };
+  return {
+    ...serializeProduct(product),
+    gallery,
+    packContents: await resolvePackContents(product.specs),
+    // Grouped here rather than in the page so the reference page and the
+    // product page cannot drift into printing the same numbers differently.
+    oeGroups: groupOeReferences(
+      product.references.filter((r) => r.type === "OEM"),
+      product.oemRefs,
+    ),
+    aftermarketRefs: product.references.filter((r) => r.type !== "OEM"),
+  };
 })
 
 /**
@@ -437,7 +455,18 @@ export const getVehicleMakes = cache(async () => {
             yearTo: true,
             engines: {
               orderBy: { name: "asc" },
-              select: { id: true, name: true, fuel: true, powerHp: true },
+              // The engine code and the displacement are what separate two
+              // engines a brochure calls by the same name, and they are how
+              // the picker groups a long motorisation list. Both are printed
+              // only where the shop recorded them.
+              select: {
+                id: true,
+                name: true,
+                fuel: true,
+                powerHp: true,
+                engineCode: true,
+                displacementCc: true,
+              },
             },
           },
         },

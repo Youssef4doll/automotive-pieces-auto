@@ -169,7 +169,10 @@ console.log("\n[5] A SECOND BANNER TURNS IT INTO A CAROUSEL");
   const inert = await band.locator('[aria-roledescription="diapositive"]').first().evaluate((el) => el.hasAttribute("inert"));
   check("the slide scrolled out of view leaves the tab order", inert === true);
 
-  await shop.screenshot({ path: `${PICS}/../shot-campaign-band.png`, clip: await band.boundingBox() });
+  // Inside the fixtures directory, which is gitignored. `${PICS}/..` put it in
+  // the repository root, where every run left an untracked PNG for the next
+  // person to wonder about and eventually commit by accident.
+  await shop.screenshot({ path: `${PICS}/shot-campaign-band.png`, clip: await band.boundingBox() });
 }
 
 console.log("\n[6] DEACTIVATING PULLS IT OFF THE STOREFRONT");

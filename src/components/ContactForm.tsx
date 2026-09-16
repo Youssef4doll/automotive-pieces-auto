@@ -33,6 +33,15 @@ export default function ContactForm({
   const productSku = params.get("ref") ?? "";
   const car = (vehicle ? vehicleLabel(vehicle) : "") ?? "";
 
+  // A link that already knows what it is about. "Une question sur cette
+  // pièce ?" on a product page arrives here carrying the reference and the
+  // subject, so the shopper types their question and nothing else. Matched
+  // against the fixed list rather than trusted: the subject is a public URL
+  // parameter, and an arbitrary string in it would be somebody else's text
+  // rendered inside our form.
+  const asked = params.get("sujet");
+  const subject = CONTACT_SUBJECTS.find((s) => s === asked) ?? CONTACT_SUBJECTS[0];
+
   if (state?.ok) {
     return (
       <div className="rounded-xl border border-green-200 bg-green-50 p-6">
@@ -73,7 +82,7 @@ export default function ContactForm({
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-semibold text-navy-900">Sujet *</span>
-        <select name="subject" required defaultValue={CONTACT_SUBJECTS[0]} className={field}>
+        <select name="subject" required defaultValue={subject} className={field}>
           {CONTACT_SUBJECTS.map((s) => (
             <option key={s} value={s}>
               {s}

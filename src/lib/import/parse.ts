@@ -1,5 +1,10 @@
 import { slugify } from "@/lib/slug";
-import { normalizeReference, parseReferenceList } from "@/lib/reference";
+import {
+  normalizeReference,
+  parseReferenceList,
+  parseOwnedReferenceList,
+  type OwnedReference,
+} from "@/lib/reference";
 
 /**
  * CSV parsing that survives real supplier exports: quoted fields containing
@@ -84,7 +89,14 @@ export type ParsedRow = {
   priceSell: number | null;
   priceBuy: number | null;
   stockQty: number;
-  oem: string[];
+  /**
+   * OE numbers, each with the carmaker that stamps it when the file says so.
+   * A cell may be a plain list, or attributed the way the product form
+   * accepts it — "RENAULT: 7701234567, 8200123456" — because a supplier
+   * export that carries the carmaker is worth keeping, and one that does not
+   * still imports.
+   */
+  oem: OwnedReference[];
   aftermarket: string[];
   description: string;
   axle: "AVANT" | "ARRIERE" | null;
@@ -161,7 +173,7 @@ export function normalizeRow(
   const stockQty = stockRaw ? Math.max(0, Math.trunc(Number(stockRaw.replace(/[^\d-]/g, "")) || 0)) : 0;
   if (!stockRaw) warnings.push("Stock non renseigné : importé à 0");
 
-  const oem = parseReferenceList(get("oem")).filter((r) => normalizeReference(r).length >= 3);
+  const oem = parseOwnedReferenceList(get("oem")).filter((r) => normalizeReference(r.raw).length >= 3);
   const aftermarket = parseReferenceList(get("aftermarket")).filter((r) => normalizeReference(r).length >= 3);
   if (oem.length === 0 && aftermarket.length === 0) {
     warnings.push("Aucune référence : le produit sera introuvable par référence");

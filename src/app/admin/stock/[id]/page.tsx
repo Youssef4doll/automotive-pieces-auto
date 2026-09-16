@@ -4,6 +4,7 @@ import { toNumber } from "@/lib/money";
 import ProductForm from "@/components/admin/ProductForm";
 import ProductImageManager from "@/components/admin/ProductImageManager";
 import FitmentEditor, { type FitMake } from "@/components/admin/FitmentEditor";
+import { formatOwnedReferenceList, groupOeReferences } from "@/lib/reference";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,7 +13,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       where: { id },
       include: {
         images: { orderBy: { order: "asc" }, select: { id: true, alt: true } },
-        references: { select: { type: true, raw: true } },
+        references: { select: { type: true, brand: true, raw: true, normalized: true } },
         fitments: { select: { engineId: true } },
         oldSlugs: { orderBy: { createdAt: "desc" }, select: { slug: true } },
       },
@@ -83,7 +84,17 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           imageUrl: product.imageUrl,
           axle: product.axle ?? "",
           side: product.side ?? "",
-          oemRefsText: product.references.filter((r) => r.type === "OEM").map((r) => r.raw).join(", "),
+          // Written back in the form the box accepts, grouped by carmaker, and
+          // folding in the flat `oemRefs` array the seed and older imports
+          // filled. What the admin sees is exactly what is stored, so a save
+          // that only fixes a price cannot silently drop a reference nobody
+          // showed them.
+          oemRefsText: formatOwnedReferenceList(
+            groupOeReferences(
+              product.references.filter((r) => r.type === "OEM"),
+              product.oemRefs,
+            ).flatMap((g) => g.refs.map((r) => ({ owner: g.owner, raw: r.raw }))),
+          ),
           aftermarketRefsText: product.references.filter((r) => r.type === "AFTERMARKET").map((r) => r.raw).join(", "),
           priceBuy: String(toNumber(product.priceBuy)),
           priceSell: String(toNumber(product.priceSell)),
