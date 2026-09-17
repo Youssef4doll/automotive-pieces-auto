@@ -15,7 +15,7 @@ worth reading first — what is not.
 ```bash
 npm install                 # postinstall runs `prisma generate`
 cp .env.example .env        # then fill in the values below
-npm run db:migrate          # 23 migrations
+npm run db:migrate          # 24 migrations
 npm run db:seed             # catalogue, vehicles, demo customer, admin
 npm run dev                 # http://localhost:3000
 ```
@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-33 Playwright suites, 1,328 checks at the last full green run, driving real
+35 Playwright suites, 1,368 checks at the last full green run, driving real
 browsers against a real database. They are the main safety net and they have
 caught more real bugs than they have cost.
 
@@ -787,6 +787,73 @@ unused, and it is the only one of these numbers that needed a human.
 `e2e-storefront-fixes` section [5] holds it in place — twelve checks that
 compare what is printed against `prisma.product.count`, including that none of
 the three old spellings of 12 000 has come back.
+
+---
+
+### 5.bb The shop's own details are still blank, and the site now says so
+
+An audit scored trust 4.5/10, and most of the reasons are one missing field
+each in `/admin/parametres`. **None of them can be fixed from the code, and
+none of them should be guessed.**
+
+| Setting | What is missing today | What the site does about it |
+|---|---|---|
+| `shop_whatsapp` | no number | every WhatsApp button is not rendered |
+| `shop_phone` | placeholder | no tap-to-call link anywhere |
+| `shop_address` | placeholder | "Passez nous voir" and collection at the counter are both hidden |
+| `shop_email` | a personal Gmail in production | shown as-is; a shop address would read better |
+| `shop_tax_id` | `5555` in production | the printable document is a reçu, not a facture, and no VAT is charged |
+
+The rule the code follows is **fail closed: a missing setting removes the
+offer, it never ships a dead one.** That came out of the worst case found —
+`216` and `+216` are not blank, not the default and not a run of zeros, so
+every guard passed them and the site shipped live `wa.me/216` buttons on eight
+pages. `isDiallable()` in `lib/contact-link.ts` wants eight digits now, and
+`e2e-trust` drives it from both sides so the rule cannot rot into a
+switched-off feature.
+
+`/conditions`, `/livraison-retours` and `/confidentialite` exist and read
+their figures from the settings, so they cannot drift away from the checkout.
+They are **not a lawyer's work** and say so at the foot of each page; the
+mentions légales of a Tunisian trader — matricule fiscal, registre du
+commerce, adresse du siège — are the owner's to supply, and an accountant
+should see the invoicing rules before the shop issues a real facture.
+
+---
+
+### 5.cc The search index is a database trigger, not application code
+
+This is the most important thing in this file for anyone touching the
+catalogue. An audit found exact product names — parts on the home page, in
+stock — returning "0 résultat". Every symptom it listed had one cause:
+`reindexProducts()` held the only copy of the blob definition and exactly one
+caller invoked it, the CSV import. **A product created in the admin was born
+with no index and could not be found by anything; a renamed one stayed
+findable only under its old name.**
+
+The comment above that function had predicted it word for word — "a helper
+that each of those has to remember to call is a helper that will eventually be
+forgotten, a part that exists, sells, and cannot be found" — and it was
+forgotten anyway, for months, which is the whole argument for where the rule
+lives now. Migration `20260920090000` defines the blob once and fires it on
+every write to `Product`, `PartReference`, `Brand` and `Category`. There is no
+"outside the app" any more: psql counts, the seed counts, a future script
+counts.
+
+**If you change what is searchable, change the migration, not TypeScript.**
+`reindexProducts()` is a repair tool that asks the trigger to run
+(`UPDATE "Product" SET name = name`) — that is not a hack to tidy up, it is
+how you re-fire a BEFORE trigger without keeping a second copy of the rule.
+`e2e-search-coverage` [1] compares every stored row against the function's own
+output, so drift is caught the moment it starts, and checks the four triggers
+are still installed.
+
+A warning about the test that was there before: `e2e-search` section [9] used
+to assert **"an edit made outside the app is not silently searchable — stale
+index returns nothing, as expected"**. That was the bug written down as a
+requirement, and it passed for months while the shop was unsearchable. If you
+find yourself writing "as expected" next to behaviour you would not defend to
+a customer, that is the moment to stop.
 
 ---
 

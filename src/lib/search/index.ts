@@ -32,48 +32,27 @@ const SUGGESTION_THRESHOLD = 0.5;
 export type SearchHit = { id: string; tier: number; score: number };
 
 /**
- * Rebuild the searchable blob for some products, or for all of them.
+ * Force a rebuild of the searchable blob — a repair tool, not the mechanism.
  *
- * Done in SQL on purpose. Products are written from the admin form, from the
- * CSV import and from the seed, and a helper that each of those has to
- * remember to call is a helper that will eventually be forgotten — a part
- * that exists, sells, and cannot be found. One statement that joins the brand,
- * the category, its family and every reference can therefore be re-run over
- * the whole catalogue at any time to repair drift, and is cheap enough to do
- * exactly that after an import.
+ * The mechanism is a trigger. This function used to hold the only copy of the
+ * blob definition and was called from exactly one place, the CSV import, so
+ * every product created or edited in the admin kept whatever index it had: a
+ * new one had none and could not be found by anything, and a renamed one
+ * stayed findable only under its old name. Its own comment had predicted that
+ * — "a helper that each of those has to remember to call is a helper that will
+ * eventually be forgotten" — and then it was forgotten for months, which is
+ * the whole argument for moving the rule into the database.
+ *
+ * `SET name = name` writes nothing and is not a trick to work around: it is
+ * how you ask the BEFORE trigger to run again. The blob is defined once, in
+ * migration 20260920090000, and nothing in this process can disagree with it.
+ *
+ * Still worth calling after a bulk import, because it is the one operation
+ * that can leave a shop wondering whether the rows it just loaded are live.
  */
 export async function reindexProducts(ids?: string[]): Promise<number> {
-  // Scalar subqueries rather than joins: brand and parent category are both
-  // optional, and UPDATE … FROM cannot express a left join to its own target.
-  // concat_ws drops the NULLs for us.
-  const scope = ids?.length ? Prisma.sql`WHERE p.id IN (${Prisma.join(ids)})` : Prisma.empty;
-  return prisma.$executeRaw`
-    UPDATE "Product" p SET
-      "searchText" = lower(unaccent(concat_ws(' ',
-        p.name, p.sku, p.description,
-        (SELECT b.name FROM "Brand" b WHERE b.id = p."brandId"),
-        (SELECT c.name FROM "Category" c WHERE c.id = p."categoryId"),
-        (SELECT pc.name FROM "Category" pc
-           JOIN "Category" c2 ON c2."parentId" = pc.id
-          WHERE c2.id = p."categoryId"),
-        array_to_string(p."oemRefs", ' '),
-        (SELECT string_agg(r.raw || ' ' || r.normalized, ' ')
-           FROM "PartReference" r WHERE r."productId" = p.id)
-      ))),
-      -- Kept in the same statement as searchText so a part can never end up
-      -- searchable by name but unreachable by its number, or the reverse.
-      "skuNormalized" = regexp_replace(upper(unaccent(p.sku)), '[^A-Z0-9]', '', 'g'),
-      "refsNormalized" = COALESCE((
-        SELECT array_agg(DISTINCT regexp_replace(upper(unaccent(v)), '[^A-Z0-9]', '', 'g'))
-        FROM (
-          SELECT unnest(p."oemRefs") AS v
-          UNION ALL
-          SELECT r.raw FROM "PartReference" r WHERE r."productId" = p.id
-        ) AS refs
-        WHERE length(regexp_replace(upper(unaccent(v)), '[^A-Z0-9]', '', 'g')) >= 3
-      ), '{}')
-    ${scope}
-  `;
+  const scope = ids?.length ? Prisma.sql`WHERE id IN (${Prisma.join(ids)})` : Prisma.empty;
+  return prisma.$executeRaw`UPDATE "Product" SET name = name ${scope}`;
 }
 
 /**

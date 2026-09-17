@@ -239,9 +239,13 @@ model Product {
 
   /// Everything a shopper might type to reach this part, in one accent-free
   /// lower-case blob: name, brand, category, family, SKU and every reference.
-  /// Rebuilt in SQL by reindexProducts(), never written by hand — see
-  /// src/lib/search. A trigram index on it is what makes a misspelled query
-  /// still find the part, and what keeps that possible at 50 000 rows.
+  /// Maintained by a database trigger, never written by hand — migration
+  /// 20260920090000 holds the only definition, and it fires on every write to
+  /// Product, PartReference, Brand and Category. It was application code
+  /// called from one place before that, which meant a part added in the admin
+  /// could not be found by anything. A trigram index on it is what makes a
+  /// misspelled query still find the part, and what keeps that possible at
+  /// 50 000 rows.
   searchText     String   @default("")
   /// The SKU with every separator stripped: "BR-4820" → "BR4820". Part
   /// numbers are written down differently by everyone, so they are matched in

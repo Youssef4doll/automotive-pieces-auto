@@ -37,11 +37,14 @@ const stroke = {
 export default function PaymentDeliveryBand({
   grandTunis,
   regions,
+  hasStore,
 }: {
   /** Delivery time for Grand Tunis, from settings — never guessed. */
   grandTunis: string;
   /** Delivery time for the rest of the country. */
   regions: string;
+  /** Whether the shop has published an address to collect from. */
+  hasStore: boolean;
 }) {
   const delivery: Method[] = [
     {
@@ -57,18 +60,25 @@ export default function PaymentDeliveryBand({
         </svg>
       ),
     },
-    {
-      key: "pickup",
-      label: "Retrait en magasin",
-      detail: "Gratuit",
-      icon: (
-        <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true" className="w-6 h-6">
-          <path d="M4 9.5V19h16V9.5" />
-          <path d="M3 5h18l-1.2 4.5H4.2z" />
-          <path d="M10 19v-5h4v5" />
-        </svg>
-      ),
-    },
+    // Only where there is a counter to walk into. Advertising free collection
+    // from a shop whose address the site has never published sends somebody to
+    // look for a door that is not written down anywhere.
+    ...(hasStore
+      ? [
+          {
+            key: "pickup",
+            label: "Retrait en magasin",
+            detail: "Gratuit",
+            icon: (
+              <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true" className="w-6 h-6">
+                <path d="M4 9.5V19h16V9.5" />
+                <path d="M3 5h18l-1.2 4.5H4.2z" />
+                <path d="M10 19v-5h4v5" />
+              </svg>
+            ),
+          } satisfies Method,
+        ]
+      : []),
   ];
 
   const payment: Method[] = [

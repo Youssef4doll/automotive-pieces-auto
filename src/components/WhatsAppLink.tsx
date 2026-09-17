@@ -22,6 +22,13 @@ export default function WhatsAppLink({
   className?: string;
   children: React.ReactNode;
 }) {
+  // No number, no button. A control labelled "WhatsApp" that quietly goes
+  // somewhere else is worse than one that is not there: the customer has
+  // already decided how they want to talk to the shop by the time they tap it.
+  // This is the fail-closed half of isDiallable — a setting that is missing or
+  // half-filled removes the offer instead of shipping a dead one.
+  if (!whatsapp) return null;
+
   const href = contactLink({ whatsapp, email: null }, text);
   return (
     <a

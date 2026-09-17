@@ -10,6 +10,7 @@ import { contactFrom } from "@/lib/data/account";
 import AccountShell from "@/components/account/AccountShell";
 import OrderTracker from "@/components/account/OrderTracker";
 import ReorderButton, { type ReorderItem } from "@/components/ReorderButton";
+import WhatsAppLink from "@/components/WhatsAppLink";
 import { StatusBadge, NEXT_STEP, HelpPanel } from "@/components/account/OrderBits";
 import { IconArrowRight, IconPackage, IconWhatsApp } from "@/components/icons";
 
@@ -222,17 +223,19 @@ export default async function OrdersPage({
                     </Link>
                     <ReorderButton items={reorderItems} />
                     {/* Tertiary on purpose, but per-order: a customer with a
-                        problem should not have to retype which order it is. */}
-                    <a
-                      href={`https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(
-                        `Bonjour, j'ai une question sur ma commande ${order.ref}.`,
-                      )}`}
-                      target="_blank"
-                      rel="noreferrer"
+                        problem should not have to retype which order it is.
+                        Built by hand here once, which is how it came to say
+                        `wa.me/null` on a shop that had not entered a number —
+                        WhatsAppLink owns the decision now and renders nothing
+                        when there is nobody to reach. */}
+                    <WhatsAppLink
+                      whatsapp={contact.whatsapp}
+                      text={`Bonjour, j'ai une question sur ma commande ${order.ref}.`}
+                      source="order_list"
                       className="inline-flex items-center gap-1.5 min-h-tap px-3 rounded-xl text-xs font-semibold text-slate-500 hover:text-green-700 transition-colors"
                     >
                       <IconWhatsApp className="w-4 h-4" /> Aide sur cette commande
-                    </a>
+                    </WhatsAppLink>
                   </div>
                 </article>
               );

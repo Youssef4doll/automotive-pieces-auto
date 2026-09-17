@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
-import { getSettings } from "@/lib/settings";
+import { getSettings, telHref } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 import { getOrderCounts, contactFrom } from "@/lib/data/account";
 import { logout } from "@/app/actions/auth";
 import AccountShell from "@/components/account/AccountShell";
 import GarageSection from "@/components/account/GarageSection";
 import { ProfileCard, PasswordCard } from "@/components/account/ProfileForms";
-import { IconArrowRight, IconWhatsApp } from "@/components/icons";
+import { IconArrowRight, IconWhatsApp, IconPhone } from "@/components/icons";
+import WhatsAppLink from "@/components/WhatsAppLink";
 
 export const metadata = { title: "Mon profil" };
 
@@ -82,14 +83,28 @@ export default async function ProfilePage() {
             Nous vous contactons par téléphone ou WhatsApp au sujet de vos commandes : confirmation, préparation et
             livraison. Nous n&apos;envoyons pas de messages publicitaires.
           </p>
-          <a
-            href={`https://wa.me/${contact.whatsapp}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 min-h-tap px-4 rounded-xl border border-slate-300 text-navy-900 text-sm font-semibold hover:border-green-400 hover:text-green-700 transition-colors"
-          >
-            <IconWhatsApp className="text-green-600" /> Nous écrire
-          </a>
+          {/* Both disappear when the shop has not entered the channel, rather
+              than rendering a link to nowhere. Tapping a number that does not
+              ring is the same dead end as a WhatsApp button with no number
+              behind it. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <WhatsAppLink
+              whatsapp={contact.whatsapp}
+              source="account_profile"
+              className="inline-flex items-center gap-2 min-h-tap px-4 rounded-xl border border-slate-300 text-navy-900 text-sm font-semibold hover:border-green-400 hover:text-green-700 transition-colors"
+            >
+              <IconWhatsApp className="text-green-600" /> Nous écrire
+            </WhatsAppLink>
+            {contact.phone && (
+              <a
+                href={telHref(contact.phone)}
+                dir="ltr"
+                className="inline-flex items-center gap-2 min-h-tap px-4 rounded-xl border border-slate-300 text-navy-900 text-sm font-semibold hover:border-navy-400 transition-colors"
+              >
+                <IconPhone className="text-navy-700" /> {contact.phone}
+              </a>
+            )}
+          </div>
         </section>
 
         <section aria-labelledby="session" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">

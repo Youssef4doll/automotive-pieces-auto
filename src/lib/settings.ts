@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { isDiallable } from "@/lib/contact-link";
 
 // Site-wide settings the admin can edit from /admin/parametres.
 // Anything not yet filled in by the shop owner is a clearly flagged
@@ -128,14 +129,26 @@ function filled(value: string | undefined) {
  * warnings belong in /admin/parametres, where somebody can act on them.
  */
 export function publicContact(settings: SettingsMap) {
+  // A number also has to be long enough to reach somebody — see isDiallable.
+  // Half a country code passed every other test and put live `wa.me/216`
+  // buttons on eight pages.
+  const dialled = (value: string | undefined) => {
+    const v = filled(value);
+    return v && isDiallable(v) ? v : null;
+  };
   return {
     name: settings.shop_name,
-    phone: filled(settings.shop_phone),
+    phone: dialled(settings.shop_phone),
     email: filled(settings.shop_email),
     address: filled(settings.shop_address),
-    whatsapp: filled(settings.shop_whatsapp),
+    whatsapp: dialled(settings.shop_whatsapp),
     hours: filled(settings.shop_hours),
   };
+}
+
+/** `tel:` from whatever the shop typed — spaces, dots and dashes and all. */
+export function telHref(phone: string) {
+  return `tel:${phone.replace(/[^\d+]/g, "")}`;
 }
 
 export type PublicContact = ReturnType<typeof publicContact>;

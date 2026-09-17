@@ -453,8 +453,21 @@ export const findProductByReference = cache(async (query: string) => {
   return product;
 })
 
+/**
+ * The makers the board may show — the ones a shopper can actually buy from.
+ *
+ * `isPartsBrand` alone put 26 logos on the home page when 16 of them held a
+ * part between them, so ten tiles were an invitation to an empty page. The
+ * flag says "this is an equipment maker, not a car make"; it does not say the
+ * shop stocks anything from them. Both conditions, and the count comes back
+ * with the row so a tile can say how deep the shelf is.
+ */
 export const getPartsBrands = cache(async () => {
-  return prisma.brand.findMany({ where: { isPartsBrand: true }, orderBy: { name: "asc" } });
+  return prisma.brand.findMany({
+    where: { isPartsBrand: true, products: { some: { active: true } } },
+    orderBy: { name: "asc" },
+    include: { _count: { select: { products: { where: { active: true } } } } },
+  });
 })
 
 /**

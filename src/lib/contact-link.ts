@@ -14,6 +14,26 @@ export type ContactChannels = {
 };
 
 /**
+ * Enough digits to actually be a phone number.
+ *
+ * A half-entered country code is the failure this exists for. `216` and `+216`
+ * both survived the "is it a placeholder?" test — they are not blank, not the
+ * default, not a run of zeros — so the shop shipped live `wa.me/216` buttons
+ * across the site. Tapping one opens WhatsApp on the contact list, which to a
+ * customer is not a broken link, it is a shop that does not answer.
+ *
+ * Eight digits is the length of a Tunisian mobile without its country code, so
+ * anything shorter cannot reach anybody however it is dialled. The rule is
+ * deliberately about the number rather than about which field it came from,
+ * and it fails closed: an unconvincing number is treated as no number, and the
+ * button that would have used it is not rendered at all.
+ */
+export function isDiallable(value: string | null | undefined): boolean {
+  const digits = (value ?? "").replace(/\D/g, "");
+  return digits.length >= 8 && !/^0+$/.test(digits);
+}
+
+/**
  * WhatsApp is the channel Tunisian shoppers actually use, so it wins when set;
  * otherwise email, and failing both the store section, which at least says when
  * the shop is open. Never a dead `https://wa.me/` with no number after it.

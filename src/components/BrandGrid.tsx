@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
 
-export type BoardBrand = { id: string; name: string; logoUrl: string | null };
+export type BoardBrand = { id: string; name: string; slug: string; logoUrl: string | null; count: number };
 
 /**
  * The brand tiles, as a board that pages sideways.
@@ -139,12 +139,17 @@ export default function BrandGrid({ brands }: { brands: BoardBrand[] }) {
       >
         {brands.map((b) => (
           <li key={b.id} className="[scroll-snap-align:start]">
-            {/* Search rather than a brand page: the index carries the brand
-                on every product, so this lands on everything the shop holds
-                from that maker without a route that would otherwise have to
-                be kept in step with the catalogue. */}
+            {/* The brand's own page, not a search for its name. These used
+                to point at /recherche?q=Bosch, which an audit found returning
+                "0 résultat" — and even once search was fixed it was the wrong
+                destination twice over: robots.txt keeps crawlers off the
+                results page, so 26 internal links led somewhere search engines
+                are told not to follow, and a results list cannot say what a
+                brand page says. /marque/[slug] carries the maker's families,
+                the cars it fits and its parts. */}
             <Link
-              href={`/recherche?q=${encodeURIComponent(b.name)}`}
+              href={`/marque/${b.slug}`}
+              title={`${b.name} — ${b.count} référence${b.count > 1 ? "s" : ""}`}
               className="flex h-[74px] items-center justify-center rounded-lg border border-navy-900/10 bg-white px-3 transition hover:-translate-y-0.5 hover:border-gold-500 hover:shadow-sm sm:h-[82px]"
             >
               {b.logoUrl ? (

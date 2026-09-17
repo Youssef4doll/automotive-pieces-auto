@@ -131,11 +131,40 @@ check("each line shows a photo", (await p.locator("main img").count()) > 0, `${a
 const productLink = p.locator(`main a[href="/produit/${prod.slug}"]`);
 check("the line links back to the product page", (await productLink.count()) > 0);
 
-const helpLinks = await p.locator('main a[href*="wa.me"]')
-  .evaluateAll((els) => els.map((e) => decodeURIComponent(e.getAttribute("href") || "")));
-check("a help link names the order so support has context",
-      helpLinks.some((h) => h.includes(ref)),
-      helpLinks.find((h) => h.includes(ref))?.slice(-55) ?? `${helpLinks.length} links, none with the ref`);
+// The per-order help link exists only when the shop has a number to answer
+// on — a button that opens WhatsApp with nobody behind it is the dead end an
+// audit found on eight pages. So the number is set here, the link checked, and
+// the setting put back. Without this the check silently passed on whatever the
+// database happened to hold.
+const waBefore = (await prisma.setting.findUnique({ where: { key: "shop_whatsapp" } }))?.value ?? null;
+await prisma.setting.upsert({
+  where: { key: "shop_whatsapp" },
+  create: { key: "shop_whatsapp", value: "21698765432" },
+  update: { value: "21698765432" },
+});
+try {
+  await p.reload({ waitUntil: "domcontentloaded" });
+  await p.waitForTimeout(1000);
+  const helpLinks = await p.locator('main a[href*="wa.me"]')
+    .evaluateAll((els) => els.map((e) => decodeURIComponent(e.getAttribute("href") || "")));
+  check("a help link names the order so support has context",
+        helpLinks.some((h) => h.includes(ref)),
+        helpLinks.find((h) => h.includes(ref))?.slice(-55) ?? `${helpLinks.length} links, none with the ref`);
+
+  await prisma.setting.update({ where: { key: "shop_whatsapp" }, data: { value: "" } });
+  await p.reload({ waitUntil: "domcontentloaded" });
+  await p.waitForTimeout(1000);
+  const none = await p.locator('main a[href*="wa.me"]').count();
+  check("and disappears entirely when there is no number to answer on", none === 0, `${none} link(s)`);
+} finally {
+  if (waBefore === null) {
+    await prisma.setting.deleteMany({ where: { key: "shop_whatsapp" } });
+  } else {
+    await prisma.setting.update({ where: { key: "shop_whatsapp" }, data: { value: waBefore } });
+  }
+  await p.reload({ waitUntil: "domcontentloaded" });
+  await p.waitForTimeout(800);
+}
 
 console.log("\n[6] REORDER PUTS IT BACK IN THE CART");
 await p.locator('button:has-text("Commander à nouveau")').first().click();

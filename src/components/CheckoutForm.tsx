@@ -455,14 +455,22 @@ export default function CheckoutForm({
                   <Price value={FLAT_DELIVERY_FEE} />
                 )}
               </Choice>
-              <Choice
-                selected={deliveryMethod === "PICKUP"}
-                onClick={() => setDeliveryMethod("PICKUP")}
-                Icon={IconStore}
-                title={t("checkout.pickup")}
-              >
-                {t("checkout.pickupFree")}
-              </Choice>
+              {/* Offered only when there is somewhere to go. The address block
+                  below used to be the only thing that disappeared when the shop
+                  had not entered one, which left a customer choosing "retrait
+                  en magasin, gratuit, prêt en 2h" and then being told nowhere
+                  to collect it — the worst of the two failures, because they
+                  have already decided by then. */}
+              {storeAddress && (
+                <Choice
+                  selected={deliveryMethod === "PICKUP"}
+                  onClick={() => setDeliveryMethod("PICKUP")}
+                  Icon={IconStore}
+                  title={t("checkout.pickup")}
+                >
+                  {t("checkout.pickupFree")}
+                </Choice>
+              )}
             </div>
 
             {/* "Retrait en magasin" used to say free and ready in two hours

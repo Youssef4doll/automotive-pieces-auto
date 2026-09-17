@@ -177,17 +177,48 @@ console.log("\n[3] THE CHECKOUT IS THREE NAMED DECISIONS, WITH SYMBOLS THAT MATC
     );
   }
 
-  // Pickup names where, or says nothing about where. Never a made-up street.
-  await p.locator('button:has-text("Retrait en magasin")').click();
-  await p.waitForTimeout(300);
-  const address = (await prisma.setting.findUnique({ where: { key: "shop_address" } }))?.value ?? "";
-  const configured = address && !address.includes("compléter");
-  const afterPick = await form.innerText();
-  check(
-    configured ? "pickup says where the shop is" : "pickup says nothing about where, because nobody has said",
-    configured ? afterPick.includes(address) : !/adresse\s*:/i.test(afterPick),
-    configured ? address : "(no address configured)",
-  );
+  // Collection is offered only where there is a counter to walk into.
+  //
+  // This used to click "Retrait en magasin" unconditionally and then check
+  // that the panel underneath stayed quiet when no address was set. That was
+  // the wrong half of the problem: the customer had already chosen collection
+  // by then, and was simply told nothing about where to go. The option itself
+  // is gated now, so both states are built here rather than assumed.
+  const pickup = p.locator('button:has-text("Retrait en magasin")');
+  const original = (await prisma.setting.findUnique({ where: { key: "shop_address" } }))?.value ?? null;
+  const setAddress = async (value) => {
+    await prisma.setting.upsert({
+      where: { key: "shop_address" },
+      create: { key: "shop_address", value },
+      update: { value },
+    });
+  };
+
+  try {
+    await setAddress("");
+    await p.reload({ waitUntil: "domcontentloaded" });
+    await p.waitForTimeout(900);
+    check("with no address, collection is not offered at all", (await pickup.count()) === 0,
+      `${await pickup.count()} pickup control(s)`);
+
+    const REAL = "24 rue Ibn Khaldoun, Ariana";
+    await setAddress(REAL);
+    await p.reload({ waitUntil: "domcontentloaded" });
+    await p.waitForTimeout(900);
+    check("with an address, it comes back", (await pickup.count()) === 1);
+    await pickup.first().click();
+    await p.waitForTimeout(400);
+    // The same locator the rest of this section uses: the page carries the
+    // header search form too, and `.first()` was reading that one.
+    const afterPick = await form.innerText();
+    check("and it names the place you are collecting from", afterPick.includes(REAL), REAL);
+  } finally {
+    if (original === null) {
+      await prisma.setting.deleteMany({ where: { key: "shop_address" } });
+    } else {
+      await setAddress(original);
+    }
+  }
 
   await p.context().close();
 }

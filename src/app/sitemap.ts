@@ -54,6 +54,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/marques`, changeFrequency: "weekly", priority: 0.6 },
     { url: `${base}/sources`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/contact`, changeFrequency: "monthly", priority: 0.5 },
+    // Low priority, but present: a shop whose terms and returns policy are not
+    // crawlable looks, from the outside, like a shop that has none.
+    { url: `${base}/livraison-retours`, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${base}/conditions`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${base}/confidentialite`, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   const categoryPages: MetadataRoute.Sitemap = categories

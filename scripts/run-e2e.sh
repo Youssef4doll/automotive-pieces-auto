@@ -82,7 +82,7 @@ SUITES=(
   smoke
   a-to-z client-area account-space account-edit
   catalog-admin catalog-pipeline product-photos
-  discovery search seo security server-cart
+  discovery search search-coverage seo security trust server-cart
   banners category-images svg-uploads catalog-authoring storefront-fixes
   admin-crud simple-journey mobile nav catalog-filters local-search tax emails contact analytics
   product-depth product-page checkout cleanup loop

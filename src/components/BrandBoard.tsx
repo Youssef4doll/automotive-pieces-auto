@@ -45,7 +45,13 @@ export default async function BrandBoard() {
             admin's own bookkeeping, and this is a client component's props —
             everything passed here is serialised into the page. */}
         <BrandGrid
-          brands={brands.map((b) => ({ id: b.id, name: b.name, logoUrl: b.logoUrl }))}
+          brands={brands.map((b) => ({
+            id: b.id,
+            name: b.name,
+            slug: b.slug,
+            logoUrl: b.logoUrl,
+            count: b._count.products,
+          }))}
         />
       </div>
     </section>

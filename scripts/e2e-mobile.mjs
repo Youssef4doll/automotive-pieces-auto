@@ -585,18 +585,32 @@ console.log("\n[17] THE BRANDS ARE A BOARD YOU CAN USE, NOT A STRIP THAT MOVES")
   check("the board is there", await board.count() === 1);
   const tiles = board.locator("a");
   const n = await tiles.count();
-  check("every brand is a link into the catalogue", n > 0 && (await tiles.first().getAttribute("href") || "").startsWith("/recherche?q="),
-    `${n} tiles`);
+  // Each tile goes to the maker's own page. They pointed at /recherche?q=Bosch
+  // until an audit found that returning "0 résultat" — and even with search
+  // fixed it was the wrong destination: robots.txt keeps crawlers off the
+  // results page, so every one of these internal links led somewhere search
+  // engines are told not to follow.
+  const hrefs = await tiles.evaluateAll((els) => els.map((e) => e.getAttribute("href") || ""));
+  check("every brand tile goes to that brand's page",
+    n > 0 && hrefs.every((h) => h.startsWith("/marque/")),
+    `${n} tiles, ${hrefs.filter((h) => !h.startsWith("/marque/")).length} elsewhere`);
+
+  // Only makers the shop actually stocks. `isPartsBrand` says "equipment
+  // maker, not a car make"; it does not say there is anything on the shelf,
+  // and the board was showing ten tiles that opened onto nothing.
+  const stocked = await prisma.brand.count({
+    where: { isPartsBrand: true, products: { some: { active: true } } },
+  });
+  check("and every one of them has parts behind it", n === stocked, `${n} tiles, ${stocked} stocked brands`);
 
   // The subtitle used to read "+60 équipementiers distribués". Nobody had
-  // counted; there are nineteen. Scoped to the line itself rather than the
-  // whole board, because textContent runs the heading straight into it
-  // ("…PIÈCES19 équipementiers") and there is no word boundary to match on.
+  // counted. Scoped to the line itself rather than the whole board, because
+  // textContent runs the heading straight into it ("…PIÈCES16 équipementiers")
+  // and there is no word boundary to match on.
   const sub = (await board.locator("h2 + span").textContent()) ?? "";
-  const real = await prisma.brand.count({ where: { isPartsBrand: true } });
-  check("and the count beside the heading is the one in the catalogue",
-    sub.trim().startsWith(String(real)) && !/\+\s*\d/.test(sub),
-    `"${sub.trim()}" vs ${real} in the catalogue`);
+  check("and the count beside the heading is the number of tiles under it",
+    sub.trim().startsWith(String(stocked)) && !/\+\s*\d/.test(sub),
+    `"${sub.trim()}" vs ${stocked} tiles`);
   await page.close();
 
   // Every brand, at every size, without a fold.
@@ -627,6 +641,7 @@ console.log("\n[17] THE BRANDS ARE A BOARD YOU CAN USE, NOT A STRIP THAT MOVES")
     return {
       scrollable: t.scrollWidth > t.clientWidth + 1,
       hidden: [...t.querySelectorAll("li")].filter((l) => getComputedStyle(l).display === "none").length,
+      total: t.querySelectorAll("li").length,
       pages: dots.length,
       active: dots.findIndex((d) => d.className.includes("w-6")),
       arrowsShown: arrows.filter((a) => getComputedStyle(a).display !== "none").length,
@@ -644,7 +659,7 @@ console.log("\n[17] THE BRANDS ARE A BOARD YOU CAN USE, NOT A STRIP THAT MOVES")
   check("no brand is hidden from a phone", onPhone.hidden === 0, `${onPhone.hidden} tiles display:none`);
   check("the board scrolls sideways instead", onPhone.scrollable, `track scrolls: ${onPhone.scrollable}`);
   check("and swiping to the end reaches the last brand", await reachLast(phone),
-    `${real} brands in the catalogue`);
+    `${onPhone.total ?? "all"} tiles on the board`);
   // The gesture on a phone is the swipe; a 44px arrow floating over the tiles
   // would cover one of them to duplicate it.
   const afterSwipe = await paging(phone);

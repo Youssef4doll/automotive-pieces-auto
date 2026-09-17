@@ -9,6 +9,14 @@ export default async function StoreSection() {
   const settings = await getSettings();
   const contact = publicContact(settings);
 
+  // "Passez nous voir" over a photograph of a shop, with no address under it,
+  // is the section a first-time buyer uses to decide whether this is a real
+  // business — and it was answering no. The invitation needs somewhere to go,
+  // so until the shop enters an address the section is not rendered at all.
+  // The footer, the contact page and /conditions still carry every detail the
+  // shop has actually given.
+  if (!contact.address) return null;
+
   return (
     <section id="magasin" className="mx-auto shell-w px-4 py-7 sm:py-10">
       <div className="grid sm:grid-cols-2 gap-8 items-center">

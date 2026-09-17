@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getMegaMenu } from "@/lib/data/catalog";
-import { getSettings, publicContact, contactHref, isExternalContact } from "@/lib/settings";
+import { getSettings, publicContact } from "@/lib/settings";
 import { About, Heading, Rights, LangRow } from "./FooterClient";
 import PaymentDeliveryBand from "./PaymentDeliveryBand";
 import T from "./T";
@@ -10,7 +10,6 @@ export default async function Footer() {
   const [families, settings] = await Promise.all([getMegaMenu(), getSettings()]);
   const catalogueLinks = families.slice(0, 4);
   const contact = publicContact(settings);
-  const help = contactHref(contact);
 
   return (
     <footer data-print-hide className="bg-navy-950 text-white/80 mt-8 pb-24 lg:pb-8">
@@ -52,13 +51,19 @@ export default async function Footer() {
         <div>
           <Heading k="footer.aideCol" />
           <ul className="space-y-2 text-sm mt-3">
+            {/* The policy page, not a WhatsApp deep link. A customer about to
+                hand cash to a courier is asking what it costs and what happens
+                if the part is wrong; opening a chat app puts the burden of the
+                question back on them, and answers nothing at 2am. */}
             <li>
-              <a href={help} {...(isExternalContact(help) ? { target: "_blank", rel: "noreferrer" } : {})} className="hover:text-white min-h-11 inline-flex items-center">
+              <Link href="/livraison-retours" className="hover:text-white min-h-11 inline-flex items-center">
                 <T k="footer.deliveryReturns" />
-              </a>
+              </Link>
             </li>
             <li>
-              <span className="min-h-11 inline-flex items-center"><T k="footer.warranty" /></span>
+              <Link href="/livraison-retours#garantie" className="hover:text-white min-h-11 inline-flex items-center">
+                <T k="footer.warranty" />
+              </Link>
             </li>
             <li>
               <Link href="/guides" className="hover:text-white min-h-11 inline-flex items-center">
@@ -120,6 +125,7 @@ export default async function Footer() {
       <PaymentDeliveryBand
         grandTunis={settings.delivery_grand_tunis}
         regions={settings.delivery_regions}
+        hasStore={!!contact.address}
       />
 
       <div className="mx-auto shell-w px-4 pb-6">
@@ -127,8 +133,16 @@ export default async function Footer() {
           <p className="text-xs text-white/40">
             © {new Date().getFullYear()} Automotive Pièces Auto. <Rights />
           </p>
-          <div className="flex items-center gap-4 text-xs text-white/40">
-            <span><T k="footer.terms" /> · <T k="footer.privacy" /></span>
+          {/* These were a <span>. Two words of grey text where a first-time
+              buyer looks for the terms they are about to accept reads as a
+              shop that has not written any — which, until now, was true. */}
+          <div className="flex items-center gap-4 text-xs">
+            <Link href="/conditions" className="text-white/60 underline underline-offset-2 hover:text-white">
+              <T k="footer.terms" />
+            </Link>
+            <Link href="/confidentialite" className="text-white/60 underline underline-offset-2 hover:text-white">
+              <T k="footer.privacy" />
+            </Link>
           </div>
           <LangRow />
         </div>

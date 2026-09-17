@@ -95,7 +95,7 @@ async function suggest(request: NextRequest) {
     }),
     prisma.brand.findMany({
       where: { name: { contains: q, mode: "insensitive" }, products: { some: { active: true } } },
-      select: { name: true, _count: { select: { products: true } } },
+      select: { name: true, slug: true, _count: { select: { products: { where: { active: true } } } } },
       take: 3,
     }),
   ]);
@@ -146,8 +146,11 @@ async function suggest(request: NextRequest) {
     suggestions.push({
       label: b.name,
       kind: "brand",
-      // Brands are a search facet rather than a page of their own.
-      href: `/recherche?q=${encodeURIComponent(b.name)}`,
+      // The brand's own page. This said brands were "a search facet rather
+      // than a page of their own", which stopped being true when /marque
+      // was built — and meanwhile the suggestion promised "Bosch · 4
+      // référence(s)" and opened a results page showing none of them.
+      href: `/marque/${b.slug}`,
       hint: `${b._count.products} référence(s)`,
     });
   }

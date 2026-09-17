@@ -281,43 +281,35 @@ console.log("\n[8b] THE TYPE-AHEAD IS FAST AND SITS ON TOP OF THE PAGE");
 
 console.log("\n[9] THE INDEX FOLLOWS THE CATALOGUE");
 {
+  // This section used to assert the opposite, and passed for months doing it:
+  // "an edit made outside the app is not silently searchable — stale index
+  // returns nothing, as expected". That was the bug written down as a
+  // requirement. Only the CSV import rebuilt the blob, so a product created or
+  // renamed in the admin was unfindable, and an audit eventually found exact
+  // product names returning "0 résultat" for parts on the home page.
+  //
+  // The blob is a database trigger now, so there is no "outside the app" left:
+  // whatever writes the row leaves the index correct.
   const unindexed = await prisma.product.count({ where: { active: true, searchText: "" } });
   check("every active product is indexed", unindexed === 0, `${unindexed} unindexed`);
 
-  // A part edited in the admin has to become findable under its new name.
   const victim = await prisma.product.findFirst({ where: { active: true }, select: { id: true, name: true } });
   const marker = `Zorglub${Date.now().toString().slice(-6)}`;
   await prisma.product.update({ where: { id: victim.id }, data: { name: `${victim.name} ${marker}` } });
-  const before = await search(marker);
-  check("an edit made outside the app is not silently searchable", before.count === 0,
-    "stale index returns nothing, as expected");
 
-  await prisma.$executeRawUnsafe(`
-    UPDATE "Product" p SET "searchText" = lower(unaccent(concat_ws(' ',
-      p.name, p.sku, p.description,
-      (SELECT b.name FROM "Brand" b WHERE b.id = p."brandId"),
-      (SELECT c.name FROM "Category" c WHERE c.id = p."categoryId"),
-      array_to_string(p."oemRefs", ' ')
-    ))) WHERE p.id = '${victim.id}'`);
   const after = await search(marker);
-  check("and becomes findable once reindexed", after.count > 0, `${after.count} results`);
+  check("a rename is searchable immediately, with nothing to remember to run",
+    after.count > 0, `${after.count} result(s) for a name set one moment ago`);
 
-  // Put the index back as well as the name.
-  //
-  // Restoring only the name left the marker sitting in this product's
-  // searchText for good, and the NEXT run of this suite generates a marker
-  // that differs from it by a few digits — close enough, sometimes, for the
-  // trigram rescue to match it. The check above then fails on a stale index
-  // this suite poisoned itself, days earlier. Intermittent, self-inflicted,
-  // and invisible until you run the suite twice in quick succession.
   await prisma.product.update({ where: { id: victim.id }, data: { name: victim.name } });
-  await prisma.$executeRawUnsafe(`
-    UPDATE "Product" p SET "searchText" = lower(unaccent(concat_ws(' ',
-      p.name, p.sku, p.description,
-      (SELECT b.name FROM "Brand" b WHERE b.id = p."brandId"),
-      (SELECT c.name FROM "Category" c WHERE c.id = p."categoryId"),
-      array_to_string(p."oemRefs", ' ')
-    ))) WHERE p.id = '${victim.id}'`);
+
+  // And the marker stops matching, so this suite cannot poison the next run.
+  // Restoring only the name used to leave the marker in searchText for good,
+  // and the next run's marker differs by a few digits — close enough for the
+  // trigram rescue to match it, which failed the check above on an index this
+  // suite had poisoned itself days earlier.
+  const gone = await search(marker);
+  check("and the old name stops matching once it is put back", gone.count === 0, `${gone.count} result(s)`);
 }
 
 console.log("\n[10] SEARCH DOES NOT SHIP ITS INDEX TO THE BROWSER");
