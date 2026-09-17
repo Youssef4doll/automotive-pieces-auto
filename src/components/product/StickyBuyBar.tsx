@@ -69,6 +69,12 @@ export default function StickyBuyBar({
       <div ref={sentinel} aria-hidden="true" className="h-px w-full" />
 
       <div
+        // Marks the bottom of the screen as taken, so the floating
+        // scroll-to-top button stands down instead of landing on the buy
+        // button. An attribute rather than shared state: the bar is a real
+        // element, `inert` below already says whether it is up, and the two
+        // components then have nothing to keep in step.
+        data-bottom-bar=""
         className={`fixed inset-x-0 bottom-0 z-40 border-t border-navy-900/10 bg-white/95 px-4 pb-[env(safe-area-inset-bottom)] backdrop-blur transition-transform duration-200 md:hidden ${
           shown ? "translate-y-0" : "translate-y-full"
         }`}

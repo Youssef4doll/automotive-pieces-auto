@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-33 Playwright suites, 1,315 checks at the last full green run, driving real
+33 Playwright suites, 1,328 checks at the last full green run, driving real
 browsers against a real database. They are the main safety net and they have
 caught more real bugs than they have cost.
 
@@ -141,6 +141,19 @@ Two things that bit, both worth knowing before writing another suite:
   emptying one shelf per family and restoring it on every path out, and
   examines 13 families instead of the 6 that happened to be mixed. Prefer a
   suite that creates its fixture to one that searches for it.
+
+- **Write the rule, not the instance.** After the floating scroll-to-top
+  button was caught sitting on the buy button, the obvious test was "that
+  button does not overlap that bar". It would have been useless twice over: it
+  passed the moment the button was hidden rather than removed, and it said
+  nothing about the next floating thing somebody adds. `e2e-mobile` [19] walks
+  every element at 390 and 1440, scrolling both ways on two pages, and fails on
+  anything `position: fixed` that is not the header or the product page's own
+  buy bar — which marks itself with `data-bottom-bar`. Three floating controls
+  have now been removed from this site for the same reason; the fourth will be
+  caught by a test rather than by somebody noticing in a screenshot. **Check a
+  negative test is not vacuous before trusting it**: inject the thing it is
+  meant to catch and watch it fail.
 
 - **Staying on the URL is not proof the form worked.** `e2e-loop` called an
   account created because the browser was still on `/compte` after pressing

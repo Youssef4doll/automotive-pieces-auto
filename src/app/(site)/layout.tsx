@@ -4,7 +4,6 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import CartSync from "@/components/CartSync";
 import AddedToast from "@/components/AddedToast";
-import ScrollTopButton from "@/components/ScrollTopButton";
 import { getSettings } from "@/lib/settings";
 
 export default async function SiteLayout({ children }: LayoutProps<"/">) {
@@ -36,14 +35,19 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
       <CartSync />
       <CartDrawer freeShippingThreshold={freeShippingThreshold} />
       <AddedToast />
-      {/* Nothing else floats over the page. The persistent WhatsApp widget and
-          the sticky bottom cart bar were both removed: they covered content on
-          every screen and competed with the page's own actions. WhatsApp is
-          still reachable from the header, footer, the finder, the "can't find
-          your part" band and out-of-stock products — the floating copy added
-          no reach, only noise. Cart feedback is carried by the header badge
-          and the add-to-cart confirmation instead. */}
-      <ScrollTopButton />
+      {/* Nothing floats over the page. The persistent WhatsApp widget, the
+          sticky bottom cart bar and — last of the three — the scroll-to-top
+          button were all removed for the same reason: they covered content on
+          every screen and competed with the page's own actions. The last one
+          was the clearest case, because it was caught doing it: on a product
+          page it sat on top of "Ajouter" in the sticky buy bar, a round disc
+          over the one control the shopper came for. WhatsApp is still
+          reachable from the header, footer, the finder, the "can't find your
+          part" band and out-of-stock products; cart feedback is carried by the
+          header badge and the add-to-cart confirmation; and the way back to
+          the top of a page is the one control every browser and phone already
+          provides. The only bar left is the product page's own buy bar, which
+          is the page's action rather than furniture on top of it. */}
     </>
   );
 }

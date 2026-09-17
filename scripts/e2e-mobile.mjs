@@ -763,6 +763,124 @@ console.log("\n[X] NOTHING ON A PHONE SUMMONS A KEYBOARD, OR THE ZOOM THAT COMES
   await page.close();
 }
 
+console.log("\n[19] NOTHING FLOATS OVER THE PAGE");
+{
+  // The scroll-to-top button was the last floating control on the site and it
+  // is gone. It appeared at 1200px and then stayed for the rest of the page,
+  // so on a product page it rode down and parked on top of "Ajouter" in the
+  // sticky buy bar — a round disc over the one control the shopper came for.
+  // The persistent WhatsApp widget and the sticky cart bar went earlier for
+  // the same reason. This check is the rule, not the button: anything fixed
+  // and floating that appears here later has to justify itself against a test.
+  //
+  // The product page's own buy bar is the exception and is named as such: it
+  // is the page's action rather than furniture sitting on top of it.
+  const floaters = (page) =>
+    page.evaluate(() => {
+      const out = [];
+      for (const el of document.querySelectorAll("body *")) {
+        const cs = getComputedStyle(el);
+        if (cs.position !== "fixed") continue;
+        if (cs.visibility === "hidden" || cs.display === "none" || cs.opacity === "0") continue;
+        const box = el.getBoundingClientRect();
+        if (box.width === 0 || box.height === 0) continue;
+        // The header and its bars are docked at the top, not floating over the
+        // middle of the page; the buy bar names itself.
+        if (el.closest("header") || el.hasAttribute("data-bottom-bar")) continue;
+        if (el.hasAttribute("inert") || el.closest("[inert]")) continue;
+        if (box.top < 8) continue;
+        out.push(`${el.tagName.toLowerCase()}.${(el.className || "").toString().split(" ")[0]} @${Math.round(box.top)},${Math.round(box.left)}`);
+      }
+      return out;
+    });
+
+  const wheel = async (page, dy, steps = 8) => {
+    for (let i = 0; i < steps; i++) {
+      await page.mouse.wheel(0, dy / steps);
+      await page.waitForTimeout(60);
+    }
+    await page.waitForTimeout(300);
+  };
+
+  for (const [width, ctx] of [[390, phone], [1440, { viewport: { width: 1440, height: 900 } }]]) {
+    const page = await (await browser.newContext(ctx)).newPage();
+    for (const [name, path] of [["the product page", PRODUCT], ["the home page", "/"]]) {
+      await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(1500);
+      await wheel(page, 2400);
+      let f = await floaters(page);
+      check(`${width}px: nothing floats over ${name} on the way down`, f.length === 0, f.join(", "));
+      await wheel(page, -700);
+      f = await floaters(page);
+      check(`${width}px: nor on the way back up`, f.length === 0, f.join(", "));
+    }
+    await page.context().close();
+  }
+}
+
+console.log("\n[20] THE BUY BAR IS STILL THERE, AND STILL UNCOVERED");
+{
+  // Removing the floating button must not have taken the one bar that earns
+  // its place with it.
+  const page = await (await browser.newContext(phone)).newPage();
+  await page.goto(`${BASE}${PRODUCT}`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
+  for (let i = 0; i < 8; i++) {
+    await page.mouse.wheel(0, 300);
+    await page.waitForTimeout(60);
+  }
+  await page.waitForTimeout(350);
+
+  const bar = await page.evaluate(() => {
+    const el = document.querySelector("[data-bottom-bar]");
+    if (!el) return null;
+    const box = el.getBoundingClientRect();
+    const up = !el.hasAttribute("inert") && box.top < window.innerHeight;
+    const button = el.querySelector("button");
+    const bb = button?.getBoundingClientRect();
+    // Whatever the browser would hand the tap at the middle of the button.
+    const hit = bb ? document.elementFromPoint(bb.left + bb.width / 2, bb.top + bb.height / 2) : null;
+    return { up, reachesTheButton: !!button && !!hit && (hit === button || button.contains(hit)) };
+  });
+
+  check("the buy bar comes up once the real button has scrolled away", !!bar && bar.up);
+  check("and a tap on it lands on the button, not on something over it", !!bar && bar.reachesTheButton);
+  await page.context().close();
+}
+
+console.log("\n[21] THE MAKER SITS ON THE PRODUCT NAME, NOT A ROW ABOVE IT");
+{
+  // The gallery spans both grid rows, and with implicit rows the browser
+  // divides a spanning item's height between the tracks it crosses — so a
+  // 580px picture inflated the brand's row to 65px for a 30px mark and opened
+  // a hole between the two things that identify the part. Measured rather than
+  // asserted from the class list, because the class is only the cause.
+  const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+  await page.goto(`${BASE}${PRODUCT}`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1200);
+  const geo = await page.evaluate(() => {
+    const h1 = document.querySelector("h1");
+    const mark = document.querySelector("a[href^='/marque/']") || h1?.closest(".grid")?.querySelector("p");
+    if (!h1 || !mark) return null;
+    const rows = getComputedStyle(h1.closest(".grid")).gridTemplateRows.split(" ").map(parseFloat);
+    return {
+      gap: Math.round(h1.getBoundingClientRect().top - mark.getBoundingClientRect().bottom),
+      markHeight: Math.round(mark.getBoundingClientRect().height),
+      firstRow: Math.round(rows[0]),
+    };
+  });
+  check("the brand and the name are on the page", !!geo);
+  if (geo) {
+    check(
+      "the brand's row is the height of the brand, not a share of the photograph",
+      geo.firstRow <= geo.markHeight + 8,
+      `row ${geo.firstRow}px for a ${geo.markHeight}px mark`,
+    );
+    check("so the name follows it immediately", geo.gap <= 24, `${geo.gap}px apart`);
+  }
+  await page.context().close();
+}
+
 await browser.close();
 await prisma.$disconnect();
 

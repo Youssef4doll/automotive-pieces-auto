@@ -249,13 +249,30 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         it would mean two elements with the maker's name on one page, which is
         two things to keep in step and two matches for every selector.
       */}
-      <div className="grid gap-x-8 gap-y-4 md:grid-cols-2 md:items-start">
+      {/* `grid-rows-[auto_1fr]` is load-bearing, not tidiness. The gallery
+          spans both rows, and with implicit rows the browser splits a spanning
+          item's height between the tracks it crosses — so a 580px picture
+          pushed the brand's row out to 65px to carry a 30px mark and left a
+          hole between the maker and the product name. Pinning row 1 to its
+          content sends the picture's extra height to the row that has
+          somewhere to put it.
+
+          `md:gap-y-2` for the same reason the row is pinned: on a phone the
+          three children are brand, picture, name and 16px between them is the
+          rhythm of the page, but on a desktop row 1 holds only the maker and
+          row 2 opens with the product name, and those two belong to each
+          other. */}
+      <div className="grid gap-x-8 gap-y-4 md:grid-cols-2 md:grid-rows-[auto_1fr] md:items-start md:gap-y-2">
         {/* 1 — the maker, and a way into everything else it makes. */}
-        <div className="md:col-start-2 md:row-start-1">
+        {/* `flex`, not the default block: the link inside is inline-level, so a
+            block parent gives it a line box and the row inherits the font's
+            descender space — four phantom pixels under the logo that no gap
+            setting accounts for because they are not a gap. */}
+        <div className="flex md:col-start-2 md:row-start-1">
           {product.brand ? (
             <Link
               href={`/marque/${product.brand.slug}`}
-              className="group inline-flex items-center gap-2.5 rounded-lg py-0.5 transition"
+              className="group inline-flex items-end gap-2.5 rounded-lg transition"
             >
               <BrandMark name={product.brand.name} logoUrl={product.brand.logoUrl} />
               <span className="inline-flex items-center gap-1 font-display text-[11px] font-bold uppercase tracking-wide text-navy-900/40 group-hover:text-red-600">
