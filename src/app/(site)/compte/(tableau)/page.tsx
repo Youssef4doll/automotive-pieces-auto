@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { toNumber, formatTNDfr } from "@/lib/money";
 import { getOrderCounts, contactFrom } from "@/lib/data/account";
 import AuthForms from "@/components/AuthForms";
+import FormNotice from "@/components/FormNotice";
 import AccountShell from "@/components/account/AccountShell";
 import AccountTiles from "@/components/account/AccountTiles";
 import { StatusBadge, NEXT_STEP } from "@/components/account/OrderBits";
@@ -12,9 +13,22 @@ import { IconArrowRight } from "@/components/icons";
 
 export const metadata = { title: "Mon compte" };
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ rattachees?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return <AuthForms />;
+
+  // How many guest orders this sign-in pulled into the account — see
+  // claimOrdersForUser. Announced rather than done quietly: the proof of
+  // ownership is the browser's cookie, and a browser can be shared. On a
+  // family phone or in a cybercafé the person who registers may not be the
+  // person who ordered, so the shop says what it attached and to whom to
+  // speak if that is wrong, instead of moving somebody else's order into an
+  // account without a word.
+  const claimed = Number((await searchParams).rattachees ?? 0) || 0;
 
   const [settings, active, counts, partCount] = await Promise.all([
     getSettings(),
@@ -49,6 +63,19 @@ export default async function AccountPage() {
       whatsapp={contact.whatsapp}
     >
       <div className="flex flex-col gap-4 sm:gap-5">
+        {claimed > 0 && (
+          <FormNotice tone="warn" title="Vos commandes ont été rattachées">
+            {claimed === 1
+              ? "La commande passée depuis cet appareil est désormais dans votre compte."
+              : `Les ${claimed} commandes passées depuis cet appareil sont désormais dans votre compte.`}{" "}
+            Si vous ne les reconnaissez pas — un téléphone partagé, par exemple —{" "}
+            <Link href="/contact" className="font-semibold underline underline-offset-2">
+              dites-le-nous
+            </Link>{" "}
+            et nous les détacherons.
+          </FormNotice>
+        )}
+
         {/* One line, not a dashboard.
 
             The page this replaced opened with the live order's full timeline,

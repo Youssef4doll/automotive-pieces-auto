@@ -225,7 +225,12 @@ try {
 
     // Written the way it comes off a greasy box: lower case, with a space.
     const messy = sample.sku.toLowerCase().replace("-", " ");
-    await p.locator("#finder input[dir=ltr]").fill(messy);
+    // By its label, not by `input[dir=ltr]`. There is more than one
+    // left-to-right field in this section now — the VIN shortcut lives in the
+    // band under the doors — and "the only LTR input on the page" was never
+    // what this test meant. A shopper finds this box because it is labelled
+    // "J'ai la référence".
+    await p.locator("#finder").getByRole("textbox", { name: /J'ai la référence/ }).fill(messy);
     await p.locator("#finder").getByRole("button", { name: /Chercher la référence/ }).click();
     await p.waitForURL(/\/(produit|recherche)/, { timeout: 15000 });
     await p.waitForTimeout(1200);

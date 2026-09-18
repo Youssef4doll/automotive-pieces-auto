@@ -630,6 +630,127 @@ console.log("\n[7] ANALYTICS IS ONE SWITCH, READ IN EVERY PLACE THAT DEPENDS ON 
   await ctx.close();
 }
 
+/* --------------------------------------------------------------- [8] ----- */
+console.log("\n[8] A NAME IS A NAME, AND AN ORDER FOLLOWS ITS CUSTOMER INTO THEIR ACCOUNT");
+{
+  // The shop really did end up with an account called `ttttt@gmail.com`:
+  // both forms validated the name with `min(2)`. That name is read off a
+  // delivery note by a driver at somebody's door.
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p = await ctx.newPage();
+  await p.goto(`${BASE}/compte`, { waitUntil: "domcontentloaded" });
+  await p.waitForTimeout(800);
+  await p.click('button:has-text("Créer un compte")');
+  await p.waitForTimeout(400);
+
+  const junkEmail = `qa-junk-${STAMP}@example.test`;
+  await p.fill('input[name="name"]', "zzzz@gmail.com");
+  await p.fill('input[name="email"]', junkEmail);
+  await p.fill('input[name="phone"]', "20445566");
+  await p.fill('input[name="password"]', PASSWORD);
+  await p.getByRole("button", { name: /Créer mon compte|Créer un compte/ }).last().click();
+  await p.waitForTimeout(2500);
+
+  const created = await prisma.user.findUnique({ where: { email: junkEmail }, select: { id: true } });
+  check("an e-mail address is refused as a name", created === null, created ? "account was created" : "no account");
+
+  // And the refusal is the shop's panel, not twelve pixels of loose red text.
+  const notice = p.locator('form [role="alert"]').first();
+  check("and the refusal is shown in the shop's own notice", (await notice.count()) > 0);
+  if (await notice.count()) {
+    const shown = await notice.innerText();
+    check("naming what is wrong, not just that something is", /nom|e-mail/i.test(shown), shown.replace(/\n/g, " · ").slice(0, 90));
+  }
+  if (created) await prisma.user.delete({ where: { id: created.id } });
+
+  // A real name gets through — a rule that rejects everything is a different
+  // bug from the one it replaced. Arabic script too: this shop is Tunisian.
+  const goodEmail = `qa-claim-${STAMP}@example.test`;
+  await p.fill('input[name="name"]', "بن صالح Karim");
+  await p.fill('input[name="email"]', goodEmail);
+  await p.fill('input[name="phone"]', "20445566");
+  await p.fill('input[name="password"]', PASSWORD);
+  await p.getByRole("button", { name: /Créer mon compte|Créer un compte/ }).last().click();
+  await p.waitForTimeout(2800);
+  const real = await prisma.user.findUnique({ where: { email: goodEmail }, select: { id: true, name: true } });
+  check("a name in Arabic and Latin script is accepted", real !== null, real?.name ?? "refused");
+  if (real) await prisma.user.delete({ where: { id: real.id } });
+  await ctx.close();
+}
+
+// The order placed as a guest back in [3] is still sitting in that browser's
+// cookie. Registering afterwards is an ordinary thing to do on a shop that
+// does not require an account, and the order used to stay a guest order for
+// ever — "Mes commandes" was empty for somebody who had just bought something.
+if (!placedRef) {
+  check("a guest order joins the account created afterwards", false, "no order was placed in [3]");
+} else {
+  const order = await prisma.order.findUnique({ where: { ref: placedRef }, select: { id: true, userId: true } });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p = await ctx.newPage();
+
+  // This browser did not place it, so it holds no proof — the claim must not
+  // happen, and that is the half worth checking.
+  const strangerEmail = `qa-stranger-${STAMP}@example.test`;
+  await p.goto(`${BASE}/compte`, { waitUntil: "domcontentloaded" });
+  await p.waitForTimeout(700);
+  await p.click('button:has-text("Créer un compte")');
+  await p.waitForTimeout(400);
+  await p.fill('input[name="name"]', "QA Stranger");
+  await p.fill('input[name="email"]', strangerEmail);
+  await p.fill('input[name="phone"]', "20445566");
+  await p.fill('input[name="password"]', PASSWORD);
+  await p.getByRole("button", { name: /Créer mon compte|Créer un compte/ }).last().click();
+  await p.waitForTimeout(2800);
+  const afterStranger = await prisma.order.findUnique({ where: { ref: placedRef }, select: { userId: true } });
+  check(
+    "a browser that did not place the order claims nothing",
+    afterStranger?.userId == null,
+    `userId ${afterStranger?.userId ?? "null"}`,
+  );
+  const stranger = await prisma.user.findUnique({ where: { email: strangerEmail }, select: { id: true } });
+  await ctx.close();
+
+  // Now the browser that did. `rememberOrder` wrote the cookie at checkout;
+  // this replays that by holding the same order id.
+  const own = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await own.addCookies([
+    { name: "apa_orders", value: order.id, domain: "localhost", path: "/", httpOnly: true, sameSite: "Lax" },
+  ]);
+  const q = await own.newPage();
+  const ownerEmail = `qa-owner-${STAMP}@example.test`;
+  await q.goto(`${BASE}/compte`, { waitUntil: "domcontentloaded" });
+  await q.waitForTimeout(700);
+  await q.click('button:has-text("Créer un compte")');
+  await q.waitForTimeout(400);
+  await q.fill('input[name="name"]', "QA Owner");
+  await q.fill('input[name="email"]', ownerEmail);
+  await q.fill('input[name="phone"]', "20445566");
+  await q.fill('input[name="password"]', PASSWORD);
+  await q.getByRole("button", { name: /Créer mon compte|Créer un compte/ }).last().click();
+  await q.waitForTimeout(3000);
+
+  const owner = await prisma.user.findUnique({ where: { email: ownerEmail }, select: { id: true, segment: true } });
+  const claimed = await prisma.order.findUnique({ where: { ref: placedRef }, select: { userId: true } });
+  check("registering after a guest checkout claims that order", !!owner && claimed?.userId === owner.id, placedRef);
+
+  // And it is visible where the customer goes looking, not only in the table.
+  await q.goto(`${BASE}/compte/commandes`, { waitUntil: "domcontentloaded" });
+  await q.waitForTimeout(1200);
+  const list = await q.locator("main").innerText();
+  check("and it is listed under Mes commandes", list.includes(placedRef), placedRef);
+  // Segment is derived from order history, so a claimed order has to move it.
+  check("the customer's segment is recomputed, not left at NEW", owner?.segment !== "NEW", owner?.segment ?? "?");
+
+  await own.close();
+  if (stranger) await prisma.user.delete({ where: { id: stranger.id } });
+  if (owner) {
+    await prisma.order.updateMany({ where: { ref: placedRef }, data: { userId: null } });
+    await prisma.cart.deleteMany({ where: { userId: owner.id } });
+    await prisma.user.delete({ where: { id: owner.id } });
+  }
+}
+
 await browser.close();
 await prisma.$disconnect();
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);

@@ -481,9 +481,25 @@ console.log("\n[C5] THE CUSTOMER CREATES AN ACCOUNT AFTER BUYING");
   const user = await prisma.user.findUnique({ where: { email: EMAIL }, select: { id: true, passwordHash: true } });
   check("it is stored with a hashed password", Boolean(user) && /^\$2[aby]\$/.test(user.passwordHash));
 
-  // The guest order stays the guest's; it is not silently claimed.
-  const stillGuest = await prisma.order.findUnique({ where: { ref: orderRef }, select: { userId: true } });
-  check("the earlier guest order is not silently attached to it", stillGuest.userId === null);
+  // The guest order joins the account — and is not claimed *silently*, which
+  // is what this check used to be about.
+  //
+  // It read "the earlier guest order is not silently attached to it" and
+  // asserted `userId === null`, so the shop's behaviour was: buy as a guest,
+  // register a minute later on the same phone, and "Mes commandes" is empty.
+  // The customer's own order had vanished. The concern behind the old
+  // assertion was real, though — the proof of ownership is the browser's
+  // cookie and browsers get shared — so the answer is not to drop the word
+  // "silently" but to keep it: the order is attached, and the account says so
+  // and offers a way to undo it.
+  const claimed = await prisma.order.findUnique({ where: { ref: orderRef }, select: { userId: true } });
+  check("the earlier guest order joins the account", claimed.userId === user?.id, `${claimed.userId}`);
+  const banner = (await shopper.locator("main").innerText()).replace(/\s+/g, " ");
+  check(
+    "and the account says so rather than doing it quietly",
+    /rattach/i.test(banner),
+    banner.slice(0, 120),
+  );
 }
 
 console.log("\n[C6] NOTHING BROKE ALONG THE WAY");

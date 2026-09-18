@@ -7,6 +7,7 @@ import { useLocale } from "@/i18n/LocaleProvider";
 import type { DictKey } from "@/i18n/dictionaries";
 import { login, signup, type AuthState } from "@/app/actions/auth";
 import FormShield from "@/components/FormShield";
+import FormNotice from "@/components/FormNotice";
 
 /**
  * Sign in / create an account.
@@ -170,7 +171,9 @@ export default function AuthForms() {
                   </Link>
                 </div>
 
-                {loginState?.error && <p className="text-xs text-red-600">{loginState.error}</p>}
+                {loginState?.error && (
+                  <FormNotice title={t("account.loginFailed")}>{loginState.error}</FormNotice>
+                )}
                 <button type="submit" disabled={loginPending} className={SUBMIT}>
                   {loginPending ? "…" : t("account.submitLogin")}
                 </button>
@@ -197,7 +200,9 @@ export default function AuthForms() {
                   placeholder={t("account.password")}
                   className={INPUT}
                 />
-                {signupState?.error && <p className="text-xs text-red-600">{signupState.error}</p>}
+                {signupState?.error && (
+                  <FormNotice title={t("account.signupFailed")}>{signupState.error}</FormNotice>
+                )}
                 <button type="submit" disabled={signupPending} className={SUBMIT}>
                   {signupPending ? "…" : t("account.submitSignup")}
                 </button>

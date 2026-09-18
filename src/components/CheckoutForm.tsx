@@ -27,6 +27,8 @@ import {
   IconClock,
   IconAlert,
 } from "@/components/icons";
+import FormNotice, { FieldError } from "@/components/FormNotice";
+import { nameProblem, phoneProblem } from "@/lib/validation";
 
 /** One input's worth of chrome, so the three fieldsets cannot drift apart. */
 const FIELD =
@@ -105,12 +107,7 @@ function Field({
           shopper who cannot see red text would otherwise get the summary at
           the button — "voir les champs signalés ci-dessus" — with no way to
           learn which fields those are. */}
-      {error && (
-        <span role="alert" className="flex items-start gap-1.5 text-xs font-semibold text-red-600">
-          <IconAlert className="mt-px h-3.5 w-3.5 shrink-0" />
-          {error}
-        </span>
-      )}
+      {error && <FieldError>{error}</FieldError>}
     </label>
   );
 }
@@ -285,24 +282,47 @@ export default function CheckoutForm({
         !el.disabled &&
         !el.checkValidity(),
     );
-    if (invalid.length > 0) {
-      const messages: Record<string, string> = {};
-      for (const el of invalid) {
-        const v = el.validity;
-        messages[el.name || "form"] = v.valueMissing
-          ? t("checkout.errRequired")
-          : v.tooShort
-            ? t("checkout.errTooShort")
-            : v.typeMismatch
-              ? t("checkout.errEmail")
-              : t("checkout.errInvalid");
-      }
+    const messages: Record<string, string> = {};
+    for (const el of invalid) {
+      const v = el.validity;
+      messages[el.name || "form"] = v.valueMissing
+        ? t("checkout.errRequired")
+        : v.tooShort
+          ? t("checkout.errTooShort")
+          : v.typeMismatch
+            ? t("checkout.errEmail")
+            : t("checkout.errInvalid");
+    }
+
+    // Two rules the browser has no attribute for, checked here so the shopper
+    // hears them before they press the button rather than after the server
+    // refuses. Same functions the server action validates with — see
+    // lib/validation — so the two can never drift into disagreeing about what
+    // a name is.
+    if (!messages.name) {
+      const problem = nameProblem(name);
+      if (problem) messages.name = problem;
+    }
+    if (!messages.phone) {
+      const problem = phoneProblem(phone);
+      if (problem) messages.phone = problem;
+    }
+
+    const offenders = [
+      ...invalid,
+      ...Object.keys(messages)
+        .filter((n) => !invalid.some((el) => el.name === n))
+        .map((n) => form.querySelector<HTMLElement>(`[name="${n}"]`))
+        .filter((el): el is HTMLElement => el !== null),
+    ];
+
+    if (offenders.length > 0) {
       setFieldErrors(messages);
       setError(t("checkout.errSummary"));
       // The first offender, brought to them — on a phone the field that
       // stopped the order can easily be two screens up.
-      invalid[0].focus();
-      invalid[0].scrollIntoView({ block: "center", behavior: "smooth" });
+      offenders[0].focus();
+      offenders[0].scrollIntoView({ block: "center", behavior: "smooth" });
       return;
     }
     setFieldErrors({});
@@ -722,12 +742,11 @@ export default function CheckoutForm({
               </p>
             )}
 
-            {error && (
-              <p className="flex items-start gap-1.5 text-xs font-semibold text-red-600" role="alert">
-                <IconAlert className="mt-px h-3.5 w-3.5 shrink-0" />
-                {error}
-              </p>
-            )}
+            {/* The panel, not a line of red text: this is the message that
+                stops an order, sitting directly above the button that was
+                just refused. Same component the sign-in and sign-up forms
+                use, so a refusal looks the same wherever the shop gives one. */}
+            {error && <FormNotice title={t("checkout.errTitle")}>{error}</FormNotice>}
 
             <button
               type="submit"

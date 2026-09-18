@@ -38,3 +38,19 @@ export async function placedInThisBrowser(orderId: string) {
   const jar = await cookies();
   return (jar.get(COOKIE)?.value ?? "").split(".").includes(orderId);
 }
+
+/**
+ * Every order this browser placed, for attaching them to an account.
+ *
+ * This is the only proof of "these are mine" the shop actually holds. Neither
+ * the e-mail nor the phone on an order is verified — checkout asks for them
+ * and believes the answer — so claiming orders by matching the e-mail typed at
+ * signup would hand a stranger's name, phone and address to anyone who
+ * registers with their address. The cookie is different: it already grants
+ * read access to exactly these orders, so attaching them to the account that
+ * is holding it gives away nothing new.
+ */
+export async function ordersFromThisBrowser() {
+  const jar = await cookies();
+  return (jar.get(COOKIE)?.value ?? "").split(".").filter(Boolean);
+}

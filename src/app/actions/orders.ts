@@ -11,7 +11,8 @@ import { getSettings } from "@/lib/settings";
 import { toNumber } from "@/lib/money";
 import { computeSegment } from "@/lib/segment";
 import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
-import { rememberOrder, placedInThisBrowser } from "@/lib/order-access";
+import { rememberOrder, placedInThisBrowser, ordersFromThisBrowser } from "@/lib/order-access";
+import { personName, phoneNumber } from "@/lib/validation";
 import { notifyOrderPlaced } from "@/lib/order-emails";
 
 const itemSchema = z.object({
@@ -28,8 +29,11 @@ const shortText = z.string().trim().max(200);
 const longText = z.string().trim().max(2000);
 
 const placeOrderSchema = z.object({
-  customerName: shortText.min(2),
-  phone: shortText.min(6),
+  // The same rules the signup form uses — see lib/validation. This name is
+  // read off a delivery note by a driver at somebody's door, so `min(2)` was
+  // not enough: it accepted `ttttt@gmail.com`.
+  customerName: personName,
+  phone: phoneNumber,
   email: z.email().max(200).optional().or(z.literal("")),
   governorate: shortText.min(2),
   address: longText.optional(),
@@ -388,7 +392,7 @@ export async function lookupGuestOrder(
 
   const order = await prisma.order.findUnique({
     where: { ref: cleanRef },
-    select: { id: true, ref: true, phone: true },
+    select: { id: true, ref: true, phone: true, userId: true },
   });
   if (!order) return { ok: false, error: NOT_FOUND };
 
@@ -400,5 +404,57 @@ export async function lookupGuestOrder(
   if (stored.length < 6 || tail(stored) !== tail(digits)) return { ok: false, error: NOT_FOUND };
 
   await rememberOrder(order.id);
+  // Signed in and looking up an order this account does not own yet — they
+  // just proved it is theirs with the phone on it, so it joins the account
+  // rather than staying a guest order they have to look up again next time.
+  const viewer = await getCurrentUser();
+  if (viewer && !order.userId) await claimOrdersForUser(viewer.id);
   return { ok: true, ref: order.ref };
+}
+
+/**
+ * Attach the orders this browser placed as a guest to an account.
+ *
+ * Checkout does not require an account, so ordering first and registering
+ * afterwards is an ordinary thing to do — and the order stayed a guest order
+ * for ever. "Mes commandes" was empty for a customer who had just bought
+ * something, which reads as the order having been lost.
+ *
+ * **What counts as proof is the browser's order cookie, not the e-mail.**
+ * Nothing on an order is verified — checkout asks and believes the answer — so
+ * matching on the address typed at signup would give a stranger's name, phone
+ * and delivery address to anyone who registers with that address. The cookie
+ * already opens exactly these orders (see lib/order-access), so this hands the
+ * account nothing it was not already holding.
+ *
+ * `userId: null` in the filter matters: an order that already belongs to
+ * somebody is never reassigned, whatever cookie the caller is carrying.
+ *
+ * The customer segment is derived from order history, so it is recomputed
+ * here — otherwise a customer who claimed four orders would sit at NEW.
+ */
+export async function claimOrdersForUser(userId: string) {
+  const ids = await ordersFromThisBrowser();
+  if (ids.length === 0) return 0;
+
+  const { count } = await prisma.order.updateMany({
+    where: { id: { in: ids }, userId: null },
+    data: { userId },
+  });
+  if (count === 0) return 0;
+
+  const orders = await prisma.order.findMany({
+    where: { userId, status: { not: "CANCELLED" } },
+    select: { total: true },
+  });
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      segment: computeSegment(
+        orders.length,
+        orders.reduce((sum, o) => sum + toNumber(o.total), 0),
+      ),
+    },
+  });
+  return count;
 }

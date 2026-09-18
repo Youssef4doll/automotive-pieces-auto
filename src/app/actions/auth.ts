@@ -7,12 +7,16 @@ import { prisma } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/session";
 import { hit, peek, clear, callerKey, LIMITS } from "@/lib/rate-limit";
 import { checkForm } from "@/lib/bot-check";
+import { personName, phoneNumber } from "@/lib/validation";
+import { claimOrdersForUser } from "./orders";
 
 const signupSchema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  email: z.email("Email invalide"),
-  phone: z.string().min(6, "Numéro de téléphone invalide"),
-  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+  // Shared with the checkout — see lib/validation. Both used to be `min(2)`,
+  // which is how an account came to be called `ttttt@gmail.com`.
+  name: personName,
+  email: z.email("Cette adresse e-mail n'est pas valide."),
+  phone: phoneNumber,
+  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères."),
 });
 
 /**
@@ -56,7 +60,13 @@ export async function signup(_prev: AuthState, formData: FormData): Promise<Auth
   });
 
   await createSession({ userId: user.id, role: user.role });
-  redirect("/compte");
+  // Ordering first and registering afterwards is an ordinary thing to do on a
+  // shop that does not require an account — and the order used to stay a guest
+  // order for ever, so "Mes commandes" was empty for somebody who had just
+  // bought something. Said out loud on the next page rather than done
+  // quietly: the proof is the browser's cookie, and browsers get shared.
+  const claimed = await claimOrdersForUser(user.id);
+  redirect(claimed > 0 ? `/compte?rattachees=${claimed}` : "/compte");
 }
 
 const loginSchema = z.object({
@@ -112,7 +122,12 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   // all (there is none today) would get the short session, which is the safe
   // way round.
   await createSession({ userId: user.id, role: user.role }, { remember: formData.get("remember") === "on" });
-  redirect(user.role === "ADMIN" ? "/admin" : "/compte");
+  // Signing in counts too, not only registering: somebody who already had an
+  // account, checked out without noticing they were signed out, and then
+  // signed in is the same situation.
+  const claimed = await claimOrdersForUser(user.id);
+  if (user.role === "ADMIN") redirect("/admin");
+  redirect(claimed > 0 ? `/compte?rattachees=${claimed}` : "/compte");
 }
 
 export async function logout() {
