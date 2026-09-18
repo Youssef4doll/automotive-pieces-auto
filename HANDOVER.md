@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-35 Playwright suites, 1,368 checks at the last full green run, driving real
+35 Playwright suites, 1,377 checks at the last full green run, driving real
 browsers against a real database. They are the main safety net and they have
 caught more real bugs than they have cost.
 

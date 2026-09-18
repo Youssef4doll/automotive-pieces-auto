@@ -16,6 +16,15 @@
   --color-navy-800: #16305f;
   --color-navy-700: #1c3a70;
   --color-navy-600: #274a87;
+  /* The reference export stopped at 600, but the site had been writing
+     `bg-navy-50`, `hover:border-navy-300` and `hover:border-navy-400` in about
+     ten places for months. An undefined Tailwind colour is not an error: the
+     class is simply dropped, so those tints and hovers quietly did nothing and
+     nobody saw a failure. Mixed from navy-900 towards white so the ramp stays
+     the same hue. */
+  --color-navy-400: #6b83ad;
+  --color-navy-300: #9aabc8;
+  --color-navy-50: #eff3fa;
 
   --color-gold-600: #e0ac00;
   --color-gold-500: #fbc000;
@@ -56,6 +65,9 @@
   --color-navy-800: var(--color-navy-800);
   --color-navy-700: var(--color-navy-700);
   --color-navy-600: var(--color-navy-600);
+  --color-navy-400: var(--color-navy-400);
+  --color-navy-300: var(--color-navy-300);
+  --color-navy-50: var(--color-navy-50);
   --color-gold-600: var(--color-gold-600);
   --color-gold-500: var(--color-gold-500);
   --color-gold-400: var(--color-gold-400);

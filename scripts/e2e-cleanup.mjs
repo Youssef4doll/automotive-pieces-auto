@@ -341,7 +341,101 @@ try {
   }
 
   /* ------------------------------------------------------------- [7] ----- */
-  console.log("\n[7] AND THE PAGES STILL WORK");
+  /* ------------------------------------------------------------- [7] ----- */
+  console.log("\n[7] EVERY BRAND COLOUR A CLASS ASKS FOR ACTUALLY EXISTS");
+  {
+    // An undefined Tailwind colour is not an error. The class is simply
+    // dropped, so `bg-navy-50` painted nothing, `hover:border-navy-300` did
+    // nothing, and both had been in the source for months across ten files
+    // without a single failure anywhere — the kind of bug you only find by
+    // wondering why a panel looks flat.
+    //
+    // Checked against the stylesheet rather than the browser because that is
+    // where the answer is: a shade is defined or it is not.
+    // Only `navy` and `gold`: they exist solely because this project declares
+    // them, so a shade nobody declared is a class that does nothing. `red`,
+    // `gray` and the rest fall back to Tailwind's own scales, where every step
+    // is real even though the project overrides two of them.
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    const defined = new Set(
+      [...css.matchAll(/--color-(navy|gold)-(\d+)\s*:/g)].map((m) => `${m[1]}-${m[2]}`),
+    );
+
+    const used = new Map();
+    for (const file of collectSource(join(process.cwd(), "src"))) {
+      const text = readFileSync(file, "utf8");
+      for (const m of text.matchAll(/\b(?:bg|text|border|fill|stroke|from|via|to|ring|outline|decoration|divide|shadow|accent|caret|placeholder)-(navy|gold)-(\d+)\b/g)) {
+        const shade = `${m[1]}-${m[2]}`;
+        if (!defined.has(shade)) {
+          used.set(shade, (used.get(shade) ?? new Set()).add(file.replace(process.cwd() + "/", "")));
+        }
+      }
+    }
+
+    const missing = [...used.entries()].map(([shade, files]) => `${shade} (${files.size} file(s))`);
+    check(
+      "no class asks for a navy or gold shade the stylesheet does not define",
+      missing.length === 0,
+      missing.join(", ") || `${defined.size} shades defined`,
+    );
+  }
+
+  /* ------------------------------------------------------------- [8] ----- */
+  console.log("\n[8] THE FOUR WAYS IN ARE SHOWN, NOT DESCRIBED");
+  {
+    // "Que cherchez-vous ?" maps to how people actually arrive — I know my
+    // car, I know the part, I have the reference, I have no idea — but it used
+    // to ask for about thirty words of reading before the first tap, on a site
+    // whose traffic is nearly all phones. Each door carries a drawing now.
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const p = await ctx.newPage();
+    await p.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+    await p.waitForTimeout(1200);
+
+    const doors = p.locator("#finder button[aria-pressed]");
+    check("all four doors are there", (await doors.count()) === 4, `${await doors.count()}`);
+
+    const art = await doors.evaluateAll((els) =>
+      els.map((el) => {
+        const svg = el.querySelector("svg");
+        return svg ? { label: svg.getAttribute("aria-label") || "", shape: svg.innerHTML.length } : null;
+      }),
+    );
+    check("each one carries a picture", art.every((a) => a && a.shape > 0), `${art.filter(Boolean).length} of 4`);
+    check("and the picture says what it is, for a screen reader",
+      art.every((a) => a && a.label.length > 8), art.map((a) => a?.label ?? "—").join(" | ").slice(0, 90));
+    // Four doors illustrated with the same drawing would be decoration.
+    check("the four are four different drawings",
+      new Set(art.map((a) => a?.shape)).size === 4, `${new Set(art.map((a) => a?.shape)).size} distinct`);
+
+    // All four on screen at once is the whole point of the change.
+    const box = await p.locator("#finder .grid").first().boundingBox();
+    const rows = await doors.evaluateAll((els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size);
+    check("they sit two-up rather than in a column of four", rows === 2, `${rows} row(s)`);
+    check("and the whole choice fits a phone screen", !!box && box.height <= 420, `${Math.round(box?.height ?? 0)}px tall`);
+
+    // The artwork has one fixed palette, which only works while the plate
+    // behind it stays light on the chosen card — where everything else goes
+    // navy. Get this wrong and the selected door shows a navy drawing on navy.
+    await doors.nth(2).click();
+    await p.waitForTimeout(350);
+    const plate = await doors.nth(2).evaluate((el) => {
+      const lum = (c) => {
+        const [r, g, b] = (c.match(/\d+/g) ?? [255, 255, 255]).map(Number);
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      };
+      return {
+        card: lum(getComputedStyle(el).backgroundColor),
+        plate: lum(getComputedStyle(el.querySelector("span")).backgroundColor),
+      };
+    });
+    check("the chosen card goes dark", plate.card < 0.35, plate.card.toFixed(2));
+    check("but its picture keeps a light plate to sit on", plate.plate > 0.8, plate.plate.toFixed(2));
+    await ctx.close();
+  }
+
+  /* ------------------------------------------------------------- [9] ----- */
+  console.log("\n[9] AND THE PAGES STILL WORK");
   {
     for (const path of ["/", "/catalogue/freinage", "/recherche?q=frein", "/panier", "/contact"]) {
       const res = await fetch(BASE + path);
