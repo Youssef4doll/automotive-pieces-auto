@@ -380,59 +380,13 @@ try {
     );
   }
 
-  /* ------------------------------------------------------------- [8] ----- */
-  console.log("\n[8] THE FOUR WAYS IN ARE SHOWN, NOT DESCRIBED");
-  {
-    // "Que cherchez-vous ?" maps to how people actually arrive — I know my
-    // car, I know the part, I have the reference, I have no idea — but it used
-    // to ask for about thirty words of reading before the first tap, on a site
-    // whose traffic is nearly all phones. Each door carries a drawing now.
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-    const p = await ctx.newPage();
-    await p.goto(BASE + "/", { waitUntil: "domcontentloaded" });
-    await p.waitForTimeout(1200);
-
-    const doors = p.locator("#finder button[aria-pressed]");
-    check("all four doors are there", (await doors.count()) === 4, `${await doors.count()}`);
-
-    const art = await doors.evaluateAll((els) =>
-      els.map((el) => {
-        const svg = el.querySelector("svg");
-        return svg ? { label: svg.getAttribute("aria-label") || "", shape: svg.innerHTML.length } : null;
-      }),
-    );
-    check("each one carries a picture", art.every((a) => a && a.shape > 0), `${art.filter(Boolean).length} of 4`);
-    check("and the picture says what it is, for a screen reader",
-      art.every((a) => a && a.label.length > 8), art.map((a) => a?.label ?? "—").join(" | ").slice(0, 90));
-    // Four doors illustrated with the same drawing would be decoration.
-    check("the four are four different drawings",
-      new Set(art.map((a) => a?.shape)).size === 4, `${new Set(art.map((a) => a?.shape)).size} distinct`);
-
-    // All four on screen at once is the whole point of the change.
-    const box = await p.locator("#finder .grid").first().boundingBox();
-    const rows = await doors.evaluateAll((els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size);
-    check("they sit two-up rather than in a column of four", rows === 2, `${rows} row(s)`);
-    check("and the whole choice fits a phone screen", !!box && box.height <= 420, `${Math.round(box?.height ?? 0)}px tall`);
-
-    // The artwork has one fixed palette, which only works while the plate
-    // behind it stays light on the chosen card — where everything else goes
-    // navy. Get this wrong and the selected door shows a navy drawing on navy.
-    await doors.nth(2).click();
-    await p.waitForTimeout(350);
-    const plate = await doors.nth(2).evaluate((el) => {
-      const lum = (c) => {
-        const [r, g, b] = (c.match(/\d+/g) ?? [255, 255, 255]).map(Number);
-        return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      };
-      return {
-        card: lum(getComputedStyle(el).backgroundColor),
-        plate: lum(getComputedStyle(el.querySelector("span")).backgroundColor),
-      };
-    });
-    check("the chosen card goes dark", plate.card < 0.35, plate.card.toFixed(2));
-    check("but its picture keeps a light plate to sit on", plate.plate > 0.8, plate.plate.toFixed(2));
-    await ctx.close();
-  }
+  /* --------------------------------------------------------------------- */
+  // [8] used to check the four "Que cherchez-vous ?" doors carried drawings.
+  // The drawings were removed at the owner's request — the doors are back to a
+  // line icon beside their two lines of text — so the section went with them
+  // rather than being left asserting artwork nobody wants. [7] above still
+  // guards the palette tokens those drawings introduced, which other
+  // components now rely on.
 
   /* ------------------------------------------------------------- [9] ----- */
   console.log("\n[9] AND THE PAGES STILL WORK");

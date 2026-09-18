@@ -4,16 +4,11 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
-import { ArtCar, ArtPart, ArtReference, ArtUnknown } from "@/components/finder/RouteArt";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import { decodeVinMakeSlug, isValidVinFormat } from "@/lib/vin";
 import { track } from "@/lib/track";
 import VehiclePicker from "./VehiclePicker";
 import SearchSuggest from "./SearchSuggest";
-
-/** One size for the four pictures, so they cannot drift apart. Big enough on a
- *  phone to be a picture rather than a bullet, and the plate gives it air. */
-const ART = "h-14 w-14 sm:h-16 sm:w-16";
 
 /**
  * The one thing the homepage asks: how would you like to find your part?
@@ -121,13 +116,11 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
 
       {/* The routes. Each is a button, not a tab strip: a tab strip says
           "these are views of one thing", and these are four different jobs. */}
-      {/* Two across on a phone rather than four stacked, so every door is on
-          screen at once and the choice is a glance instead of a scroll. */}
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         <RouteCard
           active={route === "car"}
           onClick={() => setRoute("car")}
-          art={<ArtCar className={ART} />}
+          icon={<IconCar />}
           title={t("finder2.carTitle")}
           hint={vehicle ? (vehicleLabel(vehicle) ?? "") : t("finder2.carHint")}
           primary
@@ -135,21 +128,21 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
         <RouteCard
           active={route === "name"}
           onClick={() => setRoute("name")}
-          art={<ArtPart className={ART} />}
+          icon={<IconSearch />}
           title={t("finder2.nameTitle")}
           hint={t("finder2.nameHint")}
         />
         <RouteCard
           active={route === "ref"}
           onClick={() => setRoute("ref")}
-          art={<ArtReference className={ART} />}
+          icon={<IconHash />}
           title={t("finder2.refTitle")}
           hint={t("finder2.refHint")}
         />
         <RouteCard
           active={route === "unknown"}
           onClick={() => setRoute("unknown")}
-          art={<ArtUnknown className={ART} />}
+          icon={<IconHelp />}
           title={t("finder2.unknownTitle")}
           hint={t("finder2.unknownHint")}
         />
@@ -340,31 +333,17 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
   );
 }
 
-/**
- * One door, with its picture doing the explaining.
- *
- * This was an 18px line icon beside two lines of text, laid out sideways, and
- * on a phone the four of them stacked into a column of about thirty words
- * between the shopper and the first tap. The artwork leads now and the words
- * confirm it, which is the right order when the reader is standing at a
- * counter or at the roadside.
- *
- * The plate behind the picture stays light on a selected card, where
- * everything else turns navy. That is deliberate: the illustrations then need
- * one fixed palette rather than an inverted second set to keep in step, and
- * on the chosen card it reads as a sticker rather than a hole.
- */
 function RouteCard({
   active,
   onClick,
-  art,
+  icon,
   title,
   hint,
   primary = false,
 }: {
   active: boolean;
   onClick: () => void;
-  art: React.ReactNode;
+  icon: React.ReactNode;
   title: string;
   hint: string;
   primary?: boolean;
@@ -374,7 +353,7 @@ function RouteCard({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`flex min-h-tap flex-col items-start gap-2.5 rounded-2xl border p-3 text-start transition sm:p-3.5 ${
+      className={`flex items-start gap-3 p-3.5 rounded-2xl border text-start transition ${
         active
           ? "border-navy-900 bg-navy-900 text-white shadow-sm"
           : primary
@@ -383,15 +362,15 @@ function RouteCard({
       }`}
     >
       <span
-        className={`grid w-full place-items-center rounded-xl py-3 transition-colors ${
-          active ? "bg-white" : "bg-navy-50"
+        className={`shrink-0 grid place-items-center w-9 h-9 rounded-xl ${
+          active ? "bg-white/15 text-white" : "bg-gray-100 text-navy-900"
         }`}
       >
-        {art}
+        {icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-sm font-semibold leading-tight">{title}</span>
-        <span className={`mt-0.5 block text-xs leading-snug ${active ? "text-white/70" : "text-gray-600"}`}>
+        <span className="block font-semibold text-sm leading-tight">{title}</span>
+        <span className={`block text-xs mt-0.5 leading-snug ${active ? "text-white/70" : "text-gray-600"}`}>
           {hint}
         </span>
       </span>
@@ -429,6 +408,15 @@ function IconCar() {
       <circle cx="16.5" cy="13.5" r=".8" />
     </Stroke>
   );
+}
+function IconSearch() {
+  return <Stroke><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></Stroke>;
+}
+function IconHash() {
+  return <Stroke><path d="M10 3 8 21M16 3l-2 18M3.5 8.5h17M3 15.5h17" /></Stroke>;
+}
+function IconHelp() {
+  return <Stroke><circle cx="12" cy="12" r="9" /><path d="M9.2 9.3a2.9 2.9 0 0 1 5.6 1c0 2-2.8 2.4-2.8 4" /><path d="M12 17.5h.01" /></Stroke>;
 }
 function IconCamera() {
   return (
