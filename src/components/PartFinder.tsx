@@ -120,7 +120,6 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
         <RouteCard
           active={route === "car"}
           onClick={() => setRoute("car")}
-          icon={<IconCar />}
           title={t("finder2.carTitle")}
           hint={vehicle ? (vehicleLabel(vehicle) ?? "") : t("finder2.carHint")}
           primary
@@ -128,21 +127,18 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
         <RouteCard
           active={route === "name"}
           onClick={() => setRoute("name")}
-          icon={<IconSearch />}
           title={t("finder2.nameTitle")}
           hint={t("finder2.nameHint")}
         />
         <RouteCard
           active={route === "ref"}
           onClick={() => setRoute("ref")}
-          icon={<IconHash />}
           title={t("finder2.refTitle")}
           hint={t("finder2.refHint")}
         />
         <RouteCard
           active={route === "unknown"}
           onClick={() => setRoute("unknown")}
-          icon={<IconHelp />}
           title={t("finder2.unknownTitle")}
           hint={t("finder2.unknownHint")}
         />
@@ -333,17 +329,28 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
   );
 }
 
+/**
+ * One door: what you would say out loud, and one line confirming it.
+ *
+ * No icon, no drawing, no plate. Pictures have been tried on these twice —
+ * first an 18px line glyph in a tinted square, then a small illustration
+ * across the top of a taller card — and both were removed. What the four
+ * doors have to do is let somebody recognise their own situation in a
+ * sentence, and the sentence does that on its own; a magnifying glass beside
+ * "je sais quelle pièce" adds a shape to look at, not a reason to tap.
+ *
+ * The chosen door goes navy. That is the whole of the state, and with nothing
+ * else in the card there is nothing to keep legible against it but the text.
+ */
 function RouteCard({
   active,
   onClick,
-  icon,
   title,
   hint,
   primary = false,
 }: {
   active: boolean;
   onClick: () => void;
-  icon: React.ReactNode;
   title: string;
   hint: string;
   primary?: boolean;
@@ -353,7 +360,7 @@ function RouteCard({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`flex items-start gap-3 p-3.5 rounded-2xl border text-start transition ${
+      className={`flex min-h-tap flex-col justify-center rounded-2xl border p-3.5 text-start transition ${
         active
           ? "border-navy-900 bg-navy-900 text-white shadow-sm"
           : primary
@@ -361,18 +368,9 @@ function RouteCard({
             : "border-gray-200 bg-white hover:border-navy-900/40"
       }`}
     >
-      <span
-        className={`shrink-0 grid place-items-center w-9 h-9 rounded-xl ${
-          active ? "bg-white/15 text-white" : "bg-gray-100 text-navy-900"
-        }`}
-      >
-        {icon}
-      </span>
-      <span className="min-w-0">
-        <span className="block font-semibold text-sm leading-tight">{title}</span>
-        <span className={`block text-xs mt-0.5 leading-snug ${active ? "text-white/70" : "text-gray-600"}`}>
-          {hint}
-        </span>
+      <span className="block text-sm font-semibold leading-tight">{title}</span>
+      <span className={`mt-0.5 block text-xs leading-snug ${active ? "text-white/70" : "text-gray-600"}`}>
+        {hint}
       </span>
     </button>
   );
@@ -408,15 +406,6 @@ function IconCar() {
       <circle cx="16.5" cy="13.5" r=".8" />
     </Stroke>
   );
-}
-function IconSearch() {
-  return <Stroke><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></Stroke>;
-}
-function IconHash() {
-  return <Stroke><path d="M10 3 8 21M16 3l-2 18M3.5 8.5h17M3 15.5h17" /></Stroke>;
-}
-function IconHelp() {
-  return <Stroke><circle cx="12" cy="12" r="9" /><path d="M9.2 9.3a2.9 2.9 0 0 1 5.6 1c0 2-2.8 2.4-2.8 4" /><path d="M12 17.5h.01" /></Stroke>;
 }
 function IconCamera() {
   return (
