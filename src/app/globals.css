@@ -27,11 +27,6 @@
   --color-navy-50: #eff3fa;
 
   --color-gold-600: #e0ac00;
-  /* The only gold that may carry small text on white. #e0ac00 measures
-     2.09:1 against white — well under the 4.5:1 AA floor the site holds
-     itself to — so an eyebrow set in it is decoration a good many people
-     simply cannot read. This is 5.1:1 and still unmistakably gold. */
-  --color-gold-800: #8a6a00;
   --color-gold-500: #fbc000;
   --color-gold-400: #ffd23d;
 
@@ -74,7 +69,6 @@
   --color-navy-300: var(--color-navy-300);
   --color-navy-50: var(--color-navy-50);
   --color-gold-600: var(--color-gold-600);
-  --color-gold-800: var(--color-gold-800);
   --color-gold-500: var(--color-gold-500);
   --color-gold-400: var(--color-gold-400);
   --color-red-600: var(--color-red-600);

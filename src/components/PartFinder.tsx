@@ -4,18 +4,16 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
-import { ArtCar, ArtPart, ArtReference, ArtUnknown, ArtCarteGrise } from "@/components/finder/RouteArt";
+import { ArtCar, ArtPart, ArtReference, ArtUnknown } from "@/components/finder/RouteArt";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import { decodeVinMakeSlug, isValidVinFormat } from "@/lib/vin";
 import { track } from "@/lib/track";
 import VehiclePicker from "./VehiclePicker";
 import SearchSuggest from "./SearchSuggest";
 
-/** One size for the four pictures, so they cannot drift apart. Full width and
- *  landscape: these are small illustrations across the top of a card, not
- *  icons beside a label — at 56px square they were read as bullets and
- *  skipped. */
-const ART = "h-14 w-full sm:h-[4.5rem] lg:h-20";
+/** One size for the four pictures, so they cannot drift apart. Big enough on a
+ *  phone to be a picture rather than a bullet, and the plate gives it air. */
+const ART = "h-14 w-14 sm:h-16 sm:w-16";
 
 /**
  * The one thing the homepage asks: how would you like to find your part?
@@ -60,7 +58,6 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
 
   const [vin, setVin] = useState("");
   const [vinMsg, setVinMsg] = useState<string | null>(null);
-  const [vinOpen, setVinOpen] = useState(false);
   const [photoSent, setPhotoSent] = useState(false);
 
   function openPicker(makeSlug?: string) {
@@ -113,64 +110,13 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
     openPicker(makeSlug);
   }
 
-  /**
-   * The VIN entry, rendered twice — folded on a phone, open on a wide screen.
-   *
-   * Declared here rather than as a module-level component so it reads the same
-   * `vin` state as everything else: two copies with two independent states
-   * would let the shopper type into one and submit the other.
-   */
-  function VinForm() {
-    return (
-      <form onSubmit={submitVin} className="min-w-0 flex-1">
-        <p className="text-xs leading-snug text-gray-600">{t("finder2.vinWhere")}</p>
-        <div className="mt-1.5 flex flex-wrap items-start gap-2">
-          <div className="min-w-[12rem] flex-1">
-            <input
-              dir="ltr"
-              value={vin}
-              onChange={(e) =>
-                setVin(e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, "").slice(0, 17))
-              }
-              placeholder="VF1BR1V0H12345678"
-              aria-label="VIN"
-              className={`min-h-tap w-full rounded-xl border bg-white px-3 font-mono text-base tracking-wider outline-none ${
-                vin.length === 17 ? "border-green-600" : vin.length > 0 ? "border-amber-400" : "border-gray-300"
-              }`}
-            />
-            <span className="mt-1 block text-xs text-gray-600">{vin.length}/17</span>
-            {vinMsg && <p className="mt-0.5 text-xs text-amber-700">{vinMsg}</p>}
-          </div>
-          <button
-            type="submit"
-            disabled={vin.length !== 17}
-            className="min-h-tap rounded-xl bg-navy-900 px-5 font-display text-xs font-bold uppercase tracking-wide text-white enabled:hover:bg-navy-800 disabled:bg-gray-200 disabled:text-gray-600"
-          >
-            {t("finder.identify")}
-          </button>
-        </div>
-      </form>
-    );
-  }
-
   return (
     <section id="finder" className="mx-auto shell-w px-4 pt-6 pb-8 sm:pt-9 sm:pb-12">
-      {/* Eyebrow, promise, rule. The question is the small gold line; the
-          heading is the answer to it, which is the thing worth setting large.
-          The rule under it is the same gold, so the three read as one block
-          rather than as a title with a stray caption. */}
-      <div className="mb-5 sm:mb-6">
-        {/* gold-800, not gold-500: the brand gold measures 2.09:1 on white and
-            this is 12px text. See globals.css — the swatch is for fills and
-            rules, and there is a darker step for the rare case where gold has
-            to be read rather than looked at. */}
-        <p className="font-display text-xs font-bold uppercase tracking-[0.12em] text-gold-800">
+      <div className="mb-4 sm:mb-5">
+        <h2 className="font-heading font-extrabold uppercase text-xl sm:text-2xl text-navy-950 tracking-tight">
           {t("finder2.title")}
-        </p>
-        <h2 className="mt-1.5 max-w-[34rem] font-heading text-2xl font-extrabold leading-tight tracking-tight text-navy-950 sm:text-3xl">
-          {t("finder2.subtitle")}
         </h2>
-        <span className="mt-3 block h-1 w-14 rounded-full bg-gold-500" />
+        <p className="text-sm text-gray-600 mt-1">{t("finder2.subtitle")}</p>
       </div>
 
       {/* The routes. Each is a button, not a tab strip: a tab strip says
@@ -209,12 +155,85 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
         />
       </div>
 
-      {/* One panel, under the chosen route — and none at all under "I know my
-          car", because that door's answer is the band below, which is on
-          screen whichever door is open. Two "Choisir ma voiture" buttons
-          stacked on top of each other was the alternative. */}
-      {route !== "car" && (
+      {/* One panel, under the chosen route. */}
       <div className="mt-2.5 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+        {route === "car" && (
+          <div className="flex flex-col gap-3">
+            {vehicle ? (
+              <>
+                <p className="text-sm text-gray-600">{t("finder2.carSaved")}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-2 min-h-tap px-4 rounded-xl bg-navy-50 border border-navy-900/15 text-navy-950 font-semibold text-sm">
+                    <IconCar />
+                    {vehicleLabel(vehicle)}
+                  </span>
+                  <Link
+                    href="/recherche?q="
+                    onClick={() => track("search_started", { query: "", source: "finder_my_car" })}
+                    className="inline-flex items-center min-h-tap px-5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-xs tracking-wide"
+                  >
+                    {t("finder2.shopForCar")}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => openPicker()}
+                    className="inline-flex items-center min-h-tap px-4 rounded-xl border border-gray-300 text-navy-900 text-sm font-semibold hover:border-navy-900"
+                  >
+                    {t("finder2.changeCar")}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600">{t("finder2.carIntro")}</p>
+                <button
+                  type="button"
+                  onClick={() => openPicker()}
+                  className="self-start inline-flex items-center gap-2 min-h-tap px-6 rounded-xl bg-gold-500 hover:bg-gold-400 text-navy-950 font-display font-bold uppercase text-sm tracking-wide"
+                >
+                  {t("finder2.pickCar")}
+                </button>
+
+                {/* The VIN is faster than three dropdowns for anyone holding
+                    their papers, but it is an expert's shortcut, so it sits
+                    under the main action rather than competing with it. */}
+                <details className="mt-1 group">
+                  <summary className="inline-flex items-center gap-1.5 min-h-tap-compact text-sm text-navy-700 hover:text-navy-950 cursor-pointer select-none">
+                    <IconChevron />
+                    {t("finder2.vinToggle")}
+                  </summary>
+                  <p className="mt-1 text-xs text-gray-600">{t("finder2.vinWhere")}</p>
+                  <form onSubmit={submitVin} className="mt-2 flex flex-wrap items-start gap-2">
+                    <div className="min-w-0">
+                      <input
+                        dir="ltr"
+                        value={vin}
+                        onChange={(e) =>
+                          setVin(e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, "").slice(0, 17))
+                        }
+                        placeholder="VF1BR1V0H12345678"
+                        aria-label="VIN"
+                        className={`w-full sm:w-72 px-3 min-h-tap text-base border rounded-xl outline-none font-mono tracking-wider ${
+                          vin.length === 17 ? "border-green-600" : vin.length > 0 ? "border-amber-400" : "border-gray-300"
+                        }`}
+                      />
+                      <span className="block text-xs text-gray-600 mt-1">{vin.length}/17</span>
+                      {vinMsg && <p className="text-xs text-amber-700 mt-0.5">{vinMsg}</p>}
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={vin.length !== 17}
+                      className="min-h-tap px-5 rounded-xl bg-navy-900 enabled:hover:bg-navy-800 text-white disabled:bg-gray-200 disabled:text-gray-600 font-display font-bold uppercase text-xs tracking-wide"
+                    >
+                      {t("finder.identify")}
+                    </button>
+                  </form>
+                </details>
+              </>
+            )}
+          </div>
+        )}
+
         {route === "name" && (
           <form onSubmit={submitSearch} className="flex flex-col gap-2">
             <p className="text-sm text-gray-600">{t("finder2.nameIntro")}</p>
@@ -313,90 +332,6 @@ export default function PartFinder({ contactUrl }: { contactUrl: string }) {
           </div>
         )}
       </div>
-      )}
-
-      {/* The shop's promise, kept on screen whichever door is open.
-          "Tell us your car once, and every part then says whether it fits" is
-          the single thing this site does that a marketplace does not, and it
-          used to be a paragraph inside one of the four panels — visible only
-          to somebody who had already chosen the car door, which is the one
-          group who needed no convincing. */}
-      <div className="mt-3 overflow-hidden rounded-2xl border border-navy-900/15 bg-navy-50">
-        <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:gap-6">
-          <div className="min-w-0 flex-1">
-            <p className="font-heading text-base font-extrabold tracking-tight text-navy-950 sm:text-lg">
-              {t("finder2.bandTitle")}
-            </p>
-            <p className="mt-1 text-sm leading-relaxed text-gray-600">{t("finder2.bandBody")}</p>
-          </div>
-
-          {vehicle ? (
-            <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
-              <span className="inline-flex min-h-tap items-center gap-2 rounded-xl border border-navy-900/15 bg-white px-4 text-sm font-semibold text-navy-950">
-                <IconCar />
-                {vehicleLabel(vehicle)}
-              </span>
-              <Link
-                href="/recherche?q="
-                onClick={() => track("search_started", { query: "", source: "finder_my_car" })}
-                className="inline-flex min-h-tap items-center gap-2 rounded-xl bg-gold-500 px-5 font-display text-xs font-bold uppercase tracking-wide text-navy-950 hover:bg-gold-400"
-              >
-                {t("finder2.shopForCar")}
-                <IconArrowEnd />
-              </Link>
-              <button
-                type="button"
-                onClick={() => openPicker()}
-                className="inline-flex min-h-tap items-center rounded-xl border border-navy-900/20 bg-white px-4 text-sm font-semibold text-navy-900 hover:border-navy-900"
-              >
-                {t("finder2.changeCar")}
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => openPicker()}
-              className="inline-flex min-h-tap-primary shrink-0 items-center justify-center gap-2.5 self-start rounded-xl bg-gold-500 px-6 font-display text-sm font-bold uppercase tracking-wide text-navy-950 hover:bg-gold-400 lg:self-auto"
-            >
-              <IconCar />
-              {t("finder2.pickCar")}
-              <IconArrowEnd />
-            </button>
-          )}
-
-          {/* The VIN, with the document it is printed on beside it. An
-              expert's shortcut — faster than three dropdowns for anybody
-              holding their papers, meaningless to anybody who is not — so it
-              sits to the side of the main action rather than in front of it,
-              and it is folded away on a phone where it would otherwise be a
-              third of the band. */}
-          {/* One VIN form, folded on a phone and open on a wide screen.
-              Not a <details>: `open` is an attribute, not a style, so it
-              cannot be "open above lg" in CSS — and the first attempt
-              (`lg:[&]:open`) silently did nothing, leaving the shortcut
-              invisible on desktop. The second attempt rendered the block
-              twice, which put two inputs labelled VIN in the page and made
-              `#finder input[dir=ltr]` ambiguous for anything looking for the
-              reference box. A toggle and one form. */}
-          {!vehicle && (
-            <div className="min-w-0 lg:w-[23rem] lg:shrink-0">
-              <button
-                type="button"
-                onClick={() => setVinOpen((v) => !v)}
-                aria-expanded={vinOpen}
-                className="inline-flex min-h-tap-compact select-none items-center gap-1.5 text-sm font-semibold text-navy-700 hover:text-navy-950 lg:hidden"
-              >
-                <IconChevron />
-                {t("finder2.vinToggle")}
-              </button>
-              <div className={`items-start gap-3 ${vinOpen ? "mt-2 flex" : "hidden lg:flex"}`}>
-                <ArtCarteGrise className="hidden h-16 w-24 shrink-0 lg:block" />
-                <VinForm />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {pickerOpen && (
         <VehiclePicker onClose={() => setPickerOpen(false)} initialMakeSlug={presetMake} contactUrl={contactUrl} />
@@ -439,47 +374,28 @@ function RouteCard({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`group flex min-h-tap flex-col items-start gap-2 rounded-2xl border bg-white p-2.5 text-start transition sm:gap-3 sm:p-4 ${
+      className={`flex min-h-tap flex-col items-start gap-2.5 rounded-2xl border p-3 text-start transition sm:p-3.5 ${
         active
-          ? "border-navy-900 ring-1 ring-navy-900 shadow-sm"
+          ? "border-navy-900 bg-navy-900 text-white shadow-sm"
           : primary
-            ? "border-navy-900/20 hover:border-navy-900/50"
-            : "border-gray-200 hover:border-navy-900/40"
+            ? "border-navy-900/25 bg-white hover:border-navy-900"
+            : "border-gray-200 bg-white hover:border-navy-900/40"
       }`}
     >
-      {/* The card stays white on every state and the artwork keeps one fixed
-          palette. It used to flip to navy when chosen, which meant the picture
-          needed a light plate carved out of a dark card — two things to keep
-          in step, and one navy-on-navy drawing away from being invisible. The
-          border, the ring and the arrow say which door is open instead. */}
-      <span className="grid w-full place-items-center rounded-xl bg-navy-50 py-2 sm:py-3">{art}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-bold leading-tight text-navy-950 sm:text-[15px]">{title}</span>
-        <span className="mt-1 block text-xs leading-snug text-gray-600">{hint}</span>
-      </span>
-      {/* The affordance the four titles were missing: something that looks
-          like it goes somewhere. Filled on the open door. */}
       <span
-        aria-hidden="true"
-        className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors sm:h-9 sm:w-9 ${
-          active
-            ? "bg-navy-900 text-white"
-            : "border border-navy-900/20 text-navy-900 group-hover:border-navy-900 group-hover:bg-navy-900 group-hover:text-white"
+        className={`grid w-full place-items-center rounded-xl py-3 transition-colors ${
+          active ? "bg-white" : "bg-navy-50"
         }`}
       >
-        <IconArrowEnd />
+        {art}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold leading-tight">{title}</span>
+        <span className={`mt-0.5 block text-xs leading-snug ${active ? "text-white/70" : "text-gray-600"}`}>
+          {hint}
+        </span>
       </span>
     </button>
-  );
-}
-
-/** The arrow on a route card. Flips with the writing direction. */
-function IconArrowEnd() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="rtl:-scale-x-100">
-      <path d="M5 12h13" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
   );
 }
 

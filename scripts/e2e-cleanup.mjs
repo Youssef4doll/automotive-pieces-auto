@@ -409,72 +409,28 @@ try {
       new Set(art.map((a) => a?.shape)).size === 4, `${new Set(art.map((a) => a?.shape)).size} distinct`);
 
     // All four on screen at once is the whole point of the change.
-    //
-    // Measured against the screen rather than against a number. This said
-    // `height <= 420`, which was the height the cards happened to be when it
-    // was written — so making the artwork bigger failed it at 421px, a
-    // difference no shopper could see, while telling us nothing about whether
-    // the four doors still fit. The rule is that a phone shows all four
-    // without scrolling past them; that is what this measures now.
+    const box = await p.locator("#finder .grid").first().boundingBox();
     const rows = await doors.evaluateAll((els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size);
     check("they sit two-up rather than in a column of four", rows === 2, `${rows} row(s)`);
+    check("and the whole choice fits a phone screen", !!box && box.height <= 420, `${Math.round(box?.height ?? 0)}px tall`);
 
-    await p.locator("#finder").evaluate((el) => el.scrollIntoView({ block: "start" }));
-    await p.waitForTimeout(400);
-    const fit = await doors.nth(3).evaluate((el) => ({
-      bottom: Math.round(el.getBoundingClientRect().bottom),
-      screen: window.innerHeight,
-    }));
-    check(
-      "and all four fit a phone screen at once",
-      fit.bottom <= fit.screen,
-      `last door ends at ${fit.bottom}px of ${fit.screen}px`,
-    );
-
-    // Which door is open has to be visible, and the artwork has to stay
-    // legible on it. The card used to turn navy and carve a light plate out
-    // of itself for the picture — two things to keep in step, and one
-    // navy-on-navy drawing away from an invisible illustration. It stays white
-    // now and says "chosen" with its border, its ring and a filled arrow, so
-    // this checks that the open door differs from a closed one rather than
-    // that it is dark.
+    // The artwork has one fixed palette, which only works while the plate
+    // behind it stays light on the chosen card — where everything else goes
+    // navy. Get this wrong and the selected door shows a navy drawing on navy.
     await doors.nth(2).click();
     await p.waitForTimeout(350);
-    const marks = await doors.evaluateAll((els) => {
+    const plate = await doors.nth(2).evaluate((el) => {
       const lum = (c) => {
         const [r, g, b] = (c.match(/\d+/g) ?? [255, 255, 255]).map(Number);
         return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       };
-      return els.map((el) => {
-        const spans = el.querySelectorAll("span");
-        const arrow = spans[spans.length - 1];
-        return {
-          pressed: el.getAttribute("aria-pressed") === "true",
-          border: getComputedStyle(el).borderColor,
-          // The raw string, not a luminance: an unfilled arrow is
-          // `rgba(0, 0, 0, 0)`, and reading only the r/g/b of that says
-          // "black" — which is exactly what a filled navy arrow says too.
-          arrow: getComputedStyle(arrow).backgroundColor,
-          plate: lum(getComputedStyle(spans[0]).backgroundColor),
-        };
-      });
+      return {
+        card: lum(getComputedStyle(el).backgroundColor),
+        plate: lum(getComputedStyle(el.querySelector("span")).backgroundColor),
+      };
     });
-    const open = marks.find((m) => m.pressed);
-    const shut = marks.filter((m) => !m.pressed);
-    check("exactly one door reads as open", marks.filter((m) => m.pressed).length === 1);
-    check(
-      "the open door is marked differently from the closed ones",
-      !!open && shut.every((m) => m.border !== open.border),
-      `${open?.border} vs ${shut[0]?.border}`,
-    );
-    const transparent = (c) => /^(transparent$|rgba?\([^)]*,\s*0\s*\))/.test(c);
-    check(
-      "its arrow is filled while theirs are not",
-      !!open && !transparent(open.arrow) && shut.every((m) => transparent(m.arrow)),
-      `${open?.arrow} vs ${shut[0]?.arrow}`,
-    );
-    check("and every picture keeps a light plate to sit on", marks.every((m) => m.plate > 0.8),
-      marks.map((m) => m.plate.toFixed(2)).join(", "));
+    check("the chosen card goes dark", plate.card < 0.35, plate.card.toFixed(2));
+    check("but its picture keeps a light plate to sit on", plate.plate > 0.8, plate.plate.toFixed(2));
     await ctx.close();
   }
 
