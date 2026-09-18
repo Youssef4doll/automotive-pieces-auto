@@ -76,7 +76,12 @@ export default async function Footer() {
               </Link>
             </li>
             <li>
-              <Link href="/compte/commandes" className="hover:text-white min-h-11 inline-flex items-center">
+              {/* /suivi, not the account list. This link has said "Suivi de
+                  commande" since the shop opened and led to a login wall —
+                  for a guest, who is most of them, that was the end of the
+                  road. /suivi signs you in if you have an account and takes a
+                  reference plus a phone number if you do not. */}
+              <Link href="/suivi" className="hover:text-white min-h-11 inline-flex items-center">
                 <T k="footer.tracking" />
               </Link>
             </li>

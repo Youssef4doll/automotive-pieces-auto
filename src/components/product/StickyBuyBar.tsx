@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useCart } from "@/lib/cart-store";
 import { useLocale } from "@/i18n/LocaleProvider";
 import Price from "@/components/Price";
 import { IconCheck } from "@/components/icons";
@@ -28,6 +27,7 @@ import { IconCheck } from "@/components/icons";
 export default function StickyBuyBar({
   product,
   label,
+  onAdd,
 }: {
   product: {
     id: string;
@@ -40,9 +40,22 @@ export default function StickyBuyBar({
   };
   /** The availability word, so the bar cannot claim more than the page does. */
   label: string;
+  /**
+   * The page's own add, not this bar's.
+   *
+   * This used to call `useCart().add` directly, which meant the compatibility
+   * confirm above it did not exist down here: on a phone — where this bar is
+   * the only buy button for four fifths of the scroll, and where most of the
+   * shop's traffic is — a part the page had just called incompatible went
+   * into the basket on one tap. A second control that buys the same product
+   * must not be able to buy it under different rules.
+   *
+   * Returns false when the page asked a question instead of adding, so the
+   * bar can leave its "✓ Ajouté" alone and let the panel answer.
+   */
+  onAdd: () => boolean;
 }) {
   const { t } = useLocale();
-  const add = useCart((s) => s.add);
   const [shown, setShown] = useState(false);
   const [added, setAdded] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -93,15 +106,7 @@ export default function StickyBuyBar({
           </div>
           <button
             onClick={() => {
-              add({
-                productId: product.id,
-                name: product.name,
-                sku: product.sku,
-                slug: product.slug,
-                imageUrl: product.imageUrl,
-                unitPrice: product.priceSell,
-                stockQty: product.stockQty,
-              });
+              if (!onAdd()) return;
               setAdded(true);
               setTimeout(() => setAdded(false), 1500);
             }}

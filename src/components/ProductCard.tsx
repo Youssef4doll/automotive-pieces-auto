@@ -252,7 +252,21 @@ export default function ProductCard({
       stockQty: product.stockQty,
     }, qty);
 
-  const addButton = (
+  // A card that has just said "ne correspond pas à votre véhicule" does not
+  // also offer a one-tap "Ajouter au panier". It sends the shopper to the
+  // product page, where the warning and the deliberate "ajouter quand même"
+  // live — one place for that decision rather than a confirm dialog on every
+  // tile in a grid. `fit === "no"` is the narrow case: the part has fitment
+  // data and this engine is not in it. A part with no data at all keeps its
+  // button, because "we have not checked" is not "it does not fit".
+  const addButton = fit === "no" ? (
+    <Link
+      href={`/produit/${product.slug}`}
+      className="inline-flex w-full min-h-tap items-center justify-center gap-2 rounded-lg border border-navy-900/25 bg-white text-navy-900 font-display text-xs font-bold uppercase tracking-wide transition-colors hover:border-navy-900 sm:text-[13px]"
+    >
+      {t("compat.checkBeforeBuying")}
+    </Link>
+  ) : (
     <button
       disabled={!avail.buyable}
       onClick={addToCart}

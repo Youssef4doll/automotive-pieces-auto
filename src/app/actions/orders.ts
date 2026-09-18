@@ -344,3 +344,61 @@ export async function getMyOrders() {
     orderBy: { createdAt: "desc" },
   });
 }
+
+/**
+ * The guest's way back to their own order.
+ *
+ * Until now there was none. Checkout does not require an e-mail, the footer's
+ * "Suivi de commande" led to a login wall, and the confirmation page is served
+ * only to the browser holding the httpOnly cookie that checkout set — so a
+ * guest who cleared their cookies, or ordered on a friend's phone, lost the
+ * order permanently and the shop inherited the support call.
+ *
+ * The reference on its own cannot be the key: references are sequential and
+ * printed on the page, which is the whole reason `order-access.ts` exists. So
+ * the second factor is the phone number on the order — the one detail a
+ * customer certainly knows and a guesser would have to walk eight digits to
+ * find. Compared on digits alone, because nobody types their own number the
+ * same way twice.
+ *
+ * On success this mints the same proof checkout does: the order id goes into
+ * the browser's cookie, so the confirmation page, the printable document and
+ * the tracker all work afterwards without a second lookup.
+ *
+ * One failure message for every kind of failure — unknown reference, wrong
+ * phone, malformed input. Saying "that reference exists but the number is
+ * wrong" would turn this into an oracle for which references are real.
+ */
+export async function lookupGuestOrder(
+  ref: string,
+  phone: string,
+): Promise<{ ok: true; ref: string } | { ok: false; error: string }> {
+  const gate = hit(await callerKey("orderLookup"), LIMITS.orderLookup.limit, LIMITS.orderLookup.windowMs);
+  if (!gate.ok) {
+    return {
+      ok: false,
+      error: `Trop de tentatives. Réessayez dans ${Math.ceil(gate.retryAfter / 60)} minute(s).`,
+    };
+  }
+
+  const NOT_FOUND = "Aucune commande ne correspond à cette référence et à ce numéro.";
+  const cleanRef = ref.trim().toUpperCase().slice(0, 32);
+  const digits = phone.replace(/\D/g, "");
+  if (cleanRef.length < 3 || digits.length < 6) return { ok: false, error: NOT_FOUND };
+
+  const order = await prisma.order.findUnique({
+    where: { ref: cleanRef },
+    select: { id: true, ref: true, phone: true },
+  });
+  if (!order) return { ok: false, error: NOT_FOUND };
+
+  // The stored number may carry spaces, a +216, or neither. Compare the last
+  // eight digits so a customer who typed "+216 20 445 566" at checkout and
+  // "20445566" here is the same person.
+  const stored = order.phone.replace(/\D/g, "");
+  const tail = (v: string) => v.slice(-8);
+  if (stored.length < 6 || tail(stored) !== tail(digits)) return { ok: false, error: NOT_FOUND };
+
+  await rememberOrder(order.id);
+  return { ok: true, ref: order.ref };
+}

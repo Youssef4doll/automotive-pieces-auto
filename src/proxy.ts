@@ -38,6 +38,7 @@ export function proxy(request: NextRequest) {
   }
 
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const gaEnabled = !!process.env.NEXT_PUBLIC_GA_ID?.trim();
 
   const csp = [
     "default-src 'self'",
@@ -50,10 +51,25 @@ export function proxy(request: NextRequest) {
     // bars). Attribute styles cannot execute, so they are allowed here while
     // <style> blocks still require the nonce above.
     "style-src-attr 'unsafe-inline'",
-    // blob: and data: cover next/image's own placeholder output.
-    "img-src 'self' blob: data:",
+    // blob: and data: cover next/image's own placeholder output. GA falls back
+    // to a pixel where beacons are unavailable, so its host is listed with the
+    // same switch.
+    gaEnabled
+      ? "img-src 'self' blob: data: https://*.google-analytics.com https://*.googletagmanager.com"
+      : "img-src 'self' blob: data:",
     "font-src 'self'",
-    "connect-src 'self'",
+    // Google Analytics beacons, and only when the shop has actually set a
+    // measurement id. `'strict-dynamic'` above means script-src needs no host
+    // for gtag.js — the nonced loader pulls it — but the measurement requests
+    // are fetch/beacon calls and those are governed here.
+    //
+    // Read from the same variable the component reads, so the policy and the
+    // page cannot disagree about whether Google is allowed to load: without it
+    // this stays `connect-src 'self'` and no third-party request is possible
+    // at all.
+    gaEnabled
+      ? "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com"
+      : "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

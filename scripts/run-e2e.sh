@@ -85,7 +85,7 @@ SUITES=(
   discovery search search-coverage seo security trust server-cart
   banners category-images svg-uploads catalog-authoring storefront-fixes
   admin-crud simple-journey mobile nav catalog-filters local-search tax emails contact analytics
-  product-depth product-page checkout cleanup loop
+  product-depth product-page checkout audit-fixes cleanup loop
 )
 
 total=0; failed=0; bad=""

@@ -135,6 +135,13 @@ export const LIMITS = {
   passwordReset: { limit: 5, windowMs: 15 * 60_000 },
   /** Order placement — a shared address may carry many genuine shoppers. */
   checkout: { limit: 40, windowMs: 10 * 60_000 },
+  /** Guest order lookup. The tightest window on this list, because it is the
+   *  one endpoint where a wrong answer still tells the caller something: order
+   *  references are sequential, so the only thing standing between a guesser
+   *  and somebody else's delivery address is the phone number on the order.
+   *  A genuine customer needs two or three tries; anything walking the number
+   *  space needs thousands. */
+  orderLookup: { limit: 10, windowMs: 15 * 60_000 },
   /** Newsletter, the classic spam target; the honeypot does the real work. */
   newsletter: { limit: 15, windowMs: 60 * 60_000 },
   /** The contact form. Every message is a row in the shop's inbox and an

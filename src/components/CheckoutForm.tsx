@@ -70,13 +70,28 @@ function Step({
   );
 }
 
+/**
+ * A labelled field, and — when the browser has refused it — the reason.
+ *
+ * The form relied on native validation alone. That is not nothing: it does
+ * block the submit. But the bubble it draws is written by the browser in the
+ * browser's own language, so a Tunisian shopper filling in a French checkout
+ * was told "Please fill out this field"; it points at one field at a time; and
+ * it disappears on the next tap. What the customer was left looking at was an
+ * amber ring and no words.
+ *
+ * So the messages are ours, in the page's language, on every field at once,
+ * and they stay until the field is fixed.
+ */
 function Field({
   label,
   hint,
+  error,
   children,
 }: {
   label: string;
   hint?: string;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -86,6 +101,16 @@ function Field({
         {hint && <span className="ms-1.5 font-normal text-gray-500">{hint}</span>}
       </span>
       {children}
+      {/* `role="alert"` because this appears after a failed submit, and a
+          shopper who cannot see red text would otherwise get the summary at
+          the button — "voir les champs signalés ci-dessus" — with no way to
+          learn which fields those are. */}
+      {error && (
+        <span role="alert" className="flex items-start gap-1.5 text-xs font-semibold text-red-600">
+          <IconAlert className="mt-px h-3.5 w-3.5 shrink-0" />
+          {error}
+        </span>
+      )}
     </label>
   );
 }
@@ -211,6 +236,8 @@ export default function CheckoutForm({
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Per-field messages, keyed by input name, cleared on the next attempt. */
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   /**
    * The reference of an order that has already been recorded, set the moment
    * the server action comes back. It outranks the basket in the render below:
@@ -245,6 +272,40 @@ export default function CheckoutForm({
     e.preventDefault();
     setError(null);
     if (items.length === 0) return;
+
+    // Our own pass over the browser's verdict. `checkValidity()` is the same
+    // rule set the native bubble uses — required, minLength, type=email — so
+    // nothing here invents a stricter standard than the one the form already
+    // declares; it only says so in French, on every field at once, and leaves
+    // the message on screen.
+    const form = e.currentTarget as HTMLFormElement;
+    const invalid = [...form.elements].filter(
+      (el): el is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
+        (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) &&
+        !el.disabled &&
+        !el.checkValidity(),
+    );
+    if (invalid.length > 0) {
+      const messages: Record<string, string> = {};
+      for (const el of invalid) {
+        const v = el.validity;
+        messages[el.name || "form"] = v.valueMissing
+          ? t("checkout.errRequired")
+          : v.tooShort
+            ? t("checkout.errTooShort")
+            : v.typeMismatch
+              ? t("checkout.errEmail")
+              : t("checkout.errInvalid");
+      }
+      setFieldErrors(messages);
+      setError(t("checkout.errSummary"));
+      // The first offender, brought to them — on a phone the field that
+      // stopped the order can easily be two screens up.
+      invalid[0].focus();
+      invalid[0].scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
     const attribution = getAttribution();
     const result = await placeOrder({
@@ -275,6 +336,17 @@ export default function CheckoutForm({
     track("checkout_completed", { ref: result.ref, total, itemCount: items.length });
     setPlacedRef(result.ref);
     clear();
+    // Back to the top, explicitly.
+    //
+    // The shopper pressed "Confirmer" from the bottom of a long form. The
+    // moment the order lands this component collapses to a short block, the
+    // browser clamps the now-impossible scroll offset to the new document
+    // height, and the navigation that follows inherits it — so the answer to
+    // "did my order work?" arrived with the footer on screen and the order
+    // reference somewhere above. Next resets scroll on a route change, but
+    // not on the re-render that happens first, which is what actually moved
+    // the page.
+    window.scrollTo({ top: 0, behavior: "auto" });
     // replace, not push: this form is finished and its basket is gone, so the
     // back button should return to the shop rather than to a checkout that can
     // only say "empty" now.
@@ -383,7 +455,20 @@ export default function CheckoutForm({
         </div>
       )}
 
-      <form onSubmit={submit} className="grid md:grid-cols-3 gap-8">
+      <form
+        onSubmit={submit}
+        // `noValidate` hands the verdict to us instead of switching validation
+        // off. The browser otherwise refuses to fire `submit` at all while any
+        // field is invalid, so the handler below — and every French message in
+        // it — was unreachable, and the only thing a customer ever saw was the
+        // browser's own bubble in the browser's own language. Each field is
+        // still asked `checkValidity()` against the very same `required`,
+        // `minLength` and `type` attributes; and `placeOrder` validates
+        // everything again on the server, which is what actually guards the
+        // order.
+        noValidate
+        className="grid md:grid-cols-3 gap-8"
+      >
         {/* min-w-0 on BOTH grid children is required, not optional: a grid
             item defaults to min-width:auto, so it reserves its content's
             min-content width. The order summary contains a `truncate`
@@ -397,9 +482,10 @@ export default function CheckoutForm({
                 the moment the user types, so on review they can't tell which
                 field is which. autoComplete/inputMode give mobile browsers
                 what they need for autofill and the right keyboard. */}
-            <Field label={t("checkout.name")}>
+            <Field label={t("checkout.name")} error={fieldErrors.name}>
               <input
                 required
+                name="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="name"
@@ -407,7 +493,7 @@ export default function CheckoutForm({
                 className={FIELD}
               />
             </Field>
-            <Field label={t("checkout.phone")} hint={t("checkout.phoneHint")}>
+            <Field label={t("checkout.phone")} hint={t("checkout.phoneHint")} error={fieldErrors.phone}>
               {/* minLength mirrors the server's own rule (shortText.min(6)) so
                   a too-short number is refused by the browser instantly
                   instead of after a round trip that has already been paid for.
@@ -416,6 +502,7 @@ export default function CheckoutForm({
                   reject numbers the shop would happily have accepted. */}
               <input
                 required
+                name="phone"
                 minLength={6}
                 dir="ltr"
                 value={phone}
@@ -427,8 +514,9 @@ export default function CheckoutForm({
                 className={FIELD}
               />
             </Field>
-            <Field label={t("checkout.email")} hint={t("checkout.emailHint")}>
+            <Field label={t("checkout.email")} hint={t("checkout.emailHint")} error={fieldErrors.email}>
               <input
+                name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 type="email"
@@ -513,9 +601,10 @@ export default function CheckoutForm({
             </p>
 
             {deliveryMethod === "DELIVERY" && (
-              <Field label={t("checkout.address")}>
+              <Field label={t("checkout.address")} error={fieldErrors.address}>
                 <input
                   required
+                  name="address"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   autoComplete="street-address"

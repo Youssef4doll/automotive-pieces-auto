@@ -17,14 +17,25 @@ export const metadata: Metadata = pageMeta({
  *
  * Every row below corresponds to a real table — User, Order, Cart,
  * AnalyticsEvent, SearchMiss, NewsletterSubscriber, ContactMessage — so the
- * page can be checked against the database instead of believed. Two things it
- * deliberately does not say: it does not claim a card payment processor,
- * because there is none, and it does not claim third-party advertising
- * trackers, because the site's own Content-Security-Policy blocks them.
+ * page can be checked against the database instead of believed. It does not
+ * claim a card payment processor, because there is none.
+ *
+ * The third-party section follows NEXT_PUBLIC_GA_ID rather than describing a
+ * fixed state. This page used to say flatly that the site's own
+ * Content-Security-Policy blocked every third-party script, which was true
+ * until Google Analytics was switched on — and the sentence would have gone
+ * on being printed. A privacy page that is accidentally out of date is worse
+ * than one that is vague on purpose, so it reads the same switch the script
+ * and the policy read.
  */
 export default async function PrivacyPage() {
   const settings = await getSettings();
   const contact = publicContact(settings);
+  // Named only when it is actually running. This page said "aucun traceur
+  // tiers : la politique de sécurité les bloque", which was true right up
+  // until Google Analytics was switched on — and a privacy page that is
+  // accidentally out of date is worse than one that is vague on purpose.
+  const analytics = !!process.env.NEXT_PUBLIC_GA_ID?.trim();
 
   return (
     <PolicyPage
@@ -78,21 +89,35 @@ export default async function PrivacyPage() {
             Aucune donnée bancaire — numéro de carte, IBAN, rien. Le site ne comporte aucun module
             de paiement en ligne.
           </li>
-          <li>Aucun traceur publicitaire tiers : la politique de sécurité du site les bloque.</li>
+          <li>
+            Aucun traceur publicitaire. {analytics
+              ? "Google Analytics est utilisé pour la mesure d'audience, avec la personnalisation publicitaire et les signaux Google désactivés : il nous dit quelles pages convertissent, il n'alimente pas de profil publicitaire."
+              : "La politique de sécurité du site bloque tout script tiers."}
+          </li>
           <li>Aucune revente de données, à personne, dans aucune circonstance.</li>
         </ul>
       </PolicySection>
 
       <PolicySection id="cookies" title="Cookies">
         <p>
-          Ce site n&apos;utilise pas de cookies publicitaires et n&apos;affiche donc pas de bandeau
-          de consentement. Les seuls cookies déposés servent au fonctionnement :
+          Ce site n&apos;utilise pas de cookies publicitaires. Les cookies déposés servent au
+          fonctionnement :
         </p>
         <ul className="flex flex-col gap-1.5">
           <li>votre session, si vous êtes connecté ;</li>
           <li>votre panier, pour le retrouver à votre retour ;</li>
           <li>votre langue et le véhicule que vous avez choisi ;</li>
           <li>un identifiant de session anonyme pour la mesure d&apos;audience interne.</li>
+          {analytics && (
+            <li>
+              les cookies de mesure d&apos;audience de Google Analytics, qui distinguent les visites
+              les unes des autres. Vous pouvez les refuser avec le{" "}
+              <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noreferrer">
+                module de désactivation de Google
+              </a>
+              .
+            </li>
+          )}
         </ul>
       </PolicySection>
 
@@ -110,6 +135,12 @@ export default async function PrivacyPage() {
             <strong>Le service qui envoie nos e-mails</strong> de confirmation de commande, lorsque
             vous nous avez donné une adresse.
           </li>
+          {analytics && (
+            <li>
+              <strong>Google Analytics</strong>, qui reçoit les pages consultées et les actions du
+              parcours d&apos;achat sous une forme qui ne vous nomme pas.
+            </li>
+          )}
           <li>
             <strong>L&apos;administration</strong>, si la loi nous l&apos;impose.
           </li>

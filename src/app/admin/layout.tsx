@@ -4,6 +4,7 @@ import Image from "next/image";
 import { requireAdmin } from "@/lib/session";
 import { logout } from "@/app/actions/auth";
 import AdminNav from "@/components/admin/AdminNav";
+import SignOut from "@/components/account/SignOut";
 
 export const metadata = { title: "Espace admin" };
 
@@ -27,11 +28,9 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           <Link href="/" className="font-display font-bold uppercase text-[11px] tracking-wide text-white/50 hover:text-gold-500">
             ← Retour au site
           </Link>
-          <form action={logout}>
-            <button className="font-display font-bold uppercase text-[11px] tracking-wide text-white/50 hover:text-gold-500">
-              Déconnexion
-            </button>
-          </form>
+          <SignOut className="font-display font-bold uppercase text-[11px] tracking-wide text-white/50 hover:text-gold-500">
+            Déconnexion
+          </SignOut>
         </div>
       </aside>
 

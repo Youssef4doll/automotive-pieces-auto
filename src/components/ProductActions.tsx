@@ -10,6 +10,7 @@ import VehiclePicker from "./VehiclePicker";
 import StickyBuyBar from "./product/StickyBuyBar";
 import { track } from "@/lib/track";
 import { availabilityView, type SupplyMode } from "@/lib/availability";
+import { IconAlert } from "@/components/icons";
 
 export default function ProductActions({
   product,
@@ -41,6 +42,9 @@ export default function ProductActions({
   // Three answers, not two. An empty shelf is usually a delay at this shop,
   // not a refusal, and the page used to take the buy button away for both.
   const avail = availabilityView(product);
+  /** Set once the shopper has been shown the mismatch and pressed on anyway. */
+  const [confirmedMismatch, setConfirmedMismatch] = useState(false);
+  const [askingConfirm, setAskingConfirm] = useState(false);
 
   /**
    * Four states, and the fourth is the one this used to get wrong.
@@ -77,7 +81,26 @@ export default function ProductActions({
     } ?`,
   );
 
-  function handleAdd() {
+  /**
+   * `force` is not a convenience: it is the only way the confirm button can
+   * work.
+   *
+   * That button sets `confirmedMismatch` and calls this in the same handler,
+   * and a `useState` setter does not change the value the current closure is
+   * reading — so the check below saw `false`, returned early, and the panel
+   * re-opened on itself. "Ajouter quand même" added nothing, every time.
+   */
+  function handleAdd(force = false): boolean {
+    // A part the shop's own data says is not for this car does not go into a
+    // basket on one tap. It asks first — once, inline, with the free check
+    // offered beside it. This is the narrow case: `not-listed` means the part
+    // HAS fitment data and this engine is not in it. `no-data` keeps the
+    // ordinary button, because "we have not checked" is not "it does not fit",
+    // and gating on that would put a warning on most of the catalogue.
+    if (fit === "not-listed" && !confirmedMismatch && !force) {
+      setAskingConfirm(true);
+      return false;
+    }
     add(
       {
         productId: product.id,
@@ -91,7 +114,9 @@ export default function ProductActions({
       qty
     );
     setAdded(true);
+    setAskingConfirm(false);
     setTimeout(() => setAdded(false), 1500);
+    return true;
   }
 
   return (
@@ -124,7 +149,9 @@ export default function ProductActions({
               </button>
             </div>
             <button
-              onClick={handleAdd}
+              // Wrapped, not passed by reference: `onClick={handleAdd}` hands
+              // the click event in as `force`, and an event object is truthy.
+              onClick={() => handleAdd()}
               className="min-h-tap-primary flex-1 rounded-lg bg-gold-500 font-display text-sm font-bold uppercase tracking-wide text-navy-950 transition-transform hover:bg-gold-400 active:scale-[0.98] sm:text-base"
             >
               {added ? (
@@ -137,9 +164,51 @@ export default function ProductActions({
             </button>
           </div>
 
+          {askingConfirm && (
+            <div
+              role="alertdialog"
+              aria-label={t("compat.notListedTitle")}
+              // Brought into view when it appears, because the tap that opens
+              // it can come from the sticky bar at the bottom of a phone — and
+              // a question asked off screen reads as a button that did
+              // nothing. `nearest` so the inline button, where the panel is
+              // already visible, does not jump the page.
+              ref={(el) => el?.scrollIntoView({ block: "nearest", behavior: "smooth" })}
+              className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4"
+            >
+              <p className="flex items-start gap-2 text-sm font-semibold text-amber-900">
+                <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                {t("compat.notListedTitle")}
+              </p>
+              <p className="text-xs leading-relaxed text-amber-900/80">{t("compat.notListedBody")}</p>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={askHref}
+                  {...contactLinkProps(askHref)}
+                  className="inline-flex min-h-tap items-center rounded-lg bg-navy-950 px-4 font-display text-xs font-bold uppercase tracking-wide text-white hover:bg-navy-800"
+                >
+                  {t("compat.askCheck")}
+                </a>
+                {/* Secondary on purpose. The shopper may well be right — they
+                    can see the part in their hand and we cannot — so the door
+                    stays open, just not on the way past. */}
+                <button
+                  onClick={() => {
+                    setConfirmedMismatch(true);
+                    setAskingConfirm(false);
+                    handleAdd(true);
+                  }}
+                  className="inline-flex min-h-tap items-center rounded-lg border border-amber-400 px-4 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+                >
+                  {t("compat.addAnyway")}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Rendered here so its sentinel sits directly under the real
               button — the bar appears exactly when that button leaves. */}
-          <StickyBuyBar product={product} label={avail.label} />
+          <StickyBuyBar product={product} label={avail.label} onAdd={() => handleAdd()} />
         </>
       ) : (
         <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">

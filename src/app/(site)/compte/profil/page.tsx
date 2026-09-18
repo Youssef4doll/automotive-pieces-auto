@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getSettings, telHref } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 import { getOrderCounts, contactFrom } from "@/lib/data/account";
-import { logout } from "@/app/actions/auth";
+import SignOut from "@/components/account/SignOut";
 import AccountShell from "@/components/account/AccountShell";
 import GarageSection from "@/components/account/GarageSection";
 import { ProfileCard, PasswordCard } from "@/components/account/ProfileForms";
@@ -119,11 +119,9 @@ export default async function ProfilePage() {
             {/* The primary control on this card, not a grey outline tucked in a
                 corner: logging out is the one thing a shared or borrowed phone
                 needs to be able to do without hunting. */}
-            <form action={logout}>
-              <button className="inline-flex items-center gap-2 min-h-tap px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-display font-bold uppercase text-xs tracking-wide">
-                <IconLogout /> Se déconnecter
-              </button>
-            </form>
+            <SignOut className="inline-flex items-center gap-2 min-h-tap px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-display font-bold uppercase text-xs tracking-wide">
+              <IconLogout /> Se déconnecter
+            </SignOut>
             {user.role === "ADMIN" && (
               <Link
                 href="/admin"

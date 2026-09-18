@@ -48,6 +48,22 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
         Numéro de commande : <span className="font-mono font-bold text-navy-900" dir="ltr">{order.ref}</span>
       </p>
 
+      {/* How to get back here, said before anything else scrolls it away.
+          This page is served to the browser that placed the order and to the
+          signed-in owner, and nothing else — which for a guest who clears
+          cookies used to mean the order was gone for good. The reference plus
+          the phone they just typed reopens it from /suivi. */}
+      <section className="mb-4 rounded-xl border border-gold-500/40 bg-gold-500/10 p-4 text-start">
+        <p className="text-sm text-navy-950">
+          <span className="font-semibold">Gardez ce numéro.</span> Avec lui et votre téléphone, vous
+          retrouvez cette page à tout moment depuis{" "}
+          <Link href="/suivi" className="font-semibold underline underline-offset-2">
+            Suivre ma commande
+          </Link>
+          {" "}— même sans compte.
+        </p>
+      </section>
+
       {/* The question a customer has the second after paying is "what happens
           now?". Showing the same tracker their account page uses answers it
           here, at the moment it is asked, instead of making them go looking. */}

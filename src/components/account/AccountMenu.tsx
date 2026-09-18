@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { logout } from "@/app/actions/auth";
+import SignOut from "./SignOut";
 import { IconUser } from "@/components/icons";
 
 export type AccountUser = { name: string; email: string; role: "CUSTOMER" | "ADMIN" };
@@ -90,14 +90,12 @@ export default function AccountMenu({ user, initials }: { user: AccountUser; ini
             </Link>
           )}
 
-          <form action={logout} className="border-t border-slate-100 mt-1.5 pt-1.5">
-            <button
-              className="w-full flex items-center gap-2.5 px-3 min-h-tap rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50"
-            >
+          <div className="border-t border-slate-100 mt-1.5 pt-1.5">
+            <SignOut className="w-full flex items-center gap-2.5 px-3 min-h-tap rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50">
               <IconLogout />
               Se déconnecter
-            </button>
-          </form>
+            </SignOut>
+          </div>
         </div>
       )}
     </div>
@@ -110,14 +108,12 @@ export default function AccountMenu({ user, initials }: { user: AccountUser; ini
  */
 export function LogoutButton({ className = "" }: { className?: string }) {
   return (
-    <form action={logout}>
-      <button
-        className={`w-full flex items-center gap-3 px-3.5 min-h-tap rounded-xl text-sm font-semibold text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors ${className}`}
-      >
-        <IconLogout className="text-slate-400" />
-        Se déconnecter
-      </button>
-    </form>
+    <SignOut
+      className={`w-full flex items-center gap-3 px-3.5 min-h-tap rounded-xl text-sm font-semibold text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors ${className}`}
+    >
+      <IconLogout className="text-slate-400" />
+      Se déconnecter
+    </SignOut>
   );
 }
 

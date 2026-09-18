@@ -29,6 +29,8 @@ type VehicleState = {
   /** Remove a vehicle from the garage; if it was active, activate the next one (or none). */
   removeVehicle: (engineId: string) => void;
   clear: () => void;
+  /** Empty the garage entirely — what signing out has to do. */
+  forgetAll: () => void;
 };
 
 const MAX_GARAGE_SIZE = 6;
@@ -57,6 +59,11 @@ export const useVehicle = create<VehicleState>()(
           return { vehicles, vehicle };
         }),
       clear: () => set({ vehicle: null }),
+      // `clear` only ever dropped the *active* car, which is right for
+      // "changer de véhicule" and wrong for signing out: the garage itself
+      // survived, so the next person on a shared phone or a garage counter PC
+      // inherited three saved cars belonging to somebody else.
+      forgetAll: () => set({ vehicles: [], vehicle: null }),
     }),
     { name: "apa-vehicle" }
   )

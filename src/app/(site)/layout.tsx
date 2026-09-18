@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import CartSync from "@/components/CartSync";
 import AddedToast from "@/components/AddedToast";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { getSettings } from "@/lib/settings";
 
 export default async function SiteLayout({ children }: LayoutProps<"/">) {
@@ -35,6 +36,11 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
       <CartSync />
       <CartDrawer freeShippingThreshold={freeShippingThreshold} />
       <AddedToast />
+      {/* Google's, not ours. `Analytics` — the shop's own page-view recorder
+          that feeds /admin/analytics — is mounted once in the ROOT layout and
+          stays there; this sits in the storefront layout so the admin's own
+          staff are not counted as shoppers. */}
+      <GoogleAnalytics />
       {/* Nothing floats over the page. The persistent WhatsApp widget, the
           sticky bottom cart bar and — last of the three — the scroll-to-top
           button were all removed for the same reason: they covered content on

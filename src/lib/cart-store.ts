@@ -44,6 +44,28 @@ type CartState = {
   setHydrated: () => void;
 };
 
+/**
+ * No line may ask for more than the shelf holds.
+ *
+ * Every setter goes through this rather than each one remembering the rule —
+ * `add` and `setQty` each carried their own `Math.min` and the two paths that
+ * did not, `replaceAll` and the rehydrate, were exactly the two that let a
+ * basket hold 13 of something with 8 in stock. Nothing was ever oversold,
+ * because placeOrder claims stock atomically, but the refusal arrived after
+ * the shopper had typed their name, phone and address.
+ *
+ * A zero shelf is not a zero cap: a part with `stockQty: 0` is "sur commande",
+ * which the shop orders in, so it is capped at a sane basket size instead.
+ */
+const OPEN_ORDER_CAP = 99;
+
+export function clampToStock(items: CartItem[]): CartItem[] {
+  return items.map((i) => {
+    const cap = i.stockQty > 0 ? i.stockQty : OPEN_ORDER_CAP;
+    return i.qty > cap ? { ...i, qty: cap } : i;
+  });
+}
+
 export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
@@ -51,7 +73,7 @@ export const useCart = create<CartState>()(
       isOpen: false,
       hydrated: false,
       justAdded: null,
-      replaceAll: (fn) => set({ items: fn(get().items) }),
+      replaceAll: (fn) => set({ items: clampToStock(fn(get().items)) }),
       dismissJustAdded: () => set({ justAdded: null }),
       open: () => set({ isOpen: true, justAdded: null }),
       close: () => set({ isOpen: false }),
@@ -59,15 +81,16 @@ export const useCart = create<CartState>()(
         const items = [...get().items];
         const idx = items.findIndex((i) => i.productId === item.productId);
         if (idx >= 0) {
-          items[idx] = {
-            ...items[idx],
-            qty: Math.min(items[idx].qty + qty, item.stockQty || 99),
-          };
+          // The incoming stock figure is the fresher of the two: it was read
+          // when this page rendered, while the line in the basket may have
+          // been sitting in localStorage since last week.
+          items[idx] = { ...items[idx], stockQty: item.stockQty, qty: items[idx].qty + qty };
         } else {
-          items.push({ ...item, qty: Math.min(qty, item.stockQty || 99) });
+          items.push({ ...item, qty });
         }
-        const added = items[idx >= 0 ? idx : items.length - 1];
-        set({ items, justAdded: added });
+        const clamped = clampToStock(items);
+        const added = clamped[idx >= 0 ? idx : clamped.length - 1];
+        set({ items: clamped, justAdded: added });
         track("add_to_cart", { productId: item.productId, sku: item.sku, qty, unitPrice: item.unitPrice });
       },
       remove: (productId) =>
@@ -81,10 +104,8 @@ export const useCart = create<CartState>()(
       // store's job because both steppers share it.
       setQty: (productId, qty) =>
         set({
-          items: get().items.map((i) =>
-            i.productId === productId
-              ? { ...i, qty: Math.min(Math.max(1, qty), i.stockQty || 99) }
-              : i
+          items: clampToStock(
+            get().items.map((i) => (i.productId === productId ? { ...i, qty: Math.max(1, qty) } : i)),
           ),
         }),
       clear: () => set({ items: [] }),
@@ -94,6 +115,13 @@ export const useCart = create<CartState>()(
       name: "apa-cart",
       partialize: (state) => ({ items: state.items }),
       onRehydrateStorage: () => (state) => {
+        // A basket restored from localStorage is the one case nothing else
+        // covers: it was written when the shelf held more, and until the
+        // shopper touches a stepper no setter runs. That is how a line could
+        // read "13" under a label saying "8 en stock", and how pressing "−"
+        // appeared to jump from 13 to 8 — the clamp had simply never had a
+        // chance to run. It runs on the way in now.
+        state?.replaceAll((items) => items);
         state?.setHydrated();
       },
     }

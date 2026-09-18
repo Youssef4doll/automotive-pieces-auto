@@ -74,7 +74,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-35 Playwright suites, 1,377 checks at the last full green run, driving real
+36 Playwright suites, 1,421 checks at the last full green run, driving real
 browsers against a real database. They are the main safety net and they have
 caught more real bugs than they have cost.
 
@@ -198,7 +198,7 @@ src/app/(site)/     storefront          src/lib/data/    all database reads
 src/app/admin/      admin               src/lib/         session, search, money,
 src/app/actions/    server actions                       rate limits, shipping…
 src/app/api/        images, part icons  prisma/          schema, 23 migrations
-src/components/     UI                  scripts/         the 29 e2e suites
+src/components/     UI                  scripts/         the 36 e2e suites
 ```
 
 **26 Prisma models.** The ones worth knowing: `Product`, `Category` (two levels
@@ -854,6 +854,92 @@ index returns nothing, as expected"**. That was the bug written down as a
 requirement, and it passed for months while the shop was unsearchable. If you
 find yourself writing "as expected" next to behaviour you would not defend to
 a customer, that is the moment to stop.
+
+### 5.dd A second audit, nine findings, and the two lessons in them
+
+All nine are fixed and all nine are now held by `scripts/e2e-audit-fixes.mjs`
+— a suite that exists because every one of them would have passed the other
+thirty-five. What it covers is worth reading before changing any of it:
+
+| Reported as | What it actually was |
+|---|---|
+| "13 units of an item labelled 8 en stock" | the clamp lived in `add` and `setQty`; `replaceAll` and the localStorage rehydrate were the two paths without it, and are the two that produce this |
+| "Validation is silent — nothing but an amber ring" | native validation **blocks the `submit` event**, so the form's own handler was unreachable and no French message could ever have run |
+| "Ajouter au panier is fully enabled on parts the site just said don't fit" | true, and the confirm written to fix it was broken twice over — see below |
+| "The confirmation page lands you at the footer" | the form collapses, the browser clamps the now-impossible scroll offset, and the navigation inherits it; Next resets scroll on a route change but not on the re-render that happens first |
+| "Logout doesn't clear the session" | the session went; the basket and garage are localStorage, and a deleted cookie does nothing to them |
+| "Guests cannot track their order, ever" | the footer's "Suivi de commande" pointed at a page behind a login, and checkout requires no account |
+| "Zero analytics" | true |
+
+**The fix for the third one was itself broken twice, and that is the lesson.**
+A `useState` setter does not change what the current closure reads, so
+`onClick={() => { setConfirmed(true); handleAdd(); }}` ran `handleAdd` with
+`confirmedMismatch` still `false` — "Ajouter quand même" re-opened the panel
+on itself and added nothing, every time. And `StickyBuyBar` called
+`useCart().add` directly, so on a phone, where that bar is the only buy button
+for four fifths of the scroll, the confirm did not exist at all.
+
+Both are now structural rather than remembered. `handleAdd(force)` takes the
+decision as an argument, the ordinary button is `onClick={() => handleAdd()}`
+rather than `onClick={handleAdd}` (passing the function by reference hands the
+click event in as `force`, and an event object is truthy), and the bar calls
+the page's `onAdd` and reads its answer instead of owning a second route into
+the cart. **If you add another control that buys a product, give it the page's
+add — a second button that buys under different rules is the bug, not the
+missing warning on it.**
+
+**The other lesson is that "I saw it work" is not coverage.** Every one of
+these was verified in a real browser when it was written. Two were still
+wrong — one of them on the platform most of the shop's traffic uses — and the
+nine had no test between them until this suite existed.
+
+**And a third, about the suite itself.** The compatibility section needs a
+part with fitment rows and a car outside them. It found one by taking the
+first matching product, which standalone was fine and *inside the battery*
+happened to be an oil filter listed for 24 of the shop's 25 engines — so the
+section measured nothing, printed one grey line about it, and the battery
+reported green. A sixty-line section certifying the most important fix in the
+suite was, for one run, a no-op. It searches for a usable pair now (fewest
+fitments first), and if it cannot find one it **fails** rather than notes it:
+a shop where that gate cannot be tested is a shop whose gate is untested,
+which is precisely the state it shipped broken in. Skips hide in a 36-suite
+run; the same is true of every `console.log("(nothing to measure)")` in these
+scripts, so prefer a FAIL wherever the missing data would mean the feature is
+unverified rather than genuinely absent.
+
+**There are two analytics on this site and they are not the same thing.**
+`src/components/Analytics.tsx` is the shop's own page-view recorder — it
+writes `AnalyticsEvent` rows that feed `/admin/analytics` and the unmet-demand
+list, it survives ad blockers, and it is mounted once in the **root** layout.
+`src/components/GoogleAnalytics.tsx` is GA4, off unless `NEXT_PUBLIC_GA_ID` is
+set, mounted in the **storefront** layout so staff working in the admin are
+not counted as shoppers. The GA component was originally written as
+`Analytics.tsx` and silently overwrote the first one: the internal counter
+went dead, `/admin/analytics` would have started reading zero, and
+`/confidentialite` went on promising "une mesure d'audience interne" that no
+longer existed. The whole battery passed. `e2e-audit-fixes` [7] now checks
+both mountings *and* that a real visit still lands a `page_view` row, because
+the source check alone would not have caught a mounted component that records
+nothing.
+
+Three things from that audit are deliberately *not* done, and only one of them
+is code:
+
+- **The home page's "les plus commandées" row rejects a shopper with a car
+  saved.** `ProductGrid` already floats what fits to the top, so ordering is
+  not the problem — the problem is that almost nothing carries fitment data.
+  Filtering the row would make it a row of one. This is data (§5.5).
+- **Per-SKU images.** `/api/part-icon/[slug]` draws a *family* line drawing,
+  so every brake pad in the shop looks identical. Real photographs fix it
+  (§5.1), and the per-SKU image and fitment ingestion format has to be settled
+  before any bulk import. It has not been.
+- **Whether Google Analytics needs a consent banner in Tunisia.** GA is off
+  unless `NEXT_PUBLIC_GA_ID` is set, configured with `allow_google_signals:
+  false` and ad personalisation off, and `/confidentialite` follows the same
+  variable rather than describing a fixed state — so the privacy page cannot
+  quietly go out of date the day someone turns it on. Whether a banner is
+  required is a lawyer's question and the page does not pretend it has been
+  answered.
 
 ---
 

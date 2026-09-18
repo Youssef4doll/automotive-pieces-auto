@@ -243,6 +243,16 @@ console.log("\n[5] AN ORDER RECORDS THE CAR, AND WHAT WE KNEW ABOUT EACH PART ON
       await p.waitForTimeout(800);
       await p.getByRole("button", { name: /Ajouter au panier/i }).first().click();
       await p.waitForTimeout(700);
+      // The stranger may be a part the catalogue lists for OTHER engines, in
+      // which case the page now stops the first tap and asks. That is the
+      // behaviour under test in e2e-audit-fixes; here it is a door to walk
+      // through, because this suite is measuring what the ORDER records and
+      // needs the line in the basket either way.
+      const anyway = p.getByRole("button", { name: /Ajouter quand même/i });
+      if (await anyway.count()) {
+        await anyway.first().click();
+        await p.waitForTimeout(700);
+      }
     }
 
     await p.goto(`${BASE}/commande`, { waitUntil: "domcontentloaded" });
