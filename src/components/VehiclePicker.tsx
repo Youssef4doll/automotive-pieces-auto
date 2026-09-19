@@ -8,6 +8,7 @@ import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import { decodeVinMakeSlug, isValidVinFormat } from "@/lib/vin";
 import { compareFuels, displacementLitres, engineSpecLine } from "@/lib/engine";
 import { track } from "@/lib/track";
+import { IconCar } from "./icons";
 
 type Engine = {
   id: string;
@@ -921,15 +922,6 @@ function Stroke({ children, size = 20 }: { children: React.ReactNode; size?: num
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true">
       {children}
     </svg>
-  );
-}
-function IconCar() {
-  return (
-    <Stroke>
-      <path d="M5 17h14M4 17v-4.2L6 7h12l2 5.8V17" />
-      <path d="M4 17v2h3v-2M17 17v2h3v-2" />
-      <circle cx="7.5" cy="13.5" r=".8" /><circle cx="16.5" cy="13.5" r=".8" />
-    </Stroke>
   );
 }
 function IconHelp() {

@@ -11,6 +11,36 @@
  * not filled, so a consumer sets `stroke` and gets a coherent set.
  */
 
+/**
+ * The car.
+ *
+ * The shop's own side-view drawing, and the one symbol here that is not on
+ * the 24-unit grid: it is kept at its authored coordinates (a 605×320
+ * canvas) so it can be re-exported from the drawing without anyone
+ * re-plotting it, and the transform maps it into the grid. tx/ty/scale come
+ * from its tight bounds — x 54→518, y 79→265 once the strokes are counted —
+ * fitted to the width and centred vertically, because a car runs out of
+ * width first.
+ *
+ * It is also the only one that fills: the body is a closed ribbon, and
+ * stroking a ribbon draws both of its edges. Stroke widths are in the
+ * drawing's units, chosen so that 24 of them land on the 1.25 the rest of the
+ * set uses once scaled. The wheels are rings rather than the drawing's
+ * disc-and-white-hub, so they read on navy chips and dark bars too.
+ *
+ * It lives in this module rather than in components/icons because both
+ * consumers of this file need it — carrosserie's family drawing below, and
+ * IconCar, which is the same car in the site chrome. Two copies is how the
+ * two would drift.
+ */
+export const CAR_MARKUP =
+  '<g transform="translate(-2.793 3.104) scale(0.051724)" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path fill="currentColor" stroke-width="24" d="M66 135 L135 135 L174 96 Q185 91 205 91 L292 91 Q311 92 329 103 L373 139 Q390 141 409 141 Q449 140 476 152 Q499 163 505 183 Q510 198 506 218 L494 218 L494 193 Q491 174 468 164 Q446 154 413 154 L374 154 L324 112 Q307 102 289 102 L205 102 Q188 102 178 111 L137 143 L75 143 L75 205 Q75 216 87 221 L101 226 L101 215 Q84 211 84 203 L84 151 Z" />' +
+  '<path stroke-width="26" stroke-linecap="butt" d="M194 222 L386 222" />' +
+  '<circle cx="149" cy="224" r="28.5" stroke-width="25" />' +
+  '<circle cx="434" cy="224" r="28.5" stroke-width="25" />' +
+  "</g>";
+
 /** Inner markup of each family's drawing, keyed by the seeded family slug. */
 export const PART_ICONS: Record<string, string> = {
   "filtres":
@@ -35,8 +65,9 @@ export const PART_ICONS: Record<string, string> = {
     '<rect x="3" y="7.5" width="18" height="11" rx="1.6" /> <path d="M7.5 7.5V5.5h3v2M13.5 7.5V5.5h3v2" /> <path d="M7 13h3.4M8.7 11.3v3.4M13.8 13h3.4" />',
   "capteurs-et-sondes":
     '<path d="M10 20V9.5" /> <rect x="7.6" y="4.5" width="4.8" height="5" rx="1.2" /> <path d="M14.8 6.6a6 6 0 0 1 0 8.4M17.4 4.6a9.4 9.4 0 0 1 0 12.4" />',
-  "carosserie":
-    '<path d="M3.6 18V9.6L8 5h9.2a3.2 3.2 0 0 1 3.2 3.2V18z" /> <path d="M8 5v4.6h12.4" /> <path d="M6.4 13.6h3.2" />',
+  // The family is bodywork, and the drawing it had was a blunt three-quarter
+  // box that read as a crate. The car below is the site's car.
+  "carosserie": CAR_MARKUP,
   "refroidissement-moteur":
     '<rect x="3.5" y="5" width="17" height="14" rx="1.6" /> <path d="M7.5 5v14M12 5v14M16.5 5v14" />',
   "cardan-et-transmission":

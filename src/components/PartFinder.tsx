@@ -9,6 +9,7 @@ import { decodeVinMakeSlug, isValidVinFormat } from "@/lib/vin";
 import { track } from "@/lib/track";
 import VehiclePicker from "./VehiclePicker";
 import SearchSuggest from "./SearchSuggest";
+import { IconCar } from "./icons";
 
 /**
  * The one thing the homepage asks: how would you like to find your part?
@@ -397,16 +398,6 @@ function Stroke({ children, size = 18 }: { children: React.ReactNode; size?: num
   );
 }
 
-function IconCar() {
-  return (
-    <Stroke>
-      <path d="M5 17h14M4 17v-4.2L6 7h12l2 5.8V17" />
-      <path d="M4 17v2h3v-2M17 17v2h3v-2" />
-      <circle cx="7.5" cy="13.5" r=".8" />
-      <circle cx="16.5" cy="13.5" r=".8" />
-    </Stroke>
-  );
-}
 function IconCamera() {
   return (
     <Stroke>

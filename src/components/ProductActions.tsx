@@ -10,7 +10,7 @@ import VehiclePicker from "./VehiclePicker";
 import StickyBuyBar from "./product/StickyBuyBar";
 import { track } from "@/lib/track";
 import { availabilityView, type SupplyMode } from "@/lib/availability";
-import { IconAlert } from "@/components/icons";
+import { IconAlert, IconCar } from "@/components/icons";
 
 export default function ProductActions({
   product,
@@ -335,12 +335,7 @@ export default function ProductActions({
             onClick={() => setPickerOpen(true)}
             className="inline-flex items-center gap-2 min-h-tap px-4 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-display font-bold uppercase text-xs tracking-wide"
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M5 17h14M4 17v-4.2L6 7h12l2 5.8V17" />
-              <path d="M4 17v2h3v-2M17 17v2h3v-2" />
-              <circle cx="7.5" cy="13.5" r=".8" />
-              <circle cx="16.5" cy="13.5" r=".8" />
-            </svg>
+            <IconCar className="h-[17px] w-[17px]" />
             {t("compat.pickVehicle")}
           </button>
         </div>

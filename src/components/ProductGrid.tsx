@@ -57,7 +57,16 @@ export default function ProductGrid({
       // as a grid that has been cut off, the same way "Racheter en un clic"
       // does in the account.
       <div className="w-full min-w-0 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto no-scrollbar sm:overflow-visible">
-        <div className="flex gap-3 w-max sm:w-auto sm:grid sm:grid-cols-3 lg:grid-cols-4 3xl:grid-cols-6 sm:gap-4">
+        {/* Six products, so six columns is the row this section is for: one
+            line of the shop's best, rather than four and an orphan two.
+            That used to wait for 3xl (1800px) — a second monitor — and every
+            laptop got the orphan row. It now lands at 90rem, measured rather
+            than guessed: the shell is 85vw, so a six-up card is 183px at
+            1440 and 197px at 1536, either side of the 180px the phone row
+            already ships and proves readable. At 1280 the same rule would
+            give 162px, narrower than anything on the site, so four columns
+            keep that width. */}
+        <div className="flex gap-3 w-max sm:w-auto sm:grid sm:grid-cols-3 lg:grid-cols-4 wide:grid-cols-6 sm:gap-4">
           {ordered.map((p) => (
             // A fixed width, not a vw one. vw resolves against the layout
             // viewport, and on a phone the layout viewport grows to fit
