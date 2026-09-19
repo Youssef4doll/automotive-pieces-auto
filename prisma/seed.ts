@@ -270,10 +270,24 @@ async function main() {
       create: { name: makeName, slug: slugify(makeName) },
     });
     for (const m of models) {
+      // The slug has to be written here, not left to its column default.
+      // `slug` defaults to "" and is unique per make, so seeding a make's
+      // second model onto an empty database collided on ("", makeId) and the
+      // whole seed died at Alfa Romeo's second car. Production never saw it:
+      // the 20260901120000_vehicle_slugs migration backfilled the slugs of
+      // rows that already existed, and the seed is only ever run again on top
+      // of them. A fresh database — a new contributor's, CI's — hit it first
+      // try. Derived with the same slugify the migration's SQL used.
       const model = await prisma.vehicleModel.upsert({
         where: { makeId_name: { makeId: make.id, name: m.model } },
-        update: { yearFrom: m.years[0], yearTo: m.years[1] },
-        create: { makeId: make.id, name: m.model, yearFrom: m.years[0], yearTo: m.years[1] },
+        update: { slug: slugify(m.model), yearFrom: m.years[0], yearTo: m.years[1] },
+        create: {
+          makeId: make.id,
+          name: m.model,
+          slug: slugify(m.model),
+          yearFrom: m.years[0],
+          yearTo: m.years[1],
+        },
       });
       for (const e of m.engines) {
         const engine = await prisma.vehicleEngine.upsert({
