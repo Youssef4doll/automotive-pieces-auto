@@ -55,7 +55,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   // whatever it is placed on and the surface is the page's decision, not this
   // route's. The `fill="none"` on the group means nothing else fills either.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Photo à venir">
-<g transform="translate(6 6) scale(3.5)" fill="none" color="#64748b" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">${partIconMarkup(familySlug)}</g>
+<g transform="translate(6 6) scale(3.5)" fill="none" stroke="#64748b" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">${partIconMarkup(familySlug)}</g>
 </svg>`;
 
   return new Response(svg, {

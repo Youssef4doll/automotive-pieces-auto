@@ -8,7 +8,6 @@ import { parts } from "@/i18n/plural";
 import CategoryThumb from "./CategoryThumb";
 import LanguageSwitcher from "./LanguageSwitcher";
 import type { MegaMenuFamily } from "./MegaMenu";
-import { IconCar } from "./icons";
 
 /**
  * The phone's way into the catalogue.
@@ -165,7 +164,12 @@ export default function MobileNav({
                   onClick={onPickVehicle}
                   className="w-full flex items-center gap-3 px-3.5 min-h-tap rounded-xl bg-gold-500 hover:bg-gold-400 text-navy-950 text-start"
                 >
-                  <IconCar className="h-[21px] w-[21px]" />
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true">
+                    <path d="M5 17h14M4 17v-4.2L6 7h12l2 5.8V17" />
+                    <path d="M4 17v2h3v-2M17 17v2h3v-2" />
+                    <circle cx="7.5" cy="13.5" r=".8" />
+                    <circle cx="16.5" cy="13.5" r=".8" />
+                  </svg>
                   <span className="flex-1 min-w-0 font-display font-bold uppercase text-[13px] tracking-wide">
                     {t("nav.byVehicle")}
                   </span>

@@ -92,14 +92,6 @@
      compiled, the media query was in the file, and nothing happened. */
   --breakpoint-3xl: 112.5rem;
 
-  /* 1440px: the common laptop, and the width at which the home page's row of
-     six best sellers fits on one line. The shell is 85vw there, so a six-up
-     row is a ~190px card — the same width the phone row already ships. xl
-     (1280px) would have made it 162px, narrower than anything on the site.
-     In rem for the same sorting reason as above: 90rem lands between xl and
-     2xl, where a px literal would not. */
-  --breakpoint-wide: 90rem;
-
   /* Expose the tap/gutter tokens to Tailwind so components can use
      h-tap-primary / min-h-tap / px-gutter instead of magic numbers. */
   --spacing-tap-primary: var(--tap-primary);

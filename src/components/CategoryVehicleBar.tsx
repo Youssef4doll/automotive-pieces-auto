@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import VehiclePicker from "./VehiclePicker";
-import { IconCar } from "./icons";
 
 /**
  * The vehicle card in a category page's header.
@@ -81,3 +80,13 @@ function IconCheck() {
   );
 }
 
+function IconCar() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true">
+      <path d="M5 17h14M4 17v-4.2L6 7h12l2 5.8V17" />
+      <path d="M4 17v2h3v-2M17 17v2h3v-2" />
+      <circle cx="7.5" cy="13.5" r=".8" />
+      <circle cx="16.5" cy="13.5" r=".8" />
+    </svg>
+  );
+}

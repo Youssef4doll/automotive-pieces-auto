@@ -8,7 +8,6 @@ import type { DictKey } from "@/i18n/dictionaries";
 import { login, signup, type AuthState } from "@/app/actions/auth";
 import FormShield from "@/components/FormShield";
 import FormNotice from "@/components/FormNotice";
-import { IconCar } from "@/components/icons";
 
 /**
  * Sign in / create an account.
@@ -245,9 +244,14 @@ function FeatureIcon({ name }: { name: "truck" | "car" | "cash" | "headset" }) {
         </svg>
       );
     case "car":
-      // The one symbol in this switch that is drawn elsewhere: every car on
-      // the site is the same car now.
-      return <IconCar className="h-5 w-5" />;
+      return (
+        <svg {...common}>
+          <path d="M5 17h14M4 17v-4.2L6 7h12l2 5.8V17" />
+          <path d="M4 17v2h3v-2M17 17v2h3v-2" />
+          <circle cx="7.5" cy="13.5" r=".8" />
+          <circle cx="16.5" cy="13.5" r=".8" />
+        </svg>
+      );
     case "cash":
       return (
         <svg {...common}>

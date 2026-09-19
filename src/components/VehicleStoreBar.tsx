@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useLocale } from "@/i18n/LocaleProvider";
 import { useVehicle, vehicleLabel } from "@/lib/vehicle-store";
 import VehiclePicker from "./VehiclePicker";
-import { IconCar } from "./icons";
 
 /**
  * A persistent "my vehicle / my store" strip sitting directly under the
@@ -47,10 +46,11 @@ export default function VehicleStoreBar({ storeAddress }: { storeAddress: string
             onClick={() => setPickerOpen(true)}
             className="flex items-center gap-2.5 px-gutter py-2 min-h-tap text-start hover:bg-gray-50 transition-colors"
           >
-            {/* text-navy-900 rather than the hard-coded #0f2352 this used to
-                carry: the shared car inherits its colour like every other
-                symbol on the site. */}
-            <IconCar className="text-navy-900" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f2352" strokeWidth="1.6" className="shrink-0">
+              <path d="M3 13l1.8-5.2A2 2 0 0 1 6.7 6.4h10.6a2 2 0 0 1 1.9 1.4L21 13v5h-3v-1.6H6V18H3v-5Z" />
+              <circle cx="7" cy="15" r="1" />
+              <circle cx="17" cy="15" r="1" />
+            </svg>
             <span className="min-w-0">
               <span className="block text-[10.5px] uppercase tracking-[.08em] text-gray-500 leading-tight">
                 {t("finder.myVehicle")}

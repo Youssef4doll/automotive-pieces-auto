@@ -9,7 +9,6 @@ import type { CardProduct } from "./ProductCard";
 import { useVehicle } from "@/lib/vehicle-store";
 import { logSearchMiss } from "@/app/actions/analytics";
 import { contactLinkProps } from "@/lib/contact-link";
-import { IconCar } from "./icons";
 
 export type SearchProduct = CardProduct & { matchTier?: number };
 
@@ -268,6 +267,16 @@ function IconChat() {
   return <Stroke><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-5A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4Z" /></Stroke>;
 }
 
+function IconCar() {
+  return (
+    <Stroke>
+      <path d="M5 17h14M4 17v-4.2L6 7h12l2 5.8V17" />
+      <path d="M4 17v2h3v-2M17 17v2h3v-2" />
+      <circle cx="7.5" cy="13.5" r=".8" />
+      <circle cx="16.5" cy="13.5" r=".8" />
+    </Stroke>
+  );
+}
 
 function IconHash() {
   return <Stroke><path d="M10 3 8 21M16 3l-2 18M3.5 8.5h17M3 15.5h17" /></Stroke>;

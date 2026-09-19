@@ -12,8 +12,6 @@
  * Everything here is stroked in `currentColor`, so a symbol inherits the
  * colour of the text it sits beside instead of introducing its own.
  */
-import { CAR_MARKUP } from "@/lib/part-icons";
-
 type Props = { className?: string };
 
 const base = "shrink-0";
@@ -45,29 +43,13 @@ export const IconOrders = ({ className }: Props) => (
   </svg>
 );
 
-/**
- * The car. The one symbol here that is not Lucide geometry, and the only one
- * whose drawing lives elsewhere: it is the shop's own side-view car, defined
- * once in lib/part-icons because the bodywork family's picture is the same
- * drawing, and two copies of a car is how the two would come to differ.
- *
- * Every car on the site is this one. Five components had each grown their own
- * copy of a four-dot hatchback, and the vehicle bar's was a sixth in a
- * hard-coded navy.
- */
 export const IconCar = ({ className }: Props) => (
-  <svg
-    width={22}
-    height={22}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    className={`${base} ${className ?? ""}`}
-    aria-hidden="true"
-    // Our own literal markup from the module above, never anything a user
-    // supplied — the same mechanism FamilyIcon uses, and for the same reason.
-    dangerouslySetInnerHTML={{ __html: CAR_MARKUP }}
-  />
+  <svg {...svg(className)}>
+    <path d="M5 17H3v-4l2-5h14l2 5v4h-2" />
+    <path d="M5 13h14" />
+    <circle cx="7.5" cy="17" r="2" />
+    <circle cx="16.5" cy="17" r="2" />
+  </svg>
 );
 
 export const IconHelp = ({ className }: Props) => (
