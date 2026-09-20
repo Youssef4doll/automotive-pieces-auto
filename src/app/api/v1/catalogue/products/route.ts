@@ -20,6 +20,12 @@ const PUBLIC = { cache: Cache.catalogue, cors: true };
  * UNKNOWN is the common one and is not a failure: most of this catalogue has
  * no fitment rows, so for most parts the shop genuinely does not know. A part
  * with no rows is never reported as fitting.
+ *
+ * `fits=1` goes further and returns only the parts that do have a row for
+ * that engine — the shop's confirmed list for one car. It is a narrower
+ * question than the verdict above and it has to be asked of the database:
+ * filtering a page client-side would report "nothing fits your car" whenever
+ * the first twenty rows happened to hold none.
  */
 export async function GET(request: NextRequest) {
   return guard(
@@ -30,6 +36,13 @@ export async function GET(request: NextRequest) {
       const subcategory = params.get("subcategory");
       const engine = params.get("engine");
       const pageParam = params.get("page");
+
+      // `fits=1` narrows the page to parts with a fitment row for that
+      // engine. Only meaningful alongside `engine`; asking for it without one
+      // is a caller bug rather than an empty result, so it is refused rather
+      // than quietly ignored.
+      const fits = params.get("fits") === "1";
+      if (fits && engine === null) return fail("bad_request", PUBLIC);
 
       // Bounded up front so an unbounded string never reaches a query, and so
       // a caller cannot walk the catalogue a thousand pages at a time.
@@ -48,6 +61,7 @@ export async function GET(request: NextRequest) {
         familySlug: parsed.family?.success ? parsed.family.data : undefined,
         subcategorySlug: parsed.subcategory?.success ? parsed.subcategory.data : undefined,
         engineId: parsed.engine?.success ? parsed.engine.data : undefined,
+        fitsEngineOnly: fits,
         page: parsed.page?.success ? parsed.page.data : 1,
       });
 

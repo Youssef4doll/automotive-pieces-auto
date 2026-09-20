@@ -807,6 +807,22 @@ export async function listAppProducts(options: {
   subcategorySlug?: string;
   /** The chosen engine, for the compatibility verdict. */
   engineId?: string;
+  /**
+   * Keep only the parts that actually have a fitment row for that engine.
+   *
+   * Without this the app can only filter the page it was handed, which is
+   * wrong in a way that is hard to see: page one of twenty parts might hold
+   * no confirmed fit at all, and a screen called "pièces compatibles" would
+   * come back empty for a car that has forty of them three pages later. The
+   * question has to be asked of the database, not of the page.
+   *
+   * It narrows to FITS only — never to FITS plus UNKNOWN. A part with no
+   * fitment rows is one the shop has not checked, and folding those in would
+   * turn "confirmed for your car" into "probably fine", which is the exact
+   * claim this catalogue cannot support. Ignored unless `engineId` is set,
+   * because there is nothing to be compatible with.
+   */
+  fitsEngineOnly?: boolean;
   page?: number;
   perPage?: number;
 }) {
@@ -823,7 +839,12 @@ export async function listAppProducts(options: {
         }
       : {};
 
-  const where = { active: true, ...categoryWhere };
+  const fitmentWhere =
+    options.engineId && options.fitsEngineOnly
+      ? { fitments: { some: { engineId: options.engineId } } }
+      : {};
+
+  const where = { active: true, ...categoryWhere, ...fitmentWhere };
 
   const [rows, total, settings] = await Promise.all([
     prisma.product.findMany({
