@@ -6,8 +6,7 @@ import { CATALOG_TAG, CATALOG_TTL } from "@/lib/cache";
 import { toNumber } from "@/lib/money";
 import { normalizeReference, groupOeReferences } from "@/lib/reference";
 import { parseQuery, rankProducts } from "@/lib/search";
-import { availabilityOf } from "@/lib/availability";
-import { getSettings } from "@/lib/settings";
+import { appProductSelect, toAppProduct } from "./app-catalog";
 
 /**
  * Navigation shows only what a shopper can actually buy.
@@ -759,41 +758,9 @@ export const getCatalogueScale = cache(readCatalogueScale)
 //   the compatibility table to it.
 // ---------------------------------------------------------------------------
 
-export type FitmentVerdict = "FITS" | "UNKNOWN" | "DOES_NOT_FIT";
-
-export type AppProduct = {
-  id: string;
-  name: string;
-  slug: string;
-  sku: string;
-  brand: string | null;
-  categorySlug: string;
-  familySlug: string;
-  price: number;
-  /** Struck-through reference price, when the shop has actually set one. */
-  compareAtPrice: number | null;
-  availability: "IN_STOCK" | "ON_ORDER" | "UNAVAILABLE";
-  /** Only when the shop set a low-stock threshold and stock is at or under it. */
-  lowStockQty: number | null;
-  /**
-   * A real photograph, or null.
-   *
-   * Null is not a missing value to paper over — it is most of the catalogue,
-   * and it means "draw this part's family instead". The storefront swaps in a
-   * per-family SVG at this point; the app does the same thing with its own
-   * vector drawings, which is why the family slug travels with every row.
-   */
-  imageUrl: string | null;
-  /**
-   * How this part relates to the engine the customer chose.
-   *
-   * Null when no engine was supplied — "we have not been told your car" is a
-   * different statement from "we do not know whether this fits it", and a
-   * screen that collapsed them would tell a customer with no vehicle that
-   * every part needs checking.
-   */
-  fitment: FitmentVerdict | null;
-};
+// The shape, and the one function that produces it, live in app-catalog.ts so
+// that search, the product page and the basket share them with this listing.
+export type { AppProduct, FitmentVerdict } from "./app-catalog";
 
 /**
  * Products in a family, or in one subcategory of it.
@@ -846,7 +813,7 @@ export async function listAppProducts(options: {
 
   const where = { active: true, ...categoryWhere, ...fitmentWhere };
 
-  const [rows, total, settings] = await Promise.all([
+  const [rows, total] = await Promise.all([
     prisma.product.findMany({
       where,
       // In stock first, then whatever the shop can source, then the rest.
@@ -855,76 +822,12 @@ export async function listAppProducts(options: {
       orderBy: [{ stockQty: "desc" }, { priceSell: "asc" }],
       skip: (page - 1) * perPage,
       take: perPage,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        sku: true,
-        priceSell: true,
-        compareAtPrice: true,
-        stockQty: true,
-        lowStockThreshold: true,
-        supply: true,
-        imageUrl: true,
-        brand: { select: { name: true } },
-        category: { select: { slug: true, parent: { select: { slug: true } } } },
-        images: { orderBy: { order: "asc" }, take: 1, select: { id: true } },
-        _count: { select: { fitments: true } },
-        // Only the rows matching THIS engine come back, so the verdict is
-        // "some row matched" without fetching the part's whole fitment list.
-        ...(options.engineId
-          ? {
-              fitments: {
-                where: { engineId: options.engineId },
-                take: 1,
-                select: { id: true },
-              },
-            }
-          : {}),
-      },
+      select: appProductSelect(options.engineId),
     }),
     prisma.product.count({ where }),
-    getSettings(),
   ]);
 
-  const leadTime = settings.supplier_lead_time?.trim() || null;
-
-  const products: AppProduct[] = rows.map((p) => {
-    const state = availabilityOf({ stockQty: p.stockQty, supply: p.supply });
-
-    let fitment: FitmentVerdict | null = null;
-    if (options.engineId) {
-      // No fitment rows at all is UNKNOWN, never "fits everything". That
-      // distinction is the whole compatibility feature: most of this
-      // catalogue has no fitment data, and saying so is the honest answer.
-      if (p._count.fitments === 0) fitment = "UNKNOWN";
-      else fitment = (p as { fitments?: { id: string }[] }).fitments?.length
-        ? "FITS"
-        : "DOES_NOT_FIT";
-    }
-
-    const uploaded = p.images[0]?.id;
-
-    return {
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      sku: p.sku,
-      brand: p.brand?.name ?? null,
-      categorySlug: p.category.slug,
-      familySlug: p.category.parent?.slug ?? p.category.slug,
-      price: toNumber(p.priceSell),
-      compareAtPrice: p.compareAtPrice ? toNumber(p.compareAtPrice) : null,
-      availability: state,
-      lowStockQty:
-        state === "IN_STOCK" && p.stockQty <= p.lowStockThreshold ? p.stockQty : null,
-      // Only a genuinely uploaded photograph counts. The seeded stand-in is a
-      // picture of three unrelated parts, so on a brake disc it is not a
-      // missing image but a wrong one — the app draws the family instead.
-      imageUrl: uploaded ? `/api/images/${uploaded}` : null,
-      fitment,
-    };
-  });
+  const products = rows.map((p) => toAppProduct(p, options.engineId));
 
   return { products, total, page, perPage, hasMore: page * perPage < total };
 }

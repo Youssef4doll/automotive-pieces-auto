@@ -321,6 +321,9 @@ export type PickerEngine = {
   powerHp: number | null;
   engineCode: string | null;
   displacementCc: number | null;
+  /** The production years the shop recorded for this engine, when it did. */
+  yearFrom: number | null;
+  yearTo: number | null;
   partCount: number;
 };
 
@@ -349,6 +352,8 @@ export async function listPickerEngines(
         powerHp: true,
         engineCode: true,
         displacementCc: true,
+        yearFrom: true,
+        yearTo: true,
       },
     }),
     prisma.$queryRaw<{ engineId: string; n: bigint }[]>`
@@ -368,6 +373,8 @@ export async function listPickerEngines(
     powerHp: e.powerHp,
     engineCode: e.engineCode,
     displacementCc: e.displacementCc,
+    yearFrom: e.yearFrom,
+    yearTo: e.yearTo,
     partCount: parts.get(e.id) ?? 0,
   }));
 }

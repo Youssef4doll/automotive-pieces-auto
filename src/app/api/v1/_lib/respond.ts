@@ -30,15 +30,25 @@ export const API_VERSION = "1";
 
 export type ApiError =
   | "bad_request"
+  /** One named field failed validation; the body carries `field`. */
+  | "invalid_field"
   | "not_found"
   | "rate_limited"
   | "unauthorized"
+  /**
+   * The request was fine and the shop cannot do it: a part in the basket was
+   * withdrawn or can no longer be sourced. The body carries `productId`, so
+   * the app can point at the line rather than at the whole basket.
+   */
+  | "unavailable"
   | "server_error";
 
 const STATUS: Record<ApiError, number> = {
   bad_request: 400,
   unauthorized: 401,
   not_found: 404,
+  unavailable: 409,
+  invalid_field: 422,
   rate_limited: 429,
   server_error: 500,
 };
@@ -86,18 +96,46 @@ const PUBLIC_CORS = {
   "Access-Control-Max-Age": "86400",
 } as const;
 
+/**
+ * The orders routes, and why they can take `*` after all.
+ *
+ * The rule above is about AMBIENT credentials. What makes `*` dangerous on an
+ * account or order route is a cookie: the browser attaches it to a request
+ * any page can trigger, so the page acts as the customer without knowing who
+ * they are. The /api/v1 orders routes read no cookie. They authenticate with
+ * a bearer token the app holds in the device keychain and sends in the
+ * `Authorization` header — which a hostile page cannot attach, because it
+ * does not have it. There is nothing ambient to ride on, so there is nothing
+ * for `*` to leak. (Browsers also refuse to pair `*` with credentialed
+ * requests at all, which is a second lock on the same door.)
+ *
+ * That argument holds for exactly as long as the route never reads a cookie.
+ * A route that takes `cors: "write"` must not call `cookies()` or
+ * `getCurrentUser()` — the day the app gains sign-in, the account routes get
+ * their own bearer session, not the website's cookie.
+ */
+const WRITE_CORS = {
+  ...PUBLIC_CORS,
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+} as const;
+
 type Options = {
   /** Cache-Control. Defaults to `no-store`; a route opts in to caching. */
   cache?: string;
-  /** Allow any origin to read this. Public catalogue data only — see above. */
-  cors?: boolean;
+  /**
+   * `true`: any origin may read this — public catalogue data only.
+   * `"write"`: any origin may also POST and send `Authorization` — only on a
+   * route that reads no cookie; see WRITE_CORS.
+   */
+  cors?: boolean | "write";
 };
 
 function headersFor({ cache = Cache.private, cors = false }: Options) {
   return {
     "Cache-Control": cache,
     "X-API-Version": API_VERSION,
-    ...(cors ? PUBLIC_CORS : {}),
+    ...(cors === "write" ? WRITE_CORS : cors ? PUBLIC_CORS : {}),
   };
 }
 
@@ -105,9 +143,15 @@ export function ok<T>(data: T, options: Options = {}) {
   return NextResponse.json({ data }, { headers: headersFor(options) });
 }
 
-export function fail(error: ApiError, options: Options = {}, extra?: Record<string, string>) {
+export function fail(
+  error: ApiError,
+  options: Options = {},
+  extra?: Record<string, string>,
+  /** Machine-readable detail beside the code — a field name, a product id. Never a sentence. */
+  detail?: Record<string, string>,
+) {
   return NextResponse.json(
-    { error },
+    { error, ...detail },
     // The failure carries the same CORS headers as the success. A browser
     // that cannot read the 404 reports it to the app as a network error, and
     // "pas de connexion" is the wrong thing to tell someone whose real
@@ -116,9 +160,36 @@ export function fail(error: ApiError, options: Options = {}, extra?: Record<stri
   );
 }
 
-/** The preflight answer for a public read-only route. */
+/**
+ * The preflight answers. Two functions rather than one with a flag, because
+ * each is exported directly as a route's `OPTIONS` handler and Next calls it
+ * with the request as the first argument — a flag parameter would silently
+ * receive a Request object.
+ */
 export function preflight() {
   return new Response(null, { status: 204, headers: headersFor({ cors: true }) });
+}
+
+/** For a route that takes POST or `Authorization` — see WRITE_CORS. */
+export function preflightWrite() {
+  return new Response(null, { status: 204, headers: headersFor({ cors: "write" }) });
+}
+
+/**
+ * A JSON body, bounded.
+ *
+ * `request.json()` reads whatever it is sent. A basket is a few hundred
+ * bytes; refusing anything over 32 KB before parsing keeps one malformed
+ * client from being a way to make the server allocate.
+ */
+export async function readJson(request: Request, maxBytes = 32_768): Promise<unknown | undefined> {
+  const text = await request.text();
+  if (text.length > maxBytes) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
 }
 
 /**

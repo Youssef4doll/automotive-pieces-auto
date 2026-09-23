@@ -527,8 +527,9 @@ model Order {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  items   OrderItem[]
-  history OrderStatusEvent[]
+  items        OrderItem[]
+  history      OrderStatusEvent[]
+  accessTokens OrderAccessToken[]
 
   @@index([status])
   @@index([userId])
@@ -538,6 +539,35 @@ model Order {
   // is fine at a few hundred rows and is exactly the thing that starts
   // costing the storefront a shared connection once it is not.
   @@index([createdAt])
+}
+
+/// Proof, held by a phone, that it may read one order.
+///
+/// Order references are sequential and printed on every confirmation, so a
+/// reference is not a secret. The website proves ownership with an httpOnly
+/// cookie of order ids; a phone app has no cookie jar to lean on, so the app
+/// API issues one of these with each order and the app keeps it in the
+/// device keychain. See ARCHITECTURE.md §10 in the app repository.
+///
+/// Only the SHA-256 of the token is stored. The token is 32 bytes from the
+/// operating system's CSPRNG, so there is nothing to brute-force and no need
+/// for a slow hash — but a database dump must not be a list of working keys
+/// to other people's names, phone numbers and delivery addresses.
+///
+/// A table rather than a column on Order because one order can legitimately
+/// be opened from more than one phone: the one that placed it, and the one a
+/// customer recovers it on with its reference and their phone number.
+model OrderAccessToken {
+  id         String    @id @default(cuid())
+  orderId    String
+  order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  /// Updated when the token is used, so a token nobody has presented in a
+  /// year can be pruned without guessing.
+  lastUsedAt DateTime?
+
+  @@index([orderId])
 }
 
 model OrderItem {

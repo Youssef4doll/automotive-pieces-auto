@@ -142,6 +142,11 @@ export const LIMITS = {
    *  A genuine customer needs two or three tries; anything walking the number
    *  space needs thousands. */
   orderLookup: { limit: 10, windowMs: 15 * 60_000 },
+  /** The phone app reading an order it holds a token for. The token is 256
+   *  random bits, so this is a flood ceiling, not a guessing gate — the app
+   *  refreshes a tracking screen and a list of orders, and should not be
+   *  locked out of its own customer's parcel for doing so. */
+  orderRead: { limit: 120, windowMs: 60_000 },
   /** Newsletter, the classic spam target; the honeypot does the real work. */
   newsletter: { limit: 15, windowMs: 60 * 60_000 },
   /** The contact form. Every message is a row in the shop's inbox and an
