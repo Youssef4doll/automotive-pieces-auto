@@ -64,6 +64,7 @@ model User {
   carts           Cart[]
   passwordResets  PasswordResetToken[]
   contactMessages ContactMessage[]
+  adminSessions   AdminSession[]
 
   @@index([role])
 }
@@ -539,6 +540,32 @@ model Order {
   // is fine at a few hundred rows and is exactly the thing that starts
   // costing the storefront a shared connection once it is not.
   @@index([createdAt])
+}
+
+/// The shop's staff signed in on the phone app.
+///
+/// The website's admin session is a signed cookie, and the app API never
+/// reads cookies (see respond.ts, WRITE_CORS): a route that honoured one
+/// while answering any origin would let any page the owner visits act as
+/// the owner. So the app gets its own proof, sent as a bearer header it keeps
+/// in the device keychain — the same design as OrderAccessToken, for the same
+/// reasons, and stored the same way: SHA-256 of 32 random bytes.
+///
+/// A row rather than a signed token so that it can be taken back. Signing out
+/// deletes it; a lost phone is one delete away from being locked out; and the
+/// role is read from User on every request, so demoting an account ends its
+/// app sessions on their next call rather than when a token expires.
+model AdminSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  /// Hard end. Used or not, a session is signed in again after this.
+  expiresAt  DateTime
+  lastUsedAt DateTime?
+
+  @@index([userId])
 }
 
 /// Proof, held by a phone, that it may read one order.

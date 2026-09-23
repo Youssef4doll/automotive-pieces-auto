@@ -1,12 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
-import { revalidateCatalog } from "@/lib/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
+import { deleteCategoryImage, revalidateStorefront, storeCategoryImage } from "@/lib/admin/categories";
 import { readImageFile, mediaAssetIdFromUrl, assetUrl } from "@/lib/image-upload";
 
 async function assertAdmin() {
@@ -16,16 +15,6 @@ async function assertAdmin() {
 }
 
 export type CatalogFormState = { error?: string; ok?: string } | undefined;
-
-// Categories and brands are read on nearly every storefront route (the mega
-// menu and the footer are rendered from the layout), so a change to either
-// has to invalidate the layout tree, not just one page.
-function revalidateStorefront() {
-  revalidateCatalog();
-  revalidatePath("/", "layout");
-  revalidatePath("/admin/catalogue");
-  revalidatePath("/admin/catalogue/marques");
-}
 
 /** Turn a Prisma unique-constraint violation into something an admin can act on. */
 function friendlyError(e: unknown, fallback: string) {
@@ -47,16 +36,6 @@ const categorySchema = z.object({
   parentId: z.string().optional(),
   removeImage: z.string().optional(),
 });
-
-/**
- * Drop a category's uploaded picture. Unlike a banner's artwork, a category
- * image is never shared between rows, so there is no "still in use elsewhere"
- * check to make first — it is simply deleted.
- */
-async function deleteCategoryImage(imageUrl: string | null | undefined) {
-  const assetId = mediaAssetIdFromUrl(imageUrl);
-  if (assetId) await prisma.mediaAsset.deleteMany({ where: { id: assetId } });
-}
 
 export async function upsertCategory(
   _prev: CatalogFormState,
@@ -97,16 +76,9 @@ export async function upsertCategory(
     previousImageUrl = existing?.imageUrl;
   }
   if (file instanceof File && file.size > 0) {
-    // Vectors allowed: a category tile is drawn at 44px in the admin list and
-    // at six different sizes across the storefront breakpoints, and an icon
-    // that is one file at every one of them is the whole reason to accept SVG.
-    const read = await readImageFile(file, { allowVector: true });
-    if (!read.ok) return { error: read.error };
-    const asset = await prisma.mediaAsset.create({
-      data: { data: read.bytes, mimeType: read.mimeType },
-      select: { id: true },
-    });
-    imageUrl = assetUrl(asset.id, read.mimeType);
+    const stored = await storeCategoryImage(file);
+    if (!stored.ok) return { error: stored.message };
+    imageUrl = stored.url;
   } else if (parsed.data.removeImage === "on" || parsed.data.removeImage === "true") {
     imageUrl = null;
   }

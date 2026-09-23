@@ -197,6 +197,8 @@ export async function getDashboardData() {
     recentOrders,
     totalMargin: num(productRow[0]?.margin),
     productCount: Number(productRow[0]?.total ?? 0),
+    outOfStock,
+    lowStockCount: criticalLowStock,
     periods,
     revenueBySource,
     alerts,

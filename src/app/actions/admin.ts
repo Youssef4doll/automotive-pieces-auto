@@ -2,7 +2,6 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { revalidateCatalog } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { updateSettings, DEFAULT_SETTINGS, type SettingsMap } from "@/lib/settings";
@@ -10,7 +9,8 @@ import { OrderStatus } from "@prisma/client";
 import { normalizeReference, parseOwnedReferenceList } from "@/lib/reference";
 import { readImageFile, mediaAssetIdFromUrl, assetUrl, assetUrlVariants } from "@/lib/image-upload";
 import { reindexProducts, topSearchMisses } from "@/lib/search";
-import { notifyOrderStatus } from "@/lib/order-emails";
+import { setOrderStatus } from "@/lib/admin/orders";
+import { adjustProductStock, revalidateProductSurfaces } from "@/lib/admin/products";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -20,20 +20,8 @@ async function assertAdmin() {
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   await assertAdmin();
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      status,
-      history: { create: { status } },
-    },
-  });
-  // Tell the customer their order moved. Best-effort by design — see
-  // lib/order-emails — so a mail failure never leaves the admin unable to
-  // advance an order.
-  await notifyOrderStatus(orderId, status);
-  revalidatePath("/admin/commandes");
-  revalidatePath(`/admin/commandes/${orderId}`);
-  revalidatePath("/compte/commandes");
+  // Shared with the app's staff screens — see lib/admin/orders.
+  await setOrderStatus(orderId, status);
 }
 
 const productSchema = z.object({
@@ -316,14 +304,6 @@ async function syncReferences(productId: string, type: "OEM" | "AFTERMARKET", te
 // A product shows up on the home page, its own page, every catalogue listing
 // and the search results, so a price or stock edit has to invalidate the whole
 // storefront tree — revalidating "/" alone left the listings stale.
-function revalidateProductSurfaces() {
-  // The menu carries a part count per family, so a product coming or going
-  // changes it as surely as a category rename does.
-  revalidateCatalog();
-  revalidatePath("/admin/stock");
-  revalidatePath("/", "layout");
-}
-
 export async function deleteProduct(productId: string) {
   await assertAdmin();
   await prisma.product.delete({ where: { id: productId } });
@@ -332,14 +312,8 @@ export async function deleteProduct(productId: string) {
 
 export async function adjustStock(productId: string, change: number, note?: string) {
   await assertAdmin();
-  await prisma.product.update({
-    where: { id: productId },
-    data: { stockQty: { increment: change } },
-  });
-  await prisma.stockMovement.create({
-    data: { productId, change, reason: "adjustment", note },
-  });
-  revalidateProductSurfaces();
+  // Shared with the app's staff screens — see lib/admin/products.
+  await adjustProductStock(productId, change, note);
 }
 
 export async function updateSiteSettings(patch: Partial<SettingsMap>) {

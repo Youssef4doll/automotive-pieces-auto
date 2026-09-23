@@ -5,7 +5,8 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/session";
-import { hit, peek, clear, callerKey, LIMITS } from "@/lib/rate-limit";
+import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
+import { checkCredentials } from "@/lib/credentials";
 import { checkForm } from "@/lib/bot-check";
 import { personName, phoneNumber } from "@/lib/validation";
 import { claimOrdersForUser } from "./orders";
@@ -84,40 +85,17 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   }
   const { email, password } = parsed.data;
 
-  // Two gates, because they defend different things. The per-account one is
-  // the brute-force gate: guessing one password is what it stops, and it is
-  // unaffected by how many people share the attacker's address. The per-address
-  // one is only a flood ceiling, set high enough that a carrier-NAT full of
-  // real customers never reaches it. Both run before bcrypt, which is the
-  // expensive part of serving an attempt.
-  // Only failures are charged. Checked before bcrypt runs, since serving an
-  // attempt is the expensive part.
-  const accountKey = `login:acct:${email.toLowerCase()}`;
-  const ipKey = await callerKey("login");
-  const accountGate = peek(accountKey, LIMITS.loginPerAccount.limit);
-  const ipGate = peek(ipKey, LIMITS.loginPerIp.limit);
-  if (!accountGate.ok || !ipGate.ok) {
-    const wait = Math.ceil(Math.max(accountGate.retryAfter, ipGate.retryAfter) / 60);
-    return { error: `Trop de tentatives de connexion. Réessayez dans ${wait} minute(s).` };
-  }
-
-  const fail = () => {
-    hit(accountKey, LIMITS.loginPerAccount.limit, LIMITS.loginPerAccount.windowMs);
-    hit(ipKey, LIMITS.loginPerIp.limit, LIMITS.loginPerIp.windowMs);
-    // Identical message either way: naming which half was wrong tells an
-    // attacker which emails have accounts.
+  // The password check, its lockout and its timing are shared with the app's
+  // staff sign-in — see lib/credentials — so the two doors spend one budget.
+  const checked = await checkCredentials(email, password);
+  if (!checked.ok) {
+    if (checked.reason === "rate_limited") {
+      return { error: `Trop de tentatives de connexion. Réessayez dans ${Math.ceil(checked.retryAfter / 60)} minute(s).` };
+    }
     return { error: "Email ou mot de passe incorrect" };
-  };
+  }
+  const user = checked.user;
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return fail();
-
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) return fail();
-
-  // A correct password clears the account's budget: a customer who fumbled
-  // their password twice and then got it right starts clean.
-  clear(accountKey);
   // The checkbox is on by default in the form; a form without the field at
   // all (there is none today) would get the short session, which is the safe
   // way round.

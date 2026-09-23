@@ -35,6 +35,8 @@ export type ApiError =
   | "not_found"
   | "rate_limited"
   | "unauthorized"
+  /** Signed in correctly, as somebody who may not do this — a customer at the staff door. */
+  | "forbidden"
   /**
    * The request was fine and the shop cannot do it: a part in the basket was
    * withdrawn or can no longer be sourced. The body carries `productId`, so
@@ -46,6 +48,7 @@ export type ApiError =
 const STATUS: Record<ApiError, number> = {
   bad_request: 400,
   unauthorized: 401,
+  forbidden: 403,
   not_found: 404,
   unavailable: 409,
   invalid_field: 422,
@@ -116,7 +119,7 @@ const PUBLIC_CORS = {
  */
 const WRITE_CORS = {
   ...PUBLIC_CORS,
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 } as const;
 
