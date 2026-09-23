@@ -41,11 +41,17 @@ export async function GET() {
         name: family.name,
         slug: family.slug,
         productCount: family.productCount,
+        // The picture the shop uploaded for this family in /admin/catalogue,
+        // or null. With none, the app shows the same drawing the website
+        // serves at /api/part-icon/<slug>.svg — one set of pictures, managed
+        // in one admin, for both front doors.
+        imageUrl: family.imageUrl ?? null,
         subcategories: family.children.map((child) => ({
           id: child.id,
           name: child.name,
           slug: child.slug,
           productCount: child._count.products,
+          imageUrl: child.imageUrl ?? null,
         })),
       }));
 
