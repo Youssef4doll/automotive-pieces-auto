@@ -790,6 +790,8 @@ export async function listAppProducts(options: {
    * because there is nothing to be compatible with.
    */
   fitsEngineOnly?: boolean;
+  /** A parts maker's slug — the app's "Nos marques" tiles. */
+  brandSlug?: string;
   page?: number;
   perPage?: number;
 }) {
@@ -811,7 +813,9 @@ export async function listAppProducts(options: {
       ? { fitments: { some: { engineId: options.engineId } } }
       : {};
 
-  const where = { active: true, ...categoryWhere, ...fitmentWhere };
+  const brandWhere = options.brandSlug ? { brand: { slug: options.brandSlug } } : {};
+
+  const where = { active: true, ...categoryWhere, ...fitmentWhere, ...brandWhere };
 
   const [rows, total] = await Promise.all([
     prisma.product.findMany({

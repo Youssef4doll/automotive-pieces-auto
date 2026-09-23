@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
       const subcategory = params.get("subcategory");
       const engine = params.get("engine");
       const pageParam = params.get("page");
+      const brand = params.get("brand");
 
       // `fits=1` narrows the page to parts with a fitment row for that
       // engine. Only meaningful alongside `engine`; asking for it without one
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
         subcategory: subcategory === null ? undefined : slug.safeParse(subcategory),
         engine: engine === null ? undefined : id.safeParse(engine),
         page: pageParam === null ? undefined : page.safeParse(pageParam),
+        brand: brand === null ? undefined : slug.safeParse(brand),
       };
 
       for (const value of Object.values(parsed)) {
@@ -62,6 +64,7 @@ export async function GET(request: NextRequest) {
         subcategorySlug: parsed.subcategory?.success ? parsed.subcategory.data : undefined,
         engineId: parsed.engine?.success ? parsed.engine.data : undefined,
         fitsEngineOnly: fits,
+        brandSlug: parsed.brand?.success ? parsed.brand.data : undefined,
         page: parsed.page?.success ? parsed.page.data : 1,
       });
 
