@@ -817,19 +817,45 @@ export async function listAppProducts(options: {
 
   const where = { active: true, ...categoryWhere, ...fitmentWhere, ...brandWhere };
 
-  const [rows, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      // In stock first, then whatever the shop can source, then the rest.
-      // Never by "popularity" — there is no such figure in this database and
-      // ordering by one would be inventing it.
-      orderBy: [{ stockQty: "desc" }, { priceSell: "asc" }],
-      skip: (page - 1) * perPage,
-      take: perPage,
-      select: appProductSelect(options.engineId),
-    }),
-    prisma.product.count({ where }),
-  ]);
+  // In stock first, then whatever the shop can source, then the rest.
+  // Never by "popularity" — there is no such figure in this database and
+  // ordering by one would be inventing it.
+  const orderBy = [{ stockQty: "desc" as const }, { priceSell: "asc" as const }];
+  const select = appProductSelect(options.engineId);
+  const skip = (page - 1) * perPage;
+
+  let rows: Awaited<ReturnType<typeof prisma.product.findMany<{ select: typeof select }>>>;
+  let total: number;
+
+  if (options.engineId && !options.fitsEngineOnly) {
+    // With a car chosen, the parts confirmed for it come first — across the
+    // whole list, not just within a page: two segments (fits, then
+    // everything else) paged as one. Inside each segment the order above
+    // holds. A part with no fitment rows is in the second segment; it is
+    // unverified, not compatible.
+    const fitsWhere = { ...where, fitments: { some: { engineId: options.engineId } } };
+    const restWhere = { ...where, fitments: { none: { engineId: options.engineId } } };
+    const [fitsTotal, restTotal] = await Promise.all([
+      prisma.product.count({ where: fitsWhere }),
+      prisma.product.count({ where: restWhere }),
+    ]);
+    const fromFits =
+      skip < fitsTotal
+        ? await prisma.product.findMany({ where: fitsWhere, orderBy, skip, take: Math.min(perPage, fitsTotal - skip), select })
+        : [];
+    const room = perPage - fromFits.length;
+    const fromRest =
+      room > 0
+        ? await prisma.product.findMany({ where: restWhere, orderBy, skip: Math.max(0, skip - fitsTotal), take: room, select })
+        : [];
+    rows = [...fromFits, ...fromRest];
+    total = fitsTotal + restTotal;
+  } else {
+    [rows, total] = await Promise.all([
+      prisma.product.findMany({ where, orderBy, skip, take: perPage, select }),
+      prisma.product.count({ where }),
+    ]);
+  }
 
   const products = rows.map((p) => toAppProduct(p, options.engineId));
 
