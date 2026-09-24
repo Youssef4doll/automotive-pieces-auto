@@ -66,12 +66,16 @@ const STATUS: Record<ApiError, number> = {
  * a minute late; nobody has ever noticed that, and every shopper opening the
  * garage otherwise costs a query.
  *
+ * The CDN keeps it for the same thirty seconds. It used to keep it five
+ * minutes and serve a stale copy for an hour after that, and on the phone that
+ * read as a price or a promotion the owner had changed that would not update.
+ *
  * `private` is for anything that depends on who is asking — an order, an
  * account. It must never land in a shared cache, and `no-store` rather than
  * `no-cache` because the second one still permits a stored copy.
  */
 export const Cache = {
-  catalogue: "public, max-age=30, s-maxage=300, stale-while-revalidate=3600",
+  catalogue: "public, max-age=30, s-maxage=30, stale-while-revalidate=300",
   private: "no-store",
 } as const;
 
