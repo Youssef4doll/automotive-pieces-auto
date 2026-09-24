@@ -1,6 +1,10 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { sendMail } from "@/lib/email";
+import { passwordResetMail } from "@/lib/email-templates";
+import { loadShopForEmail } from "@/lib/order-emails";
+import { siteUrl } from "@/lib/site";
 
 /** How long a "forgot my password" link works. Long enough to find the
  *  e-mail; short enough that one found in an old inbox is useless. */
@@ -29,4 +33,33 @@ export async function findValidResetToken(token: string) {
   });
   if (!row || row.usedAt || row.expiresAt.getTime() < Date.now()) return null;
   return row;
+}
+
+/**
+ * Send a reset link to this address if it has an account; do nothing if it
+ * has not. The caller answers the same either way — see the website's form
+ * and `POST /api/v1/auth/password-reset`, which both come through here.
+ */
+export async function startPasswordReset(email: string) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, name: true, email: true },
+  });
+  if (!user) return;
+
+  const token = newResetToken();
+  await prisma.$transaction([
+    // One live link per account. A second request replaces the first rather
+    // than leaving two working links in two inboxes.
+    prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } }),
+    prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash: hashResetToken(token), expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
+    }),
+  ]);
+
+  const shop = await loadShopForEmail();
+  const mail = passwordResetMail(user, `${siteUrl()}/compte/reinitialiser/${token}`, shop);
+  // sendMail never throws and logs its own failures with the subject, which
+  // carries no token.
+  await sendMail(mail);
 }

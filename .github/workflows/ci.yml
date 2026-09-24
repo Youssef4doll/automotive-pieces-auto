@@ -1,0 +1,60 @@
+# Every push and pull request: install, lint, typecheck, unit tests, migrate a
+# throwaway Postgres from zero, and build — the same steps a contributor runs
+# locally, in the order that fails fastest.
+#
+# The database here is a disposable Postgres 16 service, never Neon: CI must
+# not be able to reach production data, so it is given no credentials to it.
+# The Playwright battery (scripts/run-e2e.sh) is not run here — it drives a
+# browser against a seeded shop for ~30 minutes and is run before a release.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: apa_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci -d apa_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/apa_ci
+      DATABASE_URL_UNPOOLED: postgresql://ci:ci@localhost:5432/apa_ci
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Build (migrates the empty database first)
+        run: |
+          # A production build refuses to start without a real signing
+          # secret; CI makes a random one that dies with the job.
+          export SESSION_SECRET="$(openssl rand -base64 48)"
+          npm run build
+      - name: Dependency audit (high and critical)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true

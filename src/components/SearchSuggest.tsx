@@ -84,21 +84,23 @@ export default function SearchSuggest({
   // and aborted on the next keystroke so a slow reply cannot overwrite a
   // newer one. A query already answered in this tab skips both and paints
   // synchronously — backspacing through a word should not feel like new work.
-  useEffect(() => {
+  const [answeredFor, setAnsweredFor] = useState(query);
+  if (answeredFor !== query) {
+    // Adjusted while rendering, React's pattern for state that follows a
+    // prop: a short query closes the list, a cached one paints at once.
+    setAnsweredFor(query);
     const q = query.trim();
-    if (q.length < 2) {
-      setItems([]);
-      setOpen(false);
-      return;
-    }
-
-    const cached = CACHE.get(q);
+    const cached = q.length < 2 ? [] : CACHE.get(q);
     if (cached) {
       setItems(cached);
       setActive(-1);
       setOpen(cached.length > 0);
-      return;
     }
+  }
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2 || CACHE.has(q)) return;
 
     const controller = new AbortController();
     const timer = setTimeout(async () => {

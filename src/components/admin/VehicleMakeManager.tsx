@@ -69,7 +69,11 @@ export default function VehicleMakeManager({ makes }: { makes: AdminMake[] }) {
 function NewMakeForm() {
   const [state, action, pending] = useActionState<VehicleActionState, FormData>(upsertMake, undefined);
   const [name, setName] = useState("");
-  useEffect(() => { if (state?.ok) setName(""); }, [state]);
+  const [handled, setHandled] = useState(state);
+  if (handled !== state) {
+    setHandled(state);
+    if (state?.ok) setName("");
+  }
 
   return (
     <form action={action} className="flex flex-wrap items-end gap-2 border border-gray-200 rounded-xl bg-white px-3 py-3">
@@ -214,7 +218,11 @@ function MakeRow({ make, open, onToggle }: { make: AdminMake; open: boolean; onT
 function NewModelForm({ makeId }: { makeId: string }) {
   const [state, action, pending] = useActionState<VehicleActionState, FormData>(upsertModel, undefined);
   const [v, setV] = useState({ name: "", yearFrom: "", yearTo: "" });
-  useEffect(() => { if (state?.ok) setV({ name: "", yearFrom: "", yearTo: "" }); }, [state]);
+  const [handled, setHandled] = useState(state);
+  if (handled !== state) {
+    setHandled(state);
+    if (state?.ok) setV({ name: "", yearFrom: "", yearTo: "" });
+  }
 
   return (
     <form action={action} className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-2.5">
@@ -313,7 +321,11 @@ function ModelRow({ model, makeId }: { model: AdminModel; makeId: string }) {
 function NewEngineForm({ modelId }: { modelId: string }) {
   const [state, action, pending] = useActionState<VehicleActionState, FormData>(upsertEngine, undefined);
   const [v, setV] = useState({ name: "", fuel: "", engineCode: "", powerHp: "" });
-  useEffect(() => { if (state?.ok) setV({ name: "", fuel: "", engineCode: "", powerHp: "" }); }, [state]);
+  const [handled, setHandled] = useState(state);
+  if (handled !== state) {
+    setHandled(state);
+    if (state?.ok) setV({ name: "", fuel: "", engineCode: "", powerHp: "" });
+  }
 
   return (
     <form action={action} className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-2.5">

@@ -941,6 +941,51 @@ is code:
   required is a lawyer's question and the page does not pretend it has been
   answered.
 
+### 5.ee The phone app's customer accounts, deletion, analytics, CI (September 2026)
+
+The app (other repository, ARCHITECTURE.md §17 there) now signs customers in
+with the website's own accounts. What changed on this side:
+
+- **`CustomerSession`** (migration `20260924090000_customer_sessions`): the
+  app's bearer session, built like `AdminSession` and kept in its own table
+  so a customer token can never open `/api/v1/admin`. `lib/customer-session.ts`.
+- **Routes**: `/api/v1/auth/signup`, `/auth/session` (POST sign in, GET, DELETE
+  sign out), `/auth/password-reset` (sends this site's reset e-mail),
+  `/api/v1/account` (GET, DELETE), `/account/orders`,
+  `/account/orders/claim` (guest orders proven by their order tokens — never
+  by e-mail), and `/api/v1/events` (the app's analytics into
+  `AnalyticsEvent`, tagged `app: true`). None reads a cookie; see respond.ts.
+  `GET /api/v1/orders/:ref` also opens an order for its owner's session, and
+  `POST /api/v1/orders` attaches the order to the signed-in account.
+- **Password changed or reset signs every phone out** (customer and staff
+  sessions deleted in the same transaction).
+- **Account deletion** — required by both stores — on `/compte/profil`
+  ("Supprimer mon compte", password re-entered) and in the app, through one
+  function (`lib/account-deletion.ts`). Orders are kept, detached: they are
+  invoices. Admin accounts are refused. `/compte/profil` is the web address
+  to give Google Play as the deletion route. Covered by `e2e-account-delete`.
+- **Shared rules moved to `lib/`**: `signupSchema` (lib/validation — the
+  website form and the app API), `startPasswordReset` (lib/password-reset),
+  `claimOrderIds` (lib/orders/claim).
+- **Lint is at zero errors.** The 13 were React Compiler rules; state that
+  followed a prop or an action result is now adjusted while rendering
+  (React's documented pattern) instead of reset in an effect.
+- **Unit tests** — `npm test` (`node --test` through tsx) for the pure rules:
+  names, phones, the signup schema, availability, references, VIN, tax,
+  segments. **CI** — `.github/workflows/ci.yml`: lint, typecheck, unit tests,
+  migrate a throwaway Postgres from zero, build. The Playwright battery stays
+  a pre-release step.
+
+**Battery status at this change**, on a production build: every suite
+passes except three failures that reproduce identically on the code before
+it (checked by stashing the change, rebuilding and rerunning): catalog-
+authoring "no test category left", product-page "only an unsupplyable part
+refuses an order", and loop "the toggle brings every reference back" plus
+its two console-error checks. In this container the image optimiser also
+hung on `storefront.png` at 1920px for a long-running server, which times
+out any suite that waits for `networkidle` on the home page — a restart
+clears it; worth watching on the real host.
+
 ---
 
 ## 6. Working on it

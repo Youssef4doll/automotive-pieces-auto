@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { adminUpdateCustomer, adminDeleteCustomer, type CustomerState } from "@/app/actions/customers";
 
 export type EditableCustomer = {
@@ -40,9 +40,11 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
 
   // Controlled, so a rejected email keeps the rest of what was typed — React
   // blanks an uncontrolled form as soon as its action settles.
-  useEffect(() => {
+  const [handled, setHandled] = useState(state);
+  if (handled !== state) {
+    setHandled(state);
     if (state?.ok) setEditing(false);
-  }, [state]);
+  }
 
   return (
     <section aria-labelledby="fiche" className="p-5 rounded-xl bg-white border border-navy-900/10 shadow-sm">

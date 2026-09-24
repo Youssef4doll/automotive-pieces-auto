@@ -7,11 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { createSession } from "@/lib/session";
 import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
 import { checkForm } from "@/lib/bot-check";
-import { sendMail } from "@/lib/email";
-import { passwordResetMail } from "@/lib/email-templates";
-import { loadShopForEmail } from "@/lib/order-emails";
-import { siteUrl } from "@/lib/site";
-import { findValidResetToken, hashResetToken, newResetToken, RESET_TOKEN_TTL_MS } from "@/lib/password-reset";
+import { findValidResetToken, startPasswordReset } from "@/lib/password-reset";
 
 /**
  * "Mot de passe oublié ?" — the two halves of it.
@@ -37,27 +33,7 @@ export async function requestPasswordReset(_prev: ResetRequestState, formData: F
   const parsed = z.email().safeParse(formData.get("email"));
   if (!parsed.success) return { error: "Adresse e-mail invalide" };
 
-  const user = await prisma.user.findUnique({
-    where: { email: parsed.data },
-    select: { id: true, name: true, email: true },
-  });
-  if (!user) return { sent: true };
-
-  const token = newResetToken();
-  await prisma.$transaction([
-    // One live link per account. A second request replaces the first rather
-    // than leaving two working links in two inboxes.
-    prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } }),
-    prisma.passwordResetToken.create({
-      data: { userId: user.id, tokenHash: hashResetToken(token), expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
-    }),
-  ]);
-
-  const shop = await loadShopForEmail();
-  const mail = passwordResetMail(user, `${siteUrl()}/compte/reinitialiser/${token}`, shop);
-  // sendMail never throws and logs its own failures with the subject, which
-  // carries no token. Whatever happened, the customer sees the same screen.
-  await sendMail(mail);
+  await startPasswordReset(parsed.data);
   return { sent: true };
 }
 
@@ -86,6 +62,10 @@ export async function resetPassword(_prev: ResetState, formData: FormData): Prom
   await prisma.$transaction([
     prisma.user.update({ where: { id: row.userId }, data: { passwordHash } }),
     prisma.passwordResetToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
+    // A reset is what somebody does when they think the password is known to
+    // someone else. Every phone signed in with the old one is signed out.
+    prisma.customerSession.deleteMany({ where: { userId: row.userId } }),
+    prisma.adminSession.deleteMany({ where: { userId: row.userId } }),
   ]);
 
   // Signed in on this device only: somebody resetting a password from a

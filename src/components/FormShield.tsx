@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 const HONEYPOT_FIELD = "company_website";
 const TIMESTAMP_FIELD = "form_loaded_at";
@@ -18,10 +18,11 @@ const TIMESTAMP_FIELD = "form_loaded_at";
  * a cached page cannot ship a stale one that makes every visitor look fast.
  */
 export default function FormShield() {
-  const [loadedAt, setLoadedAt] = useState("");
+  // Written straight into the field once mounted: no state, no second render.
+  const loadedAt = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setLoadedAt(String(Date.now()));
+    if (loadedAt.current) loadedAt.current.value = String(Date.now());
   }, []);
 
   return (
@@ -47,7 +48,7 @@ export default function FormShield() {
           defaultValue=""
         />
       </div>
-      <input type="hidden" name={TIMESTAMP_FIELD} value={loadedAt} readOnly />
+      <input ref={loadedAt} type="hidden" name={TIMESTAMP_FIELD} defaultValue="" />
     </>
   );
 }

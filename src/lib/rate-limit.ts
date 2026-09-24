@@ -156,6 +156,8 @@ export const LIMITS = {
   contact: { limit: 8, windowMs: 30 * 60_000 },
   /** Reference lookup, the one endpoint that can be walked for the catalogue. */
   reference: { limit: 60, windowMs: 60_000 },
+  /** The app's analytics batches — one every few seconds from an active phone. */
+  events: { limit: 120, windowMs: 60_000 },
   /** Type-ahead fires per keystroke (debounced), so the ceiling is higher. */
   suggest: { limit: 200, windowMs: 60_000 },
 } as const;

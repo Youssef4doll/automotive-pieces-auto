@@ -8,17 +8,9 @@ import { createSession, destroySession } from "@/lib/session";
 import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
 import { checkCredentials } from "@/lib/credentials";
 import { checkForm } from "@/lib/bot-check";
-import { personName, phoneNumber } from "@/lib/validation";
+import { signupSchema } from "@/lib/validation";
 import { claimOrdersForUser } from "./orders";
 
-const signupSchema = z.object({
-  // Shared with the checkout — see lib/validation. Both used to be `min(2)`,
-  // which is how an account came to be called `ttttt@gmail.com`.
-  name: personName,
-  email: z.email("Cette adresse e-mail n'est pas valide."),
-  phone: phoneNumber,
-  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères."),
-});
 
 /**
  * bcrypt work factor. 12 is the current sensible floor — ~250ms per hash on

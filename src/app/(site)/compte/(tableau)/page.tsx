@@ -16,10 +16,25 @@ export const metadata = { title: "Mon compte" };
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ rattachees?: string }>;
+  searchParams: Promise<{ rattachees?: string; supprime?: string }>;
 }) {
   const user = await getCurrentUser();
-  if (!user) return <AuthForms />;
+  if (!user) {
+    // Straight after "Supprimer mon compte": say it is done, where the
+    // customer lands, rather than leaving them to wonder whether it worked.
+    const deleted = (await searchParams).supprime === "1";
+    return (
+      <>
+        {deleted && (
+          <p role="status" className="mx-auto max-w-xl mt-6 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-navy-950">
+            Votre compte a été supprimé. Vos commandes restent dans la comptabilité de la boutique, détachées de
+            votre nom de compte.
+          </p>
+        )}
+        <AuthForms />
+      </>
+    );
+  }
 
   // How many guest orders this sign-in pulled into the account — see
   // claimOrdersForUser. Announced rather than done quietly: the proof of

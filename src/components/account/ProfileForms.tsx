@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { updateProfile, changePassword, type AccountState } from "@/app/actions/account";
+import { useActionState, useState } from "react";
+import { updateProfile, changePassword, deleteOwnAccount, type AccountState } from "@/app/actions/account";
 
 /**
  * The profile card, in two states.
@@ -35,9 +35,11 @@ export function ProfileCard({
 
   // Leave edit mode only once the server confirms the write, so a rejected
   // email (already taken) keeps the customer in the form with their typing.
-  useEffect(() => {
+  const [handled, setHandled] = useState(state);
+  if (handled !== state) {
+    setHandled(state);
     if (state?.ok) setEditing(false);
-  }, [state]);
+  }
 
   const cancel = () => {
     setForm({ name, email, phone: phone ?? "" });
@@ -138,12 +140,14 @@ export function PasswordCard() {
     setOpen(false);
   };
 
-  useEffect(() => {
+  const [handled, setHandled] = useState(state);
+  if (handled !== state) {
+    setHandled(state);
     if (state?.ok) {
       setPw({ current: "", next: "", confirm: "" });
       setOpen(false);
     }
-  }, [state]);
+  }
 
   return (
     <section aria-labelledby="motdepasse" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
@@ -202,6 +206,84 @@ export function PasswordCard() {
             <button
               type="button"
               onClick={close}
+              className="inline-flex items-center min-h-tap px-5 rounded-xl border border-slate-300 text-slate-600 text-sm font-semibold hover:border-slate-400"
+            >
+              Annuler
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Supprimer mon compte — folded away until asked for, then plain about what
+ * goes and what stays, and finished with the password.
+ */
+export function DeleteAccountCard() {
+  const [open, setOpen] = useState(false);
+  const [state, action, pending] = useActionState<AccountState, FormData>(deleteOwnAccount, undefined);
+  const [password, setPassword] = useState("");
+
+  return (
+    <section aria-labelledby="suppression" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="suppression" className="font-heading font-extrabold uppercase text-navy-950 tracking-tight">
+            Supprimer mon compte
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">Depuis ce site ou depuis l&apos;application, à tout moment.</p>
+        </div>
+        {!open && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="shrink-0 inline-flex items-center min-h-tap-compact px-3 rounded-lg border border-red-300 text-red-700 text-[13px] font-semibold hover:border-red-600 transition-colors"
+          >
+            Supprimer
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <form action={action} className="mt-4 flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            Sont supprimés : votre nom, votre e-mail, votre téléphone, votre mot de passe et vos connexions, sur le
+            site comme dans l&apos;application.
+          </p>
+          <p className="text-sm text-slate-600">
+            Vos commandes passées restent dans la comptabilité de la boutique, détachées de votre compte, comme la loi
+            l&apos;exige pour une facture.
+          </p>
+          <p className="text-sm font-semibold text-navy-950">C&apos;est définitif. Confirmez avec votre mot de passe.</p>
+          <Input
+            label="Mot de passe"
+            name="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
+          {state?.error && (
+            <p role="alert" className="text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {state.error}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              disabled={pending || !password}
+              className="inline-flex items-center min-h-tap px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-display font-bold uppercase text-xs tracking-wide disabled:opacity-60"
+            >
+              {pending ? "…" : "Supprimer définitivement"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPassword("");
+                setOpen(false);
+              }}
               className="inline-flex items-center min-h-tap px-5 rounded-xl border border-slate-300 text-slate-600 text-sm font-semibold hover:border-slate-400"
             >
               Annuler

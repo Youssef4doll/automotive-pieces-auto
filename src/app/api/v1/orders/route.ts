@@ -3,6 +3,7 @@ import { notifyOrderPlaced } from "@/lib/order-emails";
 import { createOrder, placeOrderSchema } from "@/lib/orders/place";
 import { appOrderView } from "@/lib/orders/view";
 import { callerKey, hit, LIMITS } from "@/lib/rate-limit";
+import { customerForRequest } from "@/lib/customer-session";
 import { fail, guard, ok, preflightWrite, readJson } from "../_lib/respond";
 
 /** Never cached, never shared. Write CORS: this route reads no cookie — see respond.ts. */
@@ -53,7 +54,11 @@ export async function POST(request: NextRequest) {
         return fail("invalid_field", POLICY, undefined, { field: "address" });
       }
 
-      const result = await createOrder(parsed.data, { issueToken: true });
+      // Signed in on the app: the order joins the account. A token that has
+      // lapsed places a guest order rather than refusing the parcel — the
+      // order token still makes it the phone's own.
+      const customer = await customerForRequest(request);
+      const result = await createOrder(parsed.data, { issueToken: true, userId: customer?.id });
       if (!result.ok) {
         return fail("unavailable", POLICY, undefined, { productId: result.productId, reason: result.code });
       }

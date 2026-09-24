@@ -9,6 +9,8 @@ export const metadata = { title: "Paniers abandonnés" };
 const STALE_MINUTES = 60;
 
 export default async function AbandonedCartsPage() {
+  // A server component renders once per request; "now" is the request's time.
+  // eslint-disable-next-line react-hooks/purity
   const cutoff = new Date(Date.now() - STALE_MINUTES * 60 * 1000);
   const [carts, settings, convertedCount] = await Promise.all([
     prisma.cart.findMany({
@@ -72,6 +74,7 @@ export default async function AbandonedCartsPage() {
             </thead>
             <tbody className="divide-y divide-navy-900/8">
               {withValue.map(({ cart, value, reachable: phone }) => {
+                // eslint-disable-next-line react-hooks/purity -- server render, once per request
                 const hours = Math.round((Date.now() - cart.updatedAt.getTime()) / 3600000);
                 const names = cart.items.map((i) => i.product.name).join(", ");
                 const outOfStock = cart.items.some((i) => i.product.stockQty < i.qty);

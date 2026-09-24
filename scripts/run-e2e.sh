@@ -80,7 +80,7 @@ esac
 
 SUITES=(
   smoke
-  a-to-z client-area account-space account-edit
+  a-to-z client-area account-space account-edit account-delete
   catalog-admin catalog-pipeline product-photos
   discovery search search-coverage seo security trust server-cart
   banners category-images svg-uploads catalog-authoring storefront-fixes

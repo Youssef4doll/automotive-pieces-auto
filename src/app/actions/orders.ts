@@ -3,13 +3,12 @@
 import { prisma } from "@/lib/prisma";
 import { markCartConverted } from "./cart";
 import { getCurrentUser } from "@/lib/session";
-import { toNumber } from "@/lib/money";
-import { computeSegment } from "@/lib/segment";
 import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
 import { rememberOrder, placedInThisBrowser, ordersFromThisBrowser } from "@/lib/order-access";
 import { notifyOrderPlaced } from "@/lib/order-emails";
 import { createOrder, placeOrderSchema, type PlaceOrderData } from "@/lib/orders/place";
 import { matchGuestOrder } from "@/lib/orders/lookup";
+import { claimOrderIds } from "@/lib/orders/claim";
 
 export type PlaceOrderInput = PlaceOrderData;
 export type PlaceOrderResult = { ok: true; ref: string } | { ok: false; error: string };
@@ -178,27 +177,5 @@ export async function lookupGuestOrder(
  * here — otherwise a customer who claimed four orders would sit at NEW.
  */
 export async function claimOrdersForUser(userId: string) {
-  const ids = await ordersFromThisBrowser();
-  if (ids.length === 0) return 0;
-
-  const { count } = await prisma.order.updateMany({
-    where: { id: { in: ids }, userId: null },
-    data: { userId },
-  });
-  if (count === 0) return 0;
-
-  const orders = await prisma.order.findMany({
-    where: { userId, status: { not: "CANCELLED" } },
-    select: { total: true },
-  });
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      segment: computeSegment(
-        orders.length,
-        orders.reduce((sum, o) => sum + toNumber(o.total), 0),
-      ),
-    },
-  });
-  return count;
+  return claimOrderIds(userId, await ordersFromThisBrowser());
 }

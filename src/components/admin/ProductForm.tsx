@@ -87,18 +87,25 @@ export default function ProductForm({
   const photoRef = useRef<HTMLInputElement>(null);
   const isNew = !product;
 
-  useEffect(() => {
+  // The action's answer is folded into the form while rendering (React's
+  // pattern for state that follows a value); only the file input, which is
+  // the DOM's and not React's, is cleared in an effect.
+  const [handled, setHandled] = useState(state);
+  if (handled !== state) {
+    setHandled(state);
     if (state?.values) {
       setV((s) => ({ ...s, ...(state.values as Partial<ProductFormValues>) }));
     }
     if (state?.ok) {
       setPhotoCount(0);
-      if (photoRef.current) photoRef.current.value = "";
       // A new product's form is cleared for the next one; an edit keeps what
       // is on screen, because it now matches what was saved.
       if (isNew) setV(BLANK);
     }
-  }, [state, isNew]);
+  }
+  useEffect(() => {
+    if (state?.ok && photoRef.current) photoRef.current.value = "";
+  }, [state]);
 
   /** Highlight the exact field the server refused, not the whole form. */
   const bad = (name: string) => (state?.error && state.field === name ? "border-red-500 bg-red-50" : "border-navy-900/15");

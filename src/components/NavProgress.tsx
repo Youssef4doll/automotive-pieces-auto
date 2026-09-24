@@ -34,11 +34,18 @@ export default function NavProgress() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Any completed navigation clears the bar, however it was triggered —
-  // link, back button, or a redirect.
+  // link, back button, or a redirect. The bar is reset while rendering the
+  // new route (React's pattern for state that follows a value); the pending
+  // timer is cleared in an effect, because that is a side effect.
+  const route = `${pathname}?${searchParams?.toString() ?? ""}`;
+  const [shownFor, setShownFor] = useState(route);
+  if (shownFor !== route) {
+    setShownFor(route);
+    setActive(false);
+  }
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
-    setActive(false);
-  }, [pathname, searchParams]);
+  }, [route]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {

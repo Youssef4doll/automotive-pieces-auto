@@ -65,3 +65,21 @@ const fromProblem = (problem: (v: string) => string | null) =>
 
 export const personName = fromProblem(nameProblem);
 export const phoneNumber = fromProblem(phoneProblem);
+
+/**
+ * A new account — the website's signup form and the app's, one rule.
+ *
+ * The password ceiling is bcrypt's: it reads 72 bytes and silently ignores
+ * the rest, so a longer one would "work" while only its start counted.
+ */
+export const passwordRule = z
+  .string()
+  .min(6, "Le mot de passe doit contenir au moins 6 caractères.")
+  .max(72, "Le mot de passe est trop long.");
+
+export const signupSchema = z.object({
+  name: personName,
+  email: z.email("Cette adresse e-mail n'est pas valide.").max(200),
+  phone: phoneNumber,
+  password: passwordRule,
+});

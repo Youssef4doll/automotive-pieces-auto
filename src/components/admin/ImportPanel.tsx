@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { stageImport, applyImport, rollbackImport, discardImport, type ImportState } from "@/app/actions/import";
 
 export type BatchRow = {
@@ -42,9 +42,11 @@ export default function ImportPanel({ batches }: { batches: BatchRow[] }) {
   // list from before the upload and left the new batch collapsed.
   const focusId = batches.find((b) => b.status === "DRAFT")?.id ?? batches[0]?.id ?? null;
   const [openId, setOpenId] = useState<string | null>(focusId);
-  useEffect(() => {
+  const [focusedFor, setFocusedFor] = useState(focusId);
+  if (focusedFor !== focusId) {
+    setFocusedFor(focusId);
     if (focusId) setOpenId(focusId);
-  }, [focusId]);
+  }
   const [pending, start] = useTransition();
 
   function run(fn: () => Promise<ImportState>) {

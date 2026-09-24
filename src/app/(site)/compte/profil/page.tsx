@@ -7,7 +7,7 @@ import { getOrderCounts, contactFrom } from "@/lib/data/account";
 import SignOut from "@/components/account/SignOut";
 import AccountShell from "@/components/account/AccountShell";
 import GarageSection from "@/components/account/GarageSection";
-import { ProfileCard, PasswordCard } from "@/components/account/ProfileForms";
+import { ProfileCard, PasswordCard, DeleteAccountCard } from "@/components/account/ProfileForms";
 import { IconArrowRight, IconWhatsApp, IconPhone } from "@/components/icons";
 import WhatsAppLink from "@/components/WhatsAppLink";
 
@@ -132,6 +132,8 @@ export default async function ProfilePage() {
             )}
           </div>
         </section>
+
+        {user.role !== "ADMIN" && <DeleteAccountCard />}
       </div>
     </AccountShell>
   );

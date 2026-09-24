@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { bearerToken, orderIdForToken } from "@/lib/order-token";
+import { customerForRequest } from "@/lib/customer-session";
+import { prisma } from "@/lib/prisma";
 import { appOrderView } from "@/lib/orders/view";
 import { callerKey, hit, LIMITS } from "@/lib/rate-limit";
 import { fail, guard, ok, preflightWrite } from "../../_lib/respond";
@@ -13,8 +15,8 @@ const POLICY = { cors: "write" as const };
 /**
  * One order, to the phone holding its token.
  *
- * `Authorization: Bearer <token>` and nothing else — no session, no cookie,
- * no e-mail match. An e-mail on an order is whatever was typed at checkout,
+ * `Authorization: Bearer <token>` — the order's token, or the app session of
+ * the account that owns it — and nothing else: no cookie, no e-mail match. An e-mail on an order is whatever was typed at checkout,
  * unverified, and accepting it as proof would hand a stranger's name, phone
  * and address to anyone who typed it.
  *
@@ -34,7 +36,19 @@ export async function GET(request: NextRequest, context: { params: Promise<{ ref
       const parsed = ref.safeParse((await context.params).ref);
       if (!parsed.success) return fail("not_found", POLICY);
 
-      const orderId = await orderIdForToken(parsed.data, token);
+      // The order's own token, or the session of the account it belongs to.
+      // A session for somebody else's order is the same 404 as a bad token.
+      let orderId = await orderIdForToken(parsed.data, token);
+      if (!orderId) {
+        const customer = await customerForRequest(request);
+        if (customer) {
+          const owned = await prisma.order.findFirst({
+            where: { ref: parsed.data, userId: customer.id },
+            select: { id: true },
+          });
+          orderId = owned?.id ?? null;
+        }
+      }
       if (!orderId) return fail("not_found", POLICY);
 
       const order = await appOrderView(orderId);

@@ -65,6 +65,7 @@ model User {
   passwordResets  PasswordResetToken[]
   contactMessages ContactMessage[]
   adminSessions   AdminSession[]
+  appSessions     CustomerSession[]
 
   @@index([role])
 }
@@ -562,6 +563,28 @@ model AdminSession {
   tokenHash  String    @unique
   createdAt  DateTime  @default(now())
   /// Hard end. Used or not, a session is signed in again after this.
+  expiresAt  DateTime
+  lastUsedAt DateTime?
+
+  @@index([userId])
+}
+
+/// A customer signed in on the phone app.
+///
+/// The website's customer session is an httpOnly cookie, which the app API
+/// must never read (respond.ts, WRITE_CORS). So the app gets a bearer token
+/// kept in the device keychain — designed exactly as AdminSession, and kept
+/// in a separate table so a customer token can never be presented at the
+/// staff door, whatever the role of the account behind it.
+///
+/// Deleted on sign-out, on password change through the app, and with the
+/// account. The user is re-read on every request.
+model CustomerSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
   expiresAt  DateTime
   lastUsedAt DateTime?
 

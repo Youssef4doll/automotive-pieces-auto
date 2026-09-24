@@ -3,8 +3,10 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/session";
+import { destroySession, getCurrentUser } from "@/lib/session";
+import { deleteCustomerAccount } from "@/lib/account-deletion";
 import { hit, clear, callerKey, LIMITS } from "@/lib/rate-limit";
 
 export type AccountState = { ok?: boolean; error?: string; message?: string } | undefined;
@@ -126,11 +128,48 @@ export async function changePassword(_prev: AccountState, formData: FormData): P
     return { error: "Mot de passe actuel incorrect" };
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { passwordHash: await bcrypt.hash(next, BCRYPT_COST) },
-  });
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(next, BCRYPT_COST) },
+    }),
+    // The phone apps signed in with the old password are signed out: a
+    // password is changed because somebody else might know it.
+    prisma.customerSession.deleteMany({ where: { userId: user.id } }),
+  ]);
   clear(key);
 
   return { ok: true, message: "Mot de passe modifié." };
+}
+
+/**
+ * "Supprimer mon compte" on the website — the same deletion as the app's
+ * (lib/account-deletion), and the address given to the stores as the web
+ * route to deleting an account. The password is asked again: a signed-in
+ * tab left open on a shared computer must not be one click from erasing
+ * somebody. The login budget is spent, because this form checks a password.
+ */
+export async function deleteOwnAccount(_prev: AccountState, formData: FormData): Promise<AccountState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Session expirée. Reconnectez-vous." };
+  if (user.role === "ADMIN") {
+    return { error: "Le compte de la boutique ne peut pas être supprimé ici." };
+  }
+
+  const key = await callerKey(`account-delete:${user.id}`);
+  const gate = hit(key, LIMITS.loginPerAccount.limit, LIMITS.loginPerAccount.windowMs);
+  if (!gate.ok) {
+    return { error: `Trop de tentatives. Réessayez dans ${Math.ceil(gate.retryAfter / 60)} minute(s).` };
+  }
+
+  const password = String(formData.get("password") ?? "");
+  const row = await prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
+  if (!row || !password || !(await bcrypt.compare(password, row.passwordHash))) {
+    return { error: "Mot de passe incorrect." };
+  }
+  clear(key);
+
+  await deleteCustomerAccount(user.id);
+  await destroySession();
+  redirect("/compte?supprime=1");
 }
