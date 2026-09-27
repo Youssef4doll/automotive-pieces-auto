@@ -16,6 +16,8 @@ const schema = z.object({
     .max(50),
   engineId: z.string().min(1).max(64).optional(),
   deliveryMethod: z.enum(["DELIVERY", "PICKUP"]).optional(),
+  // A code, never an amount: lib/promo looks it up and prices it.
+  promoCode: z.string().trim().max(40).optional(),
 });
 
 /** Priced per caller, never shared: the body is the basket. */
@@ -43,7 +45,8 @@ export async function POST(request: NextRequest) {
       const parsed = schema.safeParse(await readJson(request));
       if (!parsed.success) return fail("bad_request", POLICY);
 
-      return ok(await quoteAppCart(parsed.data), POLICY);
+      const promoMissKey = parsed.data.promoCode ? await callerKey("promo-miss") : undefined;
+      return ok(await quoteAppCart({ ...parsed.data, promoMissKey }), POLICY);
     },
     "cart/quote",
     POLICY,

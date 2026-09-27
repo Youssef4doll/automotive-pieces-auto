@@ -9,7 +9,7 @@ import { useCart, cartSubtotal } from "@/lib/cart-store";
 import Price from "./Price";
 import { shippingFeeFor, FLAT_DELIVERY_FEE } from "@/lib/shipping";
 import { GOVERNORATES, GRAND_TUNIS } from "@/lib/governorates";
-import { placeOrder } from "@/app/actions/orders";
+import { checkPromoCode, placeOrder, type PromoCheck } from "@/app/actions/orders";
 import { track } from "@/lib/track";
 import { getAttribution } from "@/lib/attribution";
 import { useVehicle } from "@/lib/vehicle-store";
@@ -245,9 +245,41 @@ export default function CheckoutForm({
    */
   const [placedRef, setPlacedRef] = useState<string | null>(null);
 
+  // A promo code: typed here, judged by the server on a basket it re-prices
+  // itself (checkPromoCode), and judged again when the order is written. The
+  // discount shown is the server's figure, never one worked out in the page.
+  const basketKey = items.map((i) => `${i.productId}:${i.qty}`).join(",");
+  const [promoInput, setPromoInput] = useState("");
+  const [applied, setApplied] = useState<{ code: string; discount: number; basket: string } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
+  const promoMessage = (r: Extract<PromoCheck, { ok: false }>) =>
+    t(`cart.promoErr.${r.reason}` as Parameters<typeof t>[0]).replace("{amount}", String(r.minSubtotal ?? ""));
+  async function applyPromo(code: string) {
+    if (!code.trim() || items.length === 0) return;
+    setPromoBusy(true);
+    setPromoError(null);
+    const res = await checkPromoCode({ code, items: items.map((i) => ({ productId: i.productId, qty: i.qty })) }).catch(() => null);
+    setPromoBusy(false);
+    if (res?.ok) {
+      setApplied({ code: res.code, discount: res.discount, basket: basketKey });
+      setPromoInput(res.code);
+      track("promo_applied", { code: res.code });
+    } else {
+      setApplied(null);
+      setPromoError(res ? promoMessage(res) : t("checkout.errInvalid"));
+    }
+  }
+  // A discount is for the basket it was priced on. If the basket changes
+  // (another tab), it no longer applies until asked again — the code stays in
+  // the field, one tap from being re-checked.
+  const promo = applied && applied.basket === basketKey ? applied : null;
+
+  const discount = promo?.discount ?? 0;
+  const goods = subtotal - discount;
   const isGrandTunis = GRAND_TUNIS.has(governorate);
-  const shippingFee = shippingFeeFor(subtotal, freeShippingThreshold, deliveryMethod);
-  const total = subtotal + shippingFee + stampDuty;
+  const shippingFee = shippingFeeFor(goods, freeShippingThreshold, deliveryMethod);
+  const total = goods + shippingFee + stampDuty;
   const estimate = deliveryMethod === "PICKUP" ? "2h" : isGrandTunis ? deliveryGrandTunis : deliveryRegions;
 
   // items.length, not [] — the cart is a zustand `persist` store, so on
@@ -346,6 +378,7 @@ export default function CheckoutForm({
       // it, or catch a wrong part, without ringing the customer back. The id
       // only: the label on the order is read from our own tables server-side.
       vehicleEngineId: vehicle?.engineId,
+      promoCode: promo?.code,
     });
     setSubmitting(false);
     if (!result.ok) {
@@ -417,7 +450,7 @@ export default function CheckoutForm({
   }
 
 
-  const remainingForFree = Math.max(0, freeShippingThreshold - subtotal);
+  const remainingForFree = Math.max(0, freeShippingThreshold - goods);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -706,11 +739,66 @@ export default function CheckoutForm({
               ))}
             </div>
 
+            {/* Enter here applies the code; it must not submit the order. */}
+            <div className="border-t pt-2.5 flex flex-col gap-1.5">
+              <label htmlFor="promo" className="text-xs font-semibold text-gray-600">
+                {t("cart.promo")}
+              </label>
+              {promo ? (
+                <div className="flex items-center justify-between gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+                  <span className="font-semibold">{t("cart.promoApplied").replace("{code}", promo.code)}</span>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold underline underline-offset-2"
+                    onClick={() => {
+                      setApplied(null);
+                      setPromoInput("");
+                    }}
+                  >
+                    {t("cart.promoRemove")}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    id="promo"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void applyPromo(promoInput);
+                      }
+                    }}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    maxLength={40}
+                    className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase"
+                  />
+                  <button
+                    type="button"
+                    disabled={promoBusy || !promoInput.trim()}
+                    onClick={() => void applyPromo(promoInput)}
+                    className="rounded-lg bg-navy-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {t("cart.promoApply")}
+                  </button>
+                </div>
+              )}
+              {promoError && <p className="text-xs text-red-600" role="alert">{promoError}</p>}
+            </div>
+
             <div className="border-t pt-2.5 flex flex-col gap-1.5 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>{t("cart.subtotal")}</span>
                 <Price value={subtotal} />
               </div>
+              {discount > 0 && promo && (
+                <div className="flex justify-between text-green-700">
+                  <span>{t("cart.promoApplied").replace("{code}", promo.code)}</span>
+                  <span>− <Price value={discount} /></span>
+                </div>
+              )}
               <div className="flex justify-between text-gray-600">
                 <span>{t("cart.shipping")}</span>
                 <span>

@@ -9,6 +9,8 @@ import { toNumber } from "@/lib/money";
 import { computeSegment } from "@/lib/segment";
 import { issueOrderToken } from "@/lib/order-token";
 import { personName, phoneNumber } from "@/lib/validation";
+import { judgePromo } from "@/lib/promo";
+import type { PromoProblem } from "@/lib/promo-rules";
 
 /**
  * Placing an order — the part both front doors share.
@@ -73,6 +75,9 @@ export const placeOrderSchema = z.object({
   // a client-supplied "Renault Clio 1.5 dCi" is a string a client made up,
   // and this one goes on a delivery note.
   vehicleEngineId: z.string().min(1).max(64).optional(),
+  // A code the shop handed out. Only the code: the discount is looked up and
+  // worked out below, inside the transaction, like every other number here.
+  promoCode: z.string().trim().max(40).optional(),
 });
 
 export type PlaceOrderData = z.infer<typeof placeOrderSchema>;
@@ -96,9 +101,20 @@ class OrderError extends Error {
   }
 }
 
+/** The code stopped applying between the basket and the order — expired, used up, basket too small. */
+class PromoError extends Error {
+  constructor(
+    readonly reason: PromoProblem,
+    readonly minSubtotal?: number,
+  ) {
+    super("Ce code promo ne s'applique plus à cette commande.");
+  }
+}
+
 export type CreateOrderResult =
   | { ok: true; id: string; ref: string; token: string | null }
-  | { ok: false; code: "gone" | "unsourceable"; productId: string; message: string };
+  | { ok: false; code: "gone" | "unsourceable"; productId: string; message: string }
+  | { ok: false; code: "promo"; reason: PromoProblem; minSubtotal?: number; message: string };
 
 export async function createOrder(
   data: PlaceOrderData,
@@ -219,12 +235,23 @@ export async function createOrder(
       }
 
       const subtotal = lineItems.reduce((s, l) => s + l.lineTotal, 0);
-      const shippingFee = shippingFeeFor(subtotal, freeShippingThreshold, data.deliveryMethod);
+      // The code is judged here, on this transaction's prices, with its row
+      // locked — see lib/promo. A code that stopped applying since the basket
+      // was quoted refuses the order rather than quietly charging full price:
+      // the customer agreed to the discounted total, not this one.
+      const promo = data.promoCode?.trim()
+        ? await judgePromo(data.promoCode, subtotal, { db: tx, lock: true })
+        : null;
+      if (promo && !promo.ok) throw new PromoError(promo.reason, promo.minSubtotal);
+      const discount = promo?.ok ? promo.discount : 0;
+      // Delivery is worked out on what the parts cost after the discount —
+      // the same order the cart quote uses, so the two never disagree.
+      const shippingFee = shippingFeeFor(subtotal - discount, freeShippingThreshold, data.deliveryMethod);
       // Prices are TTC, so the rate adds nothing here — it only decides how
       // the total is broken out on the document. The droit de timbre is a
       // real extra dinar, and it is quoted in the cart and on the checkout
       // summary before this runs, so it is never a surprise at this point.
-      const total = subtotal + shippingFee + tax.stampDuty;
+      const total = subtotal - discount + shippingFee + tax.stampDuty;
 
       // Derive the reference from the highest existing one, never from
       // row count. count() breaks permanently the first time any order is
@@ -257,6 +284,9 @@ export async function createOrder(
           vehicleEngineId: engine?.id,
           vehicleLabel,
           subtotal,
+          discount,
+          promoCode: promo?.ok ? promo.code : null,
+          promoCodeId: promo?.ok ? promo.id : null,
           shippingFee,
           vatRate: tax.vatRate,
           stampDuty: tax.stampDuty,
@@ -306,6 +336,9 @@ export async function createOrder(
   } catch (e) {
     if (e instanceof OrderError) {
       return { ok: false, code: e.code, productId: e.productId, message: e.message };
+    }
+    if (e instanceof PromoError) {
+      return { ok: false, code: "promo", reason: e.reason, minSubtotal: e.minSubtotal, message: e.message };
     }
     const isRefCollision =
       typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "P2002";

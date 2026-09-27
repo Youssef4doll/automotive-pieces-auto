@@ -274,6 +274,7 @@ model Product {
   images     ProductImage[]
   /// "Souvent achetés ensemble", as the shop set it: this part → the others.
   links      ProductLink[] @relation("ProductLinks")
+  stockAlerts StockAlert[]
   linkedFrom ProductLink[] @relation("ProductLinkedFrom")
 
   @@index([categoryId])
@@ -529,16 +530,28 @@ model Order {
   // real state, not a missing value.
   vehicleEngineId String?
   vehicleLabel    String?
+  // A promo code the shop created, checked and priced on the server at the
+  // moment of the order. `discount` comes off the parts before delivery is
+  // worked out; `promoCode` is the code as it was typed-and-accepted, kept
+  // beside the id so the order still says what was used after the code row
+  // is deleted.
+  discount        Decimal        @default(0) @db.Decimal(10, 2)
+  promoCode       String?
+  promoCodeId     String?
+  promo           PromoCode?     @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
   items        OrderItem[]
   history      OrderStatusEvent[]
   accessTokens OrderAccessToken[]
+  pushTokens   OrderPushToken[]
+  review       OrderReview?
 
   @@index([status])
   @@index([userId])
   @@index([source])
+  @@index([promoCodeId])
   // Every analytics window is "the last N days of orders". Without this the
   // deep-analysis page seq-scans the order table on each of its panels, which
   // is fine at a few hundred rows and is exactly the thing that starts
@@ -842,4 +855,84 @@ model ProductLink {
 
   @@unique([productId, linkedId])
   @@index([productId])
+}
+
+enum PromoKind {
+  PERCENT
+  AMOUNT
+}
+
+/// A code the shop hands out ("ETE10"), set in /admin/promotions.
+///
+/// Only ever priced by the server: the cart quote and the order both look the
+/// code up here and work the discount out themselves, so a client can send a
+/// code but never an amount. Uses are counted from the orders that carry it
+/// (cancelled ones excluded), not kept in a counter that could drift.
+model PromoCode {
+  id          String    @id @default(cuid())
+  /// Upper-case, no spaces — see lib/promo-rules normalizeCode.
+  code        String    @unique
+  kind        PromoKind
+  /// Percent (1–90) or dinars off the parts.
+  value       Decimal   @db.Decimal(10, 2)
+  /// Parts total the basket must reach first; null for none.
+  minSubtotal Decimal?  @db.Decimal(10, 2)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  /// Orders it may be used on in all; null for no limit.
+  maxUses     Int?
+  active      Boolean   @default(true)
+  /// For the shop only ("Facebook septembre").
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  orders      Order[]
+}
+
+/// A phone that asked to hear when one order moves (an Expo push token).
+///
+/// Registered with the order's own key, so a token can only ever be tied to
+/// an order the phone could already read. Deleted with the order, and when
+/// Expo reports the device gone.
+model OrderPushToken {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  token     String
+  /// fr, en or ar — the language the app was in, for the message's wording.
+  locale    String   @default("fr")
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, token])
+  @@index([token])
+}
+
+/// "Prévenez-moi quand elle revient": one phone, one part. Sent once, the
+/// first time the part is back on the shelf, then marked.
+model StockAlert {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  token      String
+  locale     String    @default("fr")
+  createdAt  DateTime  @default(now())
+  notifiedAt DateTime?
+
+  @@unique([productId, token])
+  @@index([notifiedAt])
+}
+
+/// The customer's rating of a delivered order: stars and, if they want, a
+/// sentence. For the shop — nothing here is shown publicly.
+model OrderReview {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// 1 to 5.
+  stars     Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
 }

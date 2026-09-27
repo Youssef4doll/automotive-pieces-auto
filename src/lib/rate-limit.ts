@@ -160,6 +160,12 @@ export const LIMITS = {
   reference: { limit: 60, windowMs: 60_000 },
   /** The app's analytics batches — one every few seconds from an active phone. */
   events: { limit: 120, windowMs: 60_000 },
+  /** Promo codes that do not exist. Only misses are charged, so a customer
+   *  re-pricing a basket with a good code never gets near it, and guessing
+   *  "ETE10", "ETE15", "ETE20"… stops after a handful. */
+  promoMiss: { limit: 10, windowMs: 15 * 60_000 },
+  /** A phone asking to be told about an order or a part: a few per visit. */
+  pushRegister: { limit: 30, windowMs: 10 * 60_000 },
   /** Type-ahead fires per keystroke (debounced), so the ceiling is higher. */
   suggest: { limit: 200, windowMs: 60_000 },
 } as const;

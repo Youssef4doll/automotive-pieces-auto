@@ -32,8 +32,11 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
   if (!order) notFound();
 
   const shipping = toNumber(order.shippingFee);
+  const discount = toNumber(order.discount);
   const tax = taxBreakdown({
-    subtotal: toNumber(order.subtotal),
+    // The parts as charged: after the promo code, which comes off before VAT
+    // is decomposed and before delivery is worked out.
+    subtotal: toNumber(order.subtotal) - discount,
     shippingFee: shipping,
     vatRate: toNumber(order.vatRate),
     stampDuty: toNumber(order.stampDuty),
@@ -91,6 +94,12 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
             which is exactly the gap the question "why 22,20 and not 13,20?"
             lives in — and the timbre fiscal made it wider. */}
         <div className="border-t mt-2 pt-2 flex flex-col gap-1 text-sm">
+          {discount > 0 && (
+            <div className="flex justify-between text-green-700">
+              <span>Code {order.promoCode}</span>
+              <span>− <Price value={discount} /></span>
+            </div>
+          )}
           <div className="flex justify-between text-gray-600">
             <span>{order.deliveryMethod === "PICKUP" ? "Retrait en magasin" : "Livraison"}</span>
             <span>{shipping > 0 ? <Price value={shipping} /> : "Offerte"}</span>

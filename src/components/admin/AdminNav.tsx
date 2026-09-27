@@ -84,6 +84,7 @@ const ITEMS = [
   { href: "/admin/clients", label: "Clients", icon: "clients" },
   { href: "/admin/messages", label: "Messages", icon: "clients" },
   { href: "/admin/promotions", label: "Bannières", icon: "promotions" },
+  { href: "/admin/codes-promo", label: "Codes promo", icon: "promotions" },
   { href: "/admin/analytics", label: "Analytics", icon: "analytics" },
   { href: "/admin/analyse", label: "Analyse", icon: "analytics" },
   { href: "/admin/parametres", label: "Paramètres", icon: "settings" },

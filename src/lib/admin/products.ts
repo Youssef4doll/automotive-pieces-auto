@@ -1,4 +1,5 @@
 import "server-only";
+import { notifyBackInStock } from "@/lib/push";
 import { revalidatePath } from "next/cache";
 import type { Prisma, SupplyMode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -138,6 +139,7 @@ export async function adjustProductStock(productId: string, change: number, note
   });
   await prisma.stockMovement.create({ data: { productId, change, reason: "adjustment", note } });
   revalidateProductSurfaces(p.slug);
+  if (change > 0) await notifyBackInStock([productId]);
 }
 
 /**
@@ -156,6 +158,7 @@ export async function setProductStock(productId: string, qty: number, note?: str
     return before.slug;
   });
   if (slug) revalidateProductSurfaces(slug);
+  if (slug && qty > 0) await notifyBackInStock([productId]);
   return slug !== null;
 }
 

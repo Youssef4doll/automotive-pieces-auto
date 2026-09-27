@@ -1,4 +1,5 @@
 import "server-only";
+import { pushOrderStatus } from "@/lib/push";
 import { revalidatePath } from "next/cache";
 import type { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -22,7 +23,12 @@ export const ORDER_STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED", "PREPARED"
  * identical history row and send the customer the same e-mail again — one
  * stray tap on the highlighted button was enough.
  */
-export async function setOrderStatus(orderId: string, status: OrderStatus): Promise<boolean> {
+export async function setOrderStatus(
+  orderId: string,
+  status: OrderStatus,
+  /** `push: false` when the customer made the change themselves, on the phone that would be told. */
+  opts: { push?: boolean } = {},
+): Promise<boolean> {
   const current = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true } });
   if (!current) return false;
   if (current.status === status) return true;
@@ -33,6 +39,7 @@ export async function setOrderStatus(orderId: string, status: OrderStatus): Prom
   // Best-effort by design — see lib/order-emails — so a mail failure never
   // leaves the shop unable to advance an order.
   await notifyOrderStatus(orderId, status);
+  if (opts.push !== false) await pushOrderStatus(orderId, status);
   revalidatePath("/admin/commandes");
   revalidatePath(`/admin/commandes/${orderId}`);
   revalidatePath("/compte/commandes");
@@ -110,8 +117,10 @@ export async function adminOrderDetail(orderId: string) {
     },
   });
   if (!o) return null;
+  const discount = toNumber(o.discount);
   const tax = taxBreakdown({
-    subtotal: toNumber(o.subtotal),
+    // The parts as charged, after any promo code.
+    subtotal: toNumber(o.subtotal) - discount,
     shippingFee: toNumber(o.shippingFee),
     vatRate: toNumber(o.vatRate),
     stampDuty: toNumber(o.stampDuty),
@@ -145,6 +154,9 @@ export async function adminOrderDetail(orderId: string) {
     totals: {
       taxed: tax.taxed,
       goods: tax.goodsHT,
+      /** Already out of `goods`; shown beside it with the code. */
+      discount,
+      promoCode: o.promoCode,
       shipping: toNumber(o.shippingFee) === 0 ? 0 : tax.shippingHT,
       vatRate: tax.vatRate,
       vat: tax.vat,

@@ -12,6 +12,7 @@ import { readImageFile, mediaAssetIdFromUrl, assetUrl, assetUrlVariants } from "
 import { reindexProducts, topSearchMisses } from "@/lib/search";
 import { setOrderStatus } from "@/lib/admin/orders";
 import { adjustProductStock, revalidateProductSurfaces } from "@/lib/admin/products";
+import { notifyBackInStock } from "@/lib/push";
 
 async function assertAdmin() {
   const admin = await requireAdmin();
@@ -278,6 +279,9 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
   }
 
   revalidateProductSurfaces();
+  // Anyone waiting on this part hears about it — notifyBackInStock checks the
+  // shelf and the "on sale" flag itself, so an edit that raised neither sends nothing.
+  if (data.id) await notifyBackInStock([productId]);
   return { ok: true, error: photoWarning ?? undefined, createdId: data.id ? undefined : productId, draftReasons };
 }
 
@@ -311,6 +315,7 @@ export async function setPublished(productId: string, published: boolean): Promi
   await prisma.product.update({ where: { id: productId }, data: { active: published } });
   revalidateProductSurfaces();
   revalidatePath(`/admin/stock/${productId}`);
+  if (published) await notifyBackInStock([productId]);
   return { ok: published ? "En vente." : "Retiré de la vente." };
 }
 

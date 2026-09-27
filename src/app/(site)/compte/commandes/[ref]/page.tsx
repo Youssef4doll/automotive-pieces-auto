@@ -33,7 +33,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
     where: { ref },
     select: {
       id: true, ref: true, status: true, total: true, subtotal: true, shippingFee: true,
-      vatRate: true, stampDuty: true,
+      vatRate: true, stampDuty: true, discount: true, promoCode: true,
       createdAt: true, governorate: true, address: true, deliveryMethod: true,
       paymentMethod: true, notes: true, userId: true,
       history: { orderBy: { createdAt: "asc" }, select: { status: true, createdAt: true } },
@@ -57,8 +57,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
   ]);
   const liveById = new Map(live.map((p) => [p.id, p]));
   const contact = contactFrom(settings);
+  const discount = toNumber(order.discount);
   const tax = taxBreakdown({
-    subtotal: toNumber(order.subtotal),
+    // The parts as charged, after any promo code.
+    subtotal: toNumber(order.subtotal) - discount,
     shippingFee: toNumber(order.shippingFee),
     vatRate: toNumber(order.vatRate),
     stampDuty: toNumber(order.stampDuty),
@@ -167,7 +169,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
               must not find two different breakdowns of one order. */}
           <dl className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-1.5 text-sm">
             <div className="flex justify-between">
-              <dt className="text-slate-500">{tax.taxed ? "Sous-total HT" : "Sous-total"}</dt>
+              <dt className="text-slate-500">
+                {tax.taxed ? "Sous-total HT" : "Sous-total"}
+                {discount > 0 && (
+                  <span className="block text-xs">après remise {order.promoCode} ({formatTNDfr(discount)} TTC)</span>
+                )}
+              </dt>
               <dd className="tabular-nums text-navy-950">{formatTNDfr(tax.goodsHT)}</dd>
             </div>
             <div className="flex justify-between">

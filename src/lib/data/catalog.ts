@@ -799,6 +799,8 @@ export async function listAppProducts(options: {
   inStockOnly?: boolean;
   /** Exactly these parts (on sale only) — the app's "Commander à nouveau" row, priced today. */
   ids?: string[];
+  /** Only packs: products whose specs list the parts they bundle (`packContents`). */
+  packsOnly?: boolean;
   /** "price_asc" | "price_desc"; the default keeps stock first, then price. */
   sort?: "price_asc" | "price_desc";
   page?: number;
@@ -824,8 +826,15 @@ export async function listAppProducts(options: {
   const brandWhere = options.brandSlug ? { brand: { slug: options.brandSlug } } : {};
   const stockWhere = options.inStockOnly ? { stockQty: { gt: 0 } } : {};
   const idsWhere = options.ids?.length ? { id: { in: options.ids } } : {};
+  // A pack is a product whose specs name the parts inside it — the shop's own
+  // bundle, not something inferred from a name containing "kit". Asked of the
+  // JSON column directly; Prisma's JSON filters cannot say "has this key".
+  const packIds = options.packsOnly
+    ? (await prisma.$queryRaw<{ id: string }[]>`SELECT id FROM "Product" WHERE active AND specs ? 'packContents' LIMIT 100`).map((r) => r.id)
+    : null;
+  const packsWhere = packIds ? { AND: [{ id: { in: packIds } }] } : {};
 
-  const where = { active: true, ...categoryWhere, ...fitmentWhere, ...brandWhere, ...stockWhere, ...idsWhere };
+  const where = { active: true, ...categoryWhere, ...fitmentWhere, ...brandWhere, ...stockWhere, ...idsWhere, ...packsWhere };
 
   // In stock first, then whatever the shop can source, then the rest.
   // Never by "popularity" — there is no such figure in this database and

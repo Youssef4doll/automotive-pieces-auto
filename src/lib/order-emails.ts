@@ -65,6 +65,8 @@ async function loadOrder(orderId: string): Promise<OrderForEmail | null> {
       deliveryMethod: true,
       paymentMethod: true,
       subtotal: true,
+      discount: true,
+      promoCode: true,
       shippingFee: true,
       vatRate: true,
       stampDuty: true,
@@ -81,6 +83,7 @@ async function loadOrder(orderId: string): Promise<OrderForEmail | null> {
   return {
     ...order,
     subtotal: toNumber(order.subtotal),
+    discount: toNumber(order.discount),
     shippingFee: toNumber(order.shippingFee),
     vatRate: toNumber(order.vatRate),
     stampDuty: toNumber(order.stampDuty),

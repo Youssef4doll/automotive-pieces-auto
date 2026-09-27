@@ -60,6 +60,15 @@ export async function POST(request: NextRequest) {
       const customer = await customerForRequest(request);
       const result = await createOrder(parsed.data, { issueToken: true, userId: customer?.id });
       if (!result.ok) {
+        // The code stopped applying since the basket was priced: the field
+        // the customer has to change, and why.
+        if (result.code === "promo") {
+          return fail("invalid_field", POLICY, undefined, {
+            field: "promoCode",
+            reason: result.reason,
+            ...(result.minSubtotal != null ? { minSubtotal: String(result.minSubtotal) } : {}),
+          });
+        }
         return fail("unavailable", POLICY, undefined, { productId: result.productId, reason: result.code });
       }
 

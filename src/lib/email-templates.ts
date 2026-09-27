@@ -92,6 +92,9 @@ export type OrderForEmail = {
   deliveryMethod: "DELIVERY" | "PICKUP";
   paymentMethod: string;
   subtotal: number;
+  /** Off the parts by a promo code; 0 without one. */
+  discount: number;
+  promoCode: string | null;
   shippingFee: number;
   /** The shop's tax position as snapshotted on this order — see lib/tax. */
   vatRate: number;
@@ -430,8 +433,18 @@ function items(order: OrderForEmail) {
  * sends to the shop. Untaxed — a shop with no matricule fiscal — this renders
  * the plain three lines it always did.
  */
+/** The parts as charged: after the promo code, like every other document. */
+function chargedTax(order: OrderForEmail) {
+  return taxBreakdown({ ...order, subtotal: order.subtotal - order.discount });
+}
+
+/** "après remise ETE10 (12,35 DT TTC)" — said beside the figure it is already out of. */
+function discountNote(order: OrderForEmail) {
+  return order.discount > 0 ? `après remise ${order.promoCode ?? ""} (${formatTNDfr(order.discount)} TTC)`.replace("  ", " ") : "";
+}
+
 function totals(order: OrderForEmail) {
-  const tax = taxBreakdown(order);
+  const tax = chargedTax(order);
   const shipping = order.shippingFee > 0 ? esc(formatTNDfr(tax.shippingHT)) : "Offerte";
   const line = (label: string, value: string, strong = false) => `<tr>
     <td style="padding:${strong ? "12px 0 0" : "6px 0 0"};font-family:${strong ? FONT_HEAD : FONT};font-size:${strong ? "18px" : "14px"};color:${strong ? NAVY : MUTED};font-weight:${strong ? "800" : "normal"};${strong ? `border-top:2px solid ${NAVY};` : ""}">${label}</td>
@@ -439,7 +452,11 @@ function totals(order: OrderForEmail) {
   </tr>`;
   return row(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${LINE};">
-      ${line(tax.taxed ? "Sous-total HT" : "Sous-total", esc(formatTNDfr(tax.goodsHT)))}
+      ${line(
+        (tax.taxed ? "Sous-total HT" : "Sous-total") +
+          (order.discount > 0 ? `<br><span style="font-size:12px;color:${MUTED};">${esc(discountNote(order))}</span>` : ""),
+        esc(formatTNDfr(tax.goodsHT)),
+      )}
       ${line(
         order.deliveryMethod === "PICKUP" ? "Retrait en magasin" : tax.taxed ? "Frais de livraison HT" : "Livraison",
         order.deliveryMethod === "PICKUP" ? "—" : shipping,
@@ -522,11 +539,11 @@ function signoff(shop: ShopForEmail) {
 
 function textLines(order: OrderForEmail, shop: ShopForEmail) {
   const window = deliveryWindow(order, shop);
-  const tax = taxBreakdown(order);
+  const tax = chargedTax(order);
   return [
     ...order.items.map((i) => `- ${i.name} (réf. ${i.sku}) × ${i.qty} — ${formatTNDfr(i.lineTotal)}`),
     ``,
-    `${tax.taxed ? "Sous-total HT" : "Sous-total"} : ${formatTNDfr(tax.goodsHT)}`,
+    `${tax.taxed ? "Sous-total HT" : "Sous-total"} : ${formatTNDfr(tax.goodsHT)}${order.discount > 0 ? ` (${discountNote(order)})` : ""}`,
     order.deliveryMethod === "PICKUP"
       ? `Retrait en magasin`
       : `${tax.taxed ? "Frais de livraison HT" : "Livraison"} : ${

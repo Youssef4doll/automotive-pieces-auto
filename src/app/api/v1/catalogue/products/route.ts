@@ -26,6 +26,9 @@ const PUBLIC = { cache: Cache.catalogue, cors: true };
  * question than the verdict above and it has to be asked of the database:
  * filtering a page client-side would report "nothing fits your car" whenever
  * the first twenty rows happened to hold none.
+ *
+ * `packs=1` returns the shop's packs only — products whose specs list the
+ * parts they bundle — for the app's maintenance-pack row.
  */
 export async function GET(request: NextRequest) {
   return guard(
@@ -75,6 +78,7 @@ export async function GET(request: NextRequest) {
         sort,
         inStockOnly,
         ids,
+        packsOnly: params.get("packs") === "1",
         page: parsed.page?.success ? parsed.page.data : 1,
       });
 

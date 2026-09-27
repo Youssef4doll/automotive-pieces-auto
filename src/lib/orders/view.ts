@@ -35,6 +35,8 @@ export async function appOrderView(orderId: string) {
       deliveryMethod: true,
       paymentMethod: true,
       subtotal: true,
+      discount: true,
+      promoCode: true,
       shippingFee: true,
       stampDuty: true,
       total: true,
@@ -56,6 +58,7 @@ export async function appOrderView(orderId: string) {
         },
       },
       history: { orderBy: { createdAt: "asc" }, select: { status: true, createdAt: true } },
+      review: { select: { stars: true, comment: true } },
     },
   });
   if (!order) return null;
@@ -87,9 +90,14 @@ export async function appOrderView(orderId: string) {
       fit: i.fit,
     })),
     subtotal: toNumber(order.subtotal),
+    /** 0 without a code; the code itself so the receipt can name it. */
+    discount: toNumber(order.discount),
+    promoCode: order.promoCode,
     shippingFee: toNumber(order.shippingFee),
     stampDuty: toNumber(order.stampDuty),
     total: toNumber(order.total),
+    /** The customer's own rating, once given (DELIVERED orders only). */
+    review: order.review,
   };
 }
 

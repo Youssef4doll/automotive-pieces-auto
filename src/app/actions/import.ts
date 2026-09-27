@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notifyBackInStock } from "@/lib/push";
 import { revalidateCatalog } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 import { publishChecks } from "@/lib/publish-checks";
@@ -238,6 +239,8 @@ export async function applyImport(batchId: string): Promise<ImportState> {
   revalidatePath("/admin/stock");
   revalidatePath("/admin/qualite");
   revalidatePath("/", "layout");
+  // Many parts at once: sweep every waiting alert rather than list them.
+  await notifyBackInStock();
   return { ok: `${created} créé(s), ${updated} mis à jour${failed ? `, ${failed} en échec` : ""}` };
 }
 

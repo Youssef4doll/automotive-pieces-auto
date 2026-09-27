@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
       const order = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true } });
       if (order?.status !== "PENDING") return fail("unavailable", POLICY, undefined, { reason: "not_pending" });
 
-      await setOrderStatus(orderId, "CANCELLED");
+      await setOrderStatus(orderId, "CANCELLED", { push: false });
       return ok(await appOrderView(orderId), POLICY);
     },
     "orders/[ref]/cancel",

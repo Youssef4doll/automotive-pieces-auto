@@ -9,6 +9,9 @@ import { notifyOrderPlaced } from "@/lib/order-emails";
 import { createOrder, placeOrderSchema, type PlaceOrderData } from "@/lib/orders/place";
 import { matchGuestOrder } from "@/lib/orders/lookup";
 import { claimOrderIds } from "@/lib/orders/claim";
+import { quoteAppCart } from "@/lib/data/app-catalog";
+import type { PromoProblem } from "@/lib/promo-rules";
+import { z } from "zod";
 
 export type PlaceOrderInput = PlaceOrderData;
 export type PlaceOrderResult = { ok: true; ref: string } | { ok: false; error: string };
@@ -178,4 +181,35 @@ export async function lookupGuestOrder(
  */
 export async function claimOrdersForUser(userId: string) {
   return claimOrderIds(userId, await ordersFromThisBrowser());
+}
+
+export type PromoCheck =
+  | { ok: true; code: string; discount: number }
+  | { ok: false; reason: PromoProblem; minSubtotal?: number };
+
+const promoCheckSchema = z.object({
+  code: z.string().trim().min(1).max(40),
+  items: z.array(z.object({ productId: z.string().min(1).max(64), qty: z.number().int().positive().max(999) })).min(1).max(50),
+});
+
+/**
+ * Does this code apply to this basket, and for how much — asked by the
+ * checkout before the order, so the total the customer confirms already
+ * has the discount in it.
+ *
+ * The basket is re-priced here from ids and quantities, exactly as the app's
+ * quote does it (it is the same function), and the order judges the code
+ * again inside its own transaction: what this returns is shown, never
+ * trusted.
+ */
+export async function checkPromoCode(input: { code: string; items: { productId: string; qty: number }[] }): Promise<PromoCheck> {
+  const parsed = promoCheckSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "unknown" };
+  const quote = await quoteAppCart({
+    items: parsed.data.items,
+    promoCode: parsed.data.code,
+    promoMissKey: await callerKey("promo-miss"),
+  });
+  if (quote.promo) return { ok: true, code: quote.promo.code, discount: quote.discount };
+  return quote.promoError ? { ok: false, ...quote.promoError } : { ok: false, reason: "unknown" };
 }

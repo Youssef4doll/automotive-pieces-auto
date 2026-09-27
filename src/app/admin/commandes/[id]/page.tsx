@@ -15,8 +15,10 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   });
   if (!order) notFound();
 
+  const discount = toNumber(order.discount);
   const tax = taxBreakdown({
-    subtotal: toNumber(order.subtotal),
+    // The parts as charged, after any promo code.
+    subtotal: toNumber(order.subtotal) - discount,
     shippingFee: toNumber(order.shippingFee),
     vatRate: toNumber(order.vatRate),
     stampDuty: toNumber(order.stampDuty),
@@ -158,7 +160,14 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
               same four lines the caller is holding. */}
           <div className="flex flex-col gap-1 border-t border-navy-900/8 mt-2 pt-2 text-sm">
             <div className="flex justify-between text-gray-500">
-              <span>{tax.taxed ? "Sous-total HT" : "Sous-total"}</span>
+              <span>
+                {tax.taxed ? "Sous-total HT" : "Sous-total"}
+                {discount > 0 && (
+                  <span className="block text-xs text-green-700">
+                    après code {order.promoCode} : − {formatTND(discount)} TTC
+                  </span>
+                )}
+              </span>
               <span>{formatTND(tax.goodsHT)}</span>
             </div>
             <div className="flex justify-between text-gray-500">

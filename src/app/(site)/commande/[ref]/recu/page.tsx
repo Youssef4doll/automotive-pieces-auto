@@ -53,8 +53,10 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
 
   // Every figure comes off the order, including the rate — a rate changed in
   // the settings next year must not restate a document filed this year.
+  const discount = toNumber(order.discount);
   const tax = taxBreakdown({
-    subtotal: toNumber(order.subtotal),
+    // The parts as charged, after any promo code.
+    subtotal: toNumber(order.subtotal) - discount,
     shippingFee: toNumber(order.shippingFee),
     vatRate: toNumber(order.vatRate),
     stampDuty: toNumber(order.stampDuty),
@@ -187,7 +189,17 @@ export default async function ReceiptPage({ params }: { params: Promise<{ ref: s
           <table className="text-sm w-full sm:w-80">
             <tbody>
               <tr>
-                <td className="py-1 text-slate-600">{tax.taxed ? "Sous-total HT" : "Sous-total"}</td>
+                <td className="py-1 text-slate-600">
+                  {tax.taxed ? "Sous-total HT" : "Sous-total"}
+                  {/* The discount is already out of this figure, so it is
+                      said beside it rather than given a row of its own that
+                      the column would then not add up with. */}
+                  {discount > 0 && (
+                    <span className="block text-xs text-slate-500">
+                      après remise {order.promoCode} ({formatTNDfr(discount)} TTC)
+                    </span>
+                  )}
+                </td>
                 <td className="py-1 text-end tabular-nums">{formatTNDfr(tax.goodsHT)}</td>
               </tr>
               <tr>

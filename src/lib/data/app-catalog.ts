@@ -11,6 +11,8 @@ import { didYouMean, fold, parseQuery, rankProducts, recordSearchMiss } from "@/
 import { groupOeReferences, type OeGroup } from "@/lib/reference";
 import { cartDeliveryQuote, shippingFeeFor, type DeliveryMethod } from "@/lib/shipping";
 import { taxPolicy } from "@/lib/tax";
+import { judgePromo } from "@/lib/promo";
+import type { PromoKind, PromoProblem } from "@/lib/promo-rules";
 
 // ---------------------------------------------------------------------------
 // The catalogue, shaped for the phone app.
@@ -544,7 +546,21 @@ export type AppCartLine = {
 
 export type AppCartQuote = {
   lines: AppCartLine[];
+  /** The parts, before any code. */
   subtotal: number;
+  /** Off the parts by the promo code; 0 without one. */
+  discount: number;
+  /** The code that applied, as the shop wrote it. */
+  promo: { code: string; kind: PromoKind; value: number } | null;
+  /** Why the code sent did not apply; null when none was sent or it applied. */
+  promoError: { reason: PromoProblem; minSubtotal?: number } | null;
+  /**
+   * One part that would reach free delivery: linked by the shop to a part in
+   * the basket, or confirmed for the customer's engine — never a guess. Null
+   * when delivery is already free, the gap is too large for one part to be a
+   * sensible suggestion, or nothing qualifies.
+   */
+  suggestion: AppProduct | null;
   deliveryMethod: DeliveryMethod;
   deliveryFee: number;
   stampDuty: number;
@@ -578,6 +594,9 @@ export async function quoteAppCart(input: {
   items: { productId: string; qty: number }[];
   engineId?: string;
   deliveryMethod?: DeliveryMethod;
+  promoCode?: string;
+  /** The caller's rate-limit key for codes that do not exist — see lib/promo. */
+  promoMissKey?: string;
 }): Promise<AppCartQuote> {
   const method = input.deliveryMethod ?? "DELIVERY";
   const ids = [...new Set(input.items.map((i) => i.productId))];
@@ -612,22 +631,89 @@ export async function quoteAppCart(input: {
   const subtotal = round(lines.reduce((s, l) => s + l.lineTotal, 0));
   const freeShippingThreshold = Number(settings.free_shipping_threshold) || 150;
   const { stampDuty } = taxPolicy(settings);
-  const deliveryFee = shippingFeeFor(subtotal, freeShippingThreshold, method);
+  // The code is judged by the same function the order uses (lib/promo), and
+  // comes off the parts before delivery is worked out — so the order that
+  // follows charges exactly this.
+  const promo = input.promoCode?.trim() ? await judgePromo(input.promoCode, subtotal, { missKey: input.promoMissKey }) : null;
+  const discount = promo?.ok ? promo.discount : 0;
+  const goods = round(subtotal - discount);
+  const deliveryFee = shippingFeeFor(goods, freeShippingThreshold, method);
   // The delivery-case quote is what decides how far off free delivery is,
   // whichever method is chosen — pickup is free anyway.
-  const { remainingForFree } = cartDeliveryQuote(subtotal, freeShippingThreshold, stampDuty);
+  const { remainingForFree } = cartDeliveryQuote(goods, freeShippingThreshold, stampDuty);
+  const blocked = lines.some((l) => !l.buyable);
+
+  const gap = round(remainingForFree);
+  const suggestion =
+    method === "DELIVERY" && !blocked && goods > 0 && gap > 0 && gap <= freeShippingThreshold * SUGGEST_MAX_GAP_SHARE
+      ? await freeDeliverySuggestion(ids, input.engineId, gap)
+      : null;
 
   return {
     lines,
     subtotal,
+    discount,
+    promo: promo?.ok ? { code: promo.code, kind: promo.kind, value: promo.value } : null,
+    promoError: promo && !promo.ok ? { reason: promo.reason, ...(promo.minSubtotal != null ? { minSubtotal: promo.minSubtotal } : {}) } : null,
+    suggestion,
     deliveryMethod: method,
     deliveryFee,
     stampDuty,
-    total: round(subtotal + deliveryFee + stampDuty),
+    total: round(goods + deliveryFee + stampDuty),
     freeShippingThreshold,
-    remainingForFree: round(remainingForFree),
-    blocked: lines.some((l) => !l.buyable),
+    remainingForFree: gap,
+    blocked,
   };
+}
+
+/**
+ * Past half the threshold away, "add this to get free delivery" is an upsell
+ * dressed as a favour: no single part should be pushed to close that gap.
+ */
+const SUGGEST_MAX_GAP_SHARE = 0.5;
+
+/**
+ * The cheapest part that closes the gap to free delivery, from what the shop
+ * actually knows goes with this basket or this car:
+ *
+ *   first, a part the shop linked to one already in the basket (a filter
+ *   with the oil) — the shop's own recommendation;
+ *
+ *   then, a part with a VERIFIED fitment row for the customer's engine.
+ *
+ * On the shelf only, so taking the suggestion never turns a basket that
+ * would leave today into one that waits on a supplier. Never a part in the
+ * basket already, never one that does not fit. Without a link or a car there
+ * is nothing honest to suggest, and none is.
+ */
+async function freeDeliverySuggestion(inCart: string[], engineId: string | undefined, gap: number): Promise<AppProduct | null> {
+  const base: Prisma.ProductWhereInput = {
+    active: true,
+    stockQty: { gt: 0 },
+    priceSell: { gte: gap },
+    id: { notIn: inCart },
+  };
+  const pick = async (where: Prisma.ProductWhereInput, need: FitmentVerdict[] | null) => {
+    const rows = await prisma.product.findMany({
+      where: { ...base, ...where },
+      orderBy: [{ priceSell: "asc" }, { id: "asc" }],
+      take: 8,
+      select: appProductSelect(engineId),
+    });
+    if (!rows.length) return null;
+    const fit = await fitContext(engineId, rows.map((r) => r.id));
+    for (const r of rows) {
+      const p = toAppProduct(r, engineId, fit);
+      if (p.fitment === "DOES_NOT_FIT") continue;
+      if (need && (!p.fitment || !need.includes(p.fitment))) continue;
+      return p;
+    }
+    return null;
+  };
+
+  const linked = await pick({ linkedFrom: { some: { productId: { in: inCart } } } }, null);
+  if (linked || !engineId) return linked;
+  return pick({ fitments: { some: { engineId, confidence: "VERIFIED" } } }, ["FITS"]);
 }
 
 /** Money to the millime, so 0.1 + 0.2 never reaches a customer. */
