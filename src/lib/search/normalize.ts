@@ -53,10 +53,55 @@ export type ParsedQuery = {
  * the demand log alike — so the buying list groups "plaquete" with
  * "Plaquettes de frein" instead of listing them as two different wants.
  */
+/**
+ * How a French word sounds, written the catalogue's way — for the words a
+ * customer spells by ear: "plakette" → "plaquette", "filtr" stays, "frain" →
+ * "frein", "amortiseur" → "amortisseur", "fare" → "phare". Applied only to a
+ * word the vocabulary did not recognise as typed, and kept only when the
+ * respelling IS recognised, so "kit" is never turned into "cit".
+ */
+export function soundAlike(word: string): string[] {
+  const out = new Set<string>();
+  const add = (w: string) => w !== word && out.add(w);
+  add(word.replace(/k(?=[eiy])/g, "qu").replace(/k/g, "c"));
+  add(word.replace(/k/g, "qu"));
+  add(word.replace(/ain/g, "ein"));
+  add(word.replace(/([aeiou])s([aeiou])/g, "$1ss$2"));
+  add(word.replace(/^f/, "ph"));
+  add(word.replace(/ph/g, "f"));
+  add(word.replace(/(.)\1/g, "$1"));
+  add(word.replace(/ete?$/, "ette"));
+  // All of them at once: "plakete" needs both k → qu and -ete → -ette.
+  add(
+    word
+      .replace(/k(?=[eiy])/g, "qu")
+      .replace(/k/g, "c")
+      .replace(/ph/g, "f")
+      .replace(/ain/g, "ein")
+      .replace(/([aeiou])s([aeiou])/g, "$1ss$2")
+      .replace(/ete?$/, "ette"),
+  );
+  return [...out];
+}
+
 export function parseQuery(raw: string): ParsedQuery {
   const trimmed = raw.trim();
   const folded = fold(trimmed);
-  const { canonical, rest } = expandQuery(folded);
+  const expanded = expandQuery(folded);
+  const canonical = [...expanded.canonical];
+  let rest = expanded.rest;
+  // Spelt by ear: an unrecognised word whose sound-alike IS in the
+  // vocabulary is read as that word (soundAlike).
+  rest = rest.filter((word) => {
+    for (const variant of soundAlike(word)) {
+      const hit = expandQuery(variant).canonical;
+      if (hit.length) {
+        for (const c of hit) if (!canonical.includes(c)) canonical.push(c);
+        return false;
+      }
+    }
+    return true;
+  });
 
   // A word the vocabulary did not recognise and that carries no Latin
   // character cannot appear in the index — the catalogue is written in French

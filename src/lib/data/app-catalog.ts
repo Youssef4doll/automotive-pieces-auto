@@ -3,7 +3,7 @@ import type { Prisma, SupplyMode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fuelContradicts } from "@/lib/fitment-rules";
 import { fitContext, type FitContext } from "@/lib/data/fitment";
-import { fitVerdict, type FitmentVerdict } from "@/lib/fitment-verdict";
+import { fitReason, fitVerdict, type FitReason, type FitmentVerdict } from "@/lib/fitment-verdict";
 import { availabilityOf } from "@/lib/availability";
 import { toNumber } from "@/lib/money";
 import { getSettings } from "@/lib/settings";
@@ -61,6 +61,8 @@ export type AppProduct = {
    * statement from "we do not know whether this fits it".
    */
   fitment: FitmentVerdict | null;
+  /** Why the verdict is not a plain yes (lib/fitment-verdict), for the sentence under it. */
+  fitmentReason: FitReason;
 };
 
 /** The columns `toAppProduct` reads, and nothing else. */
@@ -108,14 +110,17 @@ export function toAppProduct(p: AppProductRow, engineId?: string, fit?: FitConte
   // The verdict, from evidence (lib/fitment-verdict): this engine's own row,
   // the same model, the same engine code and fuel, and the fuel rule.
   let fitment: FitmentVerdict | null = null;
+  let fitmentReason: FitReason = null;
   if (engineId) {
     const near = fit?.near.get(p.id);
-    fitment = fitVerdict({
+    const evidence = {
       mine: p.fitments?.[0]?.confidence ?? null,
       sameModel: near?.sameModel ?? false,
       sameCode: near?.sameCode ?? false,
       wrongFuel: fuelContradicts(p.category.slug, p.name, fit?.fuel),
-    });
+    };
+    fitment = fitVerdict(evidence);
+    fitmentReason = fitReason(evidence);
   }
 
   const uploaded = p.images[0]?.id;
@@ -134,6 +139,7 @@ export function toAppProduct(p: AppProductRow, engineId?: string, fit?: FitConte
     lowStockQty: state === "IN_STOCK" && p.stockQty <= p.lowStockThreshold ? p.stockQty : null,
     imageUrl: uploaded ? `/api/images/${uploaded}` : null,
     fitment,
+    fitmentReason,
   };
 }
 

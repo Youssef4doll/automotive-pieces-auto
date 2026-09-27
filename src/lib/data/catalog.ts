@@ -793,8 +793,14 @@ export async function listAppProducts(options: {
    * because there is nothing to be compatible with.
    */
   fitsEngineOnly?: boolean;
-  /** A parts maker's slug — the app's "Nos marques" tiles. */
+  /** A parts maker's slug — the app's "Nos marques" tiles, and the family filter. */
   brandSlug?: string;
+  /** Only parts on the shelf now (stock > 0). */
+  inStockOnly?: boolean;
+  /** Exactly these parts (on sale only) — the app's "Commander à nouveau" row, priced today. */
+  ids?: string[];
+  /** "price_asc" | "price_desc"; the default keeps stock first, then price. */
+  sort?: "price_asc" | "price_desc";
   page?: number;
   perPage?: number;
 }) {
@@ -816,13 +822,20 @@ export async function listAppProducts(options: {
   const fitmentWhere = confirmed && options.fitsEngineOnly ? confirmed : {};
 
   const brandWhere = options.brandSlug ? { brand: { slug: options.brandSlug } } : {};
+  const stockWhere = options.inStockOnly ? { stockQty: { gt: 0 } } : {};
+  const idsWhere = options.ids?.length ? { id: { in: options.ids } } : {};
 
-  const where = { active: true, ...categoryWhere, ...fitmentWhere, ...brandWhere };
+  const where = { active: true, ...categoryWhere, ...fitmentWhere, ...brandWhere, ...stockWhere, ...idsWhere };
 
   // In stock first, then whatever the shop can source, then the rest.
   // Never by "popularity" — there is no such figure in this database and
   // ordering by one would be inventing it.
-  const orderBy = [{ stockQty: "desc" as const }, { priceSell: "asc" as const }];
+  const orderBy =
+    options.sort === "price_asc"
+      ? [{ priceSell: "asc" as const }, { stockQty: "desc" as const }]
+      : options.sort === "price_desc"
+        ? [{ priceSell: "desc" as const }, { stockQty: "desc" as const }]
+        : [{ stockQty: "desc" as const }, { priceSell: "asc" as const }];
   const select = appProductSelect(options.engineId);
   const skip = (page - 1) * perPage;
 
@@ -863,5 +876,25 @@ export async function listAppProducts(options: {
   const fit = await fitContext(options.engineId, rows.map((r) => r.id));
   const products = rows.map((p) => toAppProduct(p, options.engineId, fit));
 
-  return { products, total, page, perPage, hasMore: page * perPage < total };
+  // The brands this family actually holds, for the filter chips — counted
+  // without the brand filter, so choosing one does not hide the others.
+  const brands = options.familySlug || options.subcategorySlug
+    ? (
+        await prisma.product.groupBy({
+          by: ["brandId"],
+          where: { active: true, ...categoryWhere, ...fitmentWhere, ...stockWhere, brandId: { not: null } },
+          _count: { _all: true },
+        })
+      )
+    : [];
+  const brandRows = brands.length
+    ? await prisma.brand.findMany({ where: { id: { in: brands.map((b) => b.brandId!) } }, select: { id: true, name: true, slug: true } })
+    : [];
+  const facets = {
+    brands: brandRows
+      .map((b) => ({ name: b.name, slug: b.slug, count: brands.find((x) => x.brandId === b.id)?._count._all ?? 0 }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+  };
+
+  return { products, total, page, perPage, hasMore: page * perPage < total, facets };
 }

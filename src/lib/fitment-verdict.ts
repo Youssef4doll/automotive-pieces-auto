@@ -26,6 +26,18 @@ export type FitEvidence = {
   wrongFuel: boolean;
 };
 
+/** Why, when it is not a plain yes — so the page can say the right sentence. */
+export type FitReason = "WRONG_FUEL" | "OTHER_ENGINES_OF_MODEL" | "SAME_ENGINE_CODE" | "DERIVED" | null;
+
+export function fitReason(e: FitEvidence): FitReason {
+  if (e.wrongFuel) return "WRONG_FUEL";
+  if (e.mine === "VERIFIED") return null;
+  if (e.mine === "DERIVED") return "DERIVED";
+  if (e.sameCode) return "SAME_ENGINE_CODE";
+  if (e.sameModel) return "OTHER_ENGINES_OF_MODEL";
+  return null;
+}
+
 export function fitVerdict(e: FitEvidence): FitmentVerdict {
   if (e.wrongFuel) return "DOES_NOT_FIT";
   if (e.mine === "VERIFIED") return "FITS";

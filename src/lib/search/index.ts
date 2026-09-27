@@ -88,12 +88,22 @@ export async function rankProducts(parsed: ParsedQuery, take = 40): Promise<Sear
     .filter((t) => t.length >= 2)
     .map((t) => Prisma.sql`p."searchText" LIKE ${`%${t}%`}`);
 
+  // How many of the words are in the part's NAME, not just somewhere in its
+  // description or references: "huile 5w30" must put the 5W30 oils above a
+  // water pump whose description mentions an oil. Names first, then the
+  // similarity score.
+  const nameHits = parsed.tokens
+    .filter((t) => t.length >= 2)
+    .map((t) => Prisma.sql`(lower(unaccent(p.name)) LIKE ${`%${t}%`})::int`);
+  const inName = nameHits.length ? Prisma.join(nameHits, " + ") : Prisma.sql`0`;
+
   if (tokenConditions.length > 0) {
     const rows = await prisma.$queryRaw<{ id: string; score: number }[]>`
       SELECT p.id, word_similarity(${parsed.fuzzyText}, p."searchText")::float8 AS score
       FROM "Product" p
       WHERE p.active AND ${Prisma.join(tokenConditions, " AND ")}
-      ORDER BY score DESC,
+      ORDER BY (${inName}) DESC,
+               score DESC,
                (p."stockQty" > 0) DESC,
                p."isTopSeller" DESC,
                p."priceSell" ASC

@@ -37,6 +37,13 @@ export async function GET(request: NextRequest) {
       const engine = params.get("engine");
       const pageParam = params.get("page");
       const brand = params.get("brand");
+      const sortParam = params.get("sort");
+      const sort = sortParam === "price_asc" || sortParam === "price_desc" ? sortParam : undefined;
+      const inStockOnly = params.get("inStock") === "1";
+      // Up to twenty ids, each shaped like one; anything else is a caller bug.
+      const idsParam = params.get("ids");
+      const ids = idsParam ? idsParam.split(",").filter(Boolean) : undefined;
+      if (ids && (ids.length > 20 || ids.some((x) => !/^[a-z0-9]{10,40}$/i.test(x)))) return fail("bad_request", PUBLIC);
 
       // `fits=1` narrows the page to parts with a fitment row for that
       // engine. Only meaningful alongside `engine`; asking for it without one
@@ -65,6 +72,9 @@ export async function GET(request: NextRequest) {
         engineId: parsed.engine?.success ? parsed.engine.data : undefined,
         fitsEngineOnly: fits,
         brandSlug: parsed.brand?.success ? parsed.brand.data : undefined,
+        sort,
+        inStockOnly,
+        ids,
         page: parsed.page?.success ? parsed.page.data : 1,
       });
 
