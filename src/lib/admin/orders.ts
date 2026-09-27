@@ -114,6 +114,7 @@ export async function adminOrderDetail(orderId: string) {
       items: { orderBy: { id: "asc" } },
       history: { orderBy: { createdAt: "asc" } },
       user: { select: { email: true } },
+      review: { select: { stars: true, comment: true, updatedAt: true } },
     },
   });
   if (!o) return null;
@@ -164,5 +165,7 @@ export async function adminOrderDetail(orderId: string) {
       total: toNumber(o.total),
     },
     history: o.history.map((h) => ({ status: h.status, at: h.createdAt.toISOString(), note: h.note })),
+    /** The customer's rating once delivered; null until they give one. */
+    review: o.review ? { stars: o.review.stars, comment: o.review.comment, at: o.review.updatedAt.toISOString() } : null,
   };
 }

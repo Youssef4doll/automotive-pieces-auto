@@ -76,7 +76,7 @@ this wrapper, caught by testing it standalone rather than only through `npm`.
 
 ## 2. The test battery
 
-36 Playwright suites, 1,422 checks at the last full green run, driving real
+36 Playwright suites (37 with e2e-promo-codes, added since), 1,422 checks at the last full green run, driving real
 browsers against a real database. They are the main safety net and they have
 caught more real bugs than they have cost.
 
@@ -719,6 +719,13 @@ it means re-adding the moderation queue with it, because that queue was the
 only publish *and* take-down path, and a public writable surface with neither
 is worse than no reviews.
 
+*September 2026:* the app now asks for a **rating of a delivered order**
+(`OrderReview`, §5.gg). That is not this feature coming back: it is written
+only with the order's own key, only once the shop marked it DELIVERED, and it
+is shown to the shop alone (Admin → Avis, the order page) — nothing is
+published, so there is nothing to moderate. Publishing any of it would bring
+this paragraph back into force.
+
 ### 5.z Cloudflare — looked at, and not added
 
 Asked for directly. The answer is no, for a reason that is not a judgement
@@ -1044,6 +1051,63 @@ e-mail. The owner gets the usual e-mail with the photo count.
 
 **Cache.** `Cache.catalogue` is now `s-maxage=30, stale-while-revalidate=300`
 (it was 300/3600): phones were seeing prices and promotions minutes late.
+
+### 5.gg Before the real data arrives: promo codes, push, ratings, crash reports (September 2026)
+
+The owner's "build these before the real data arrives" list, website side.
+The app side is its ARCHITECTURE §21.
+
+**Promo codes** (`PromoCode`, migration `20260927140000_promo_codes`;
+`Order.discount`, `Order.promoCode`, `Order.promoCodeId`). Created in
+**Admin → Codes promo**: percent (max 90) or dinars off the *parts*, optional
+minimum basket, dates (Tunis days) and total uses. A code is never edited
+after creation — switch it off and make another — because orders record it.
+Judged in one place, `lib/promo.ts judgePromo` over `lib/promo-rules.ts`
+(tested): by the cart quote, by the website checkout's "Appliquer"
+(`checkPromoCode`, which re-prices the basket from ids itself) and again by
+`createOrder` inside the transaction with the code's row `FOR UPDATE`, so the
+last use of a limited code cannot be taken twice. Uses are counted from the
+non-cancelled orders that carry the code, not a counter. The discount comes
+off before delivery is worked out; every document (confirmation, reçu/facture,
+account page, admin order, e-mails, app) shows it, and the TVA breakdown is
+computed on the parts *after* it. Codes that do not exist are rate-limited
+(`LIMITS.promoMiss`, 10 per 15 minutes per caller, misses only). Suite:
+`scripts/e2e-promo-codes.mjs`.
+
+**Free-delivery suggestion.** The cart quote returns `suggestion`: the
+cheapest on-shelf part that closes the gap to free delivery, first from the
+shop's product links to parts in the basket, then from VERIFIED fits for the
+customer's engine; never a part that does not fit, never when the gap is more
+than half the threshold, never without a link or a car to go on.
+
+**Packs.** `GET /api/v1/catalogue/products?packs=1` lists products whose
+`specs` hold `packContents` (the shop's own bundles).
+
+**Push notifications** (migration `20260927160000_push_alerts_reviews`).
+`OrderPushToken` (a phone, an order, its language) is registered with the
+order's own key — `POST|DELETE /api/v1/orders/{ref}/push`, same access rule
+as reading the order (`lib/orders/request-access.ts`). `setOrderStatus` pushes
+each change through Expo (`lib/push.ts`, copy in `lib/push-copy.ts`, tested):
+confirmed, ready (pickup only), shipped, delivered, cancelled — never a date.
+A customer cancelling on their phone is not pushed about it. **Back in stock**:
+`StockAlert` via `POST|DELETE /api/v1/products/{slug}/stock-alert` (refused
+for a part already on the shelf); `notifyBackInStock` runs after every stock
+write — adjustment, inventory count, product form, publishing, import — and
+marks an alert sent only when Expo accepted it. Expo needs no key; set
+`EXPO_ACCESS_TOKEN` if the Expo project turns on enhanced push security, and
+`PUSH_DISABLED=1` to silence sending (tests, staging). Tokens Expo reports as
+gone are deleted. Everything is best-effort: a push failure never blocks a
+status change.
+
+**Ratings** (`OrderReview`, 1–5 enforced by a CHECK). `POST
+/api/v1/orders/{ref}/review`, DELIVERED only (409 `not_delivered` before),
+sending again replaces it. Shown on the admin order page, in the staff API's
+order detail and in **Admin → Avis** (average only from five ratings). Not
+public — see §5.y.
+
+**App errors.** Admin → Analytics now lists the phone app's `app_error`
+(an error screen was shown) and `app_crash` (an error nothing caught),
+14 days, one line per message.
 
 ## 6. Working on it
 

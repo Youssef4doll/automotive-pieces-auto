@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAnalyticsData } from "@/lib/data/admin";
 import { getUnmetTotals } from "@/lib/data/deep-analytics";
+import { prisma } from "@/lib/prisma";
 import UnmetDemandPaged from "@/components/admin/UnmetDemandPaged";
 
 export const metadata = { title: "Analytics" };
@@ -25,8 +26,30 @@ const EVENT_LABELS: Record<string, string> = {
   whatsapp_clicked: "Clics WhatsApp",
 };
 
+/**
+ * The phone app's errors, last 14 days, one line per distinct message:
+ * `app_error` (a screen threw and the error screen replaced it) and
+ * `app_crash` (an error no screen caught — services/crash in the app).
+ */
+async function appErrors() {
+  return prisma.$queryRaw<{ message: string; kind: string; n: bigint; sessions: bigint; last: Date; version: string | null; platform: string | null }[]>`
+    SELECT COALESCE(properties->>'message', '(sans message)') AS message,
+           name AS kind,
+           COUNT(*) AS n,
+           COUNT(DISTINCT "sessionId") AS sessions,
+           MAX("createdAt") AS last,
+           MAX(properties->>'appVersion') AS version,
+           MAX(properties->>'platform') AS platform
+    FROM "AnalyticsEvent"
+    WHERE name IN ('app_error', 'app_crash') AND "createdAt" > now() - interval '14 days'
+    GROUP BY 1, 2
+    ORDER BY MAX("createdAt") DESC
+    LIMIT 20
+  `;
+}
+
 export default async function AnalyticsPage() {
-  const [data, unmet] = await Promise.all([getAnalyticsData(), getUnmetTotals()]);
+  const [data, unmet, errors] = await Promise.all([getAnalyticsData(), getUnmetTotals(), appErrors()]);
 
   const kpis = [
     { label: "Événements (30j)", value: data.totalEvents.toLocaleString("fr-TN") },
@@ -61,6 +84,31 @@ export default async function AnalyticsPage() {
           because a shop can be losing sales before it has any traffic worth
           charting. */}
       <UnmetDemandPaged totalLines={unmet.lines} totalSearches={unmet.searches} />
+
+      <section className="p-5 rounded-xl bg-white border border-navy-900/10 shadow-sm">
+        <h2 className="font-display font-bold uppercase tracking-wide text-sm text-navy-950 mb-1">Erreurs de l&rsquo;app</h2>
+        <p className="text-xs text-navy-900/45 mb-3">
+          14 derniers jours. « Écran » : une page a planté et l&rsquo;écran d&rsquo;erreur l&rsquo;a remplacée. « Hors écran » : une erreur
+          qu&rsquo;aucune page n&rsquo;a rattrapée.
+        </p>
+        {errors.length === 0 ? (
+          <p className="text-sm text-navy-900/40">Aucune erreur signalée.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-navy-900/8">
+            {errors.map((e) => (
+              <li key={`${e.kind}-${e.message}`} className="py-2 flex flex-col gap-0.5">
+                <span className="font-mono text-xs text-navy-950 break-all">{e.message}</span>
+                <span className="text-xs text-navy-900/45">
+                  {e.kind === "app_crash" ? "Hors écran" : "Écran"} · {Number(e.n)} fois · {Number(e.sessions)} appareil(s) · dernière{" "}
+                  {new Date(e.last).toLocaleString("fr-FR")}
+                  {e.platform ? ` · ${e.platform}` : ""}
+                  {e.version ? ` ${e.version}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {data.totalEvents === 0 ? (
         <div className="p-8 rounded-xl bg-white border border-navy-900/10 text-center">
