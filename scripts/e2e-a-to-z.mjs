@@ -150,7 +150,7 @@ check("product stored in the database", !!created, created?.slug);
 check("price stored exactly", Number(created?.priceSell) === 149.9, String(created?.priceSell));
 check("stock stored", created?.stockQty === 7);
 check("filed under the new subcategory", created?.categoryId === subCat?.id);
-check("active by default so shoppers can see it", created?.active === true);
+check("saved offline until it is published", created?.active === false);
 
 console.log("\n[3] ADMIN PHOTOGRAPHS IT");
 await admin.goto(`${BASE}/admin/stock/${created.id}`);
@@ -159,6 +159,14 @@ await admin.setInputFiles('input[type="file"]', [`${PICS}/pad-front.png`, `${PIC
 await admin.waitForTimeout(2500);
 const shots = await prisma.productImage.findMany({ where: { productId: created.id }, orderBy: { order: "asc" }, select: { id: true } });
 check("photos attached", shots.length === 2, `${shots.length}`);
+// Brand and photo in place: the preview's checks pass and « Publier » puts it on sale.
+await admin.reload();
+await admin.waitForTimeout(1200);
+const publish = admin.getByRole("button", { name: /^Publier/ });
+check("« Publier » is offered once brand and photo are in", await publish.isEnabled().catch(() => false));
+if (await publish.isEnabled().catch(() => false)) await publish.click();
+await admin.waitForTimeout(1500);
+check("published: on sale for shoppers", (await prisma.product.findUnique({ where: { id: created.id }, select: { active: true } }))?.active === true);
 
 console.log("\n[4] A NEW CUSTOMER REGISTERS");
 const shopCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });

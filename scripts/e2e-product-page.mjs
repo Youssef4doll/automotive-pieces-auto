@@ -381,7 +381,9 @@ console.log("\n[8] WHAT THE SOURCE MUST AND MUST NOT SAY");
   const availability = read("src/lib/availability.ts");
   check("a delay is only ever quoted when the shop has set one", availability.includes("leadTime?.trim() || null"));
 
-  const orders = read("src/app/actions/orders.ts");
+  // The order itself is written by lib/orders/place (shared with the app's
+  // checkout since September 23); the website's action only calls it.
+  const orders = read("src/lib/orders/place.ts");
   check(
     "only an unsupplyable part refuses an order",
     /supply === "UNAVAILABLE"/.test(orders) && !/Stock insuffisant/.test(orders),
