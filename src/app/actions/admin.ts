@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { canPublish, publishChecks } from "@/lib/publish-checks";
 import { requireAdmin } from "@/lib/session";
 import { updateSettings, DEFAULT_SETTINGS, type SettingsMap } from "@/lib/settings";
 import { OrderStatus } from "@prisma/client";
@@ -59,7 +60,16 @@ const productSchema = z.object({
  * whole entry.
  */
 export type ProductFormState =
-  | { error?: string; ok?: boolean; field?: string; values?: Record<string, string> }
+  | {
+      error?: string;
+      ok?: boolean;
+      field?: string;
+      values?: Record<string, string>;
+      /** Set on create: the new part's id, so the form can open its preview. */
+      createdId?: string;
+      /** Saved, but kept offline: what stops it being published. */
+      draftReasons?: string[];
+    }
   | undefined;
 
 /** Everything the admin typed, minus the file inputs, so it can be given back. */
@@ -222,7 +232,9 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
           lowStockThreshold: data.lowStockThreshold,
           supply: data.supply ?? "ON_ORDER",
           isTopSeller: !!data.isTopSeller,
-          active: data.active ?? true,
+          // Every new part starts offline and opens on its preview; it goes
+          // on sale from there, once the checks pass (lib/publish-checks).
+          active: false,
           axle: (data.axle || null) as never,
           side: (data.side || null) as never,
         },
@@ -255,8 +267,51 @@ export async function upsertProduct(_prev: ProductFormState, formData: FormData)
     };
   }
 
+  // An edit may not put on sale a part that fails the publishing checks.
+  let draftReasons: string[] | undefined;
+  if (data.id && (data.active ?? true)) {
+    const checks = await checksFor(productId);
+    if (!canPublish(checks)) {
+      await prisma.product.update({ where: { id: productId }, data: { active: false } });
+      draftReasons = checks.filter((c) => c.blocking).map((c) => c.message);
+    }
+  }
+
   revalidateProductSurfaces();
-  return { ok: true, error: photoWarning ?? undefined };
+  return { ok: true, error: photoWarning ?? undefined, createdId: data.id ? undefined : productId, draftReasons };
+}
+
+/** The publishing checks for a saved part (lib/publish-checks). */
+export async function checksFor(productId: string) {
+  const [p, brands] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id: productId },
+      select: { name: true, priceSell: true, priceBuy: true, brand: { select: { name: true } }, _count: { select: { images: true } } },
+    }),
+    prisma.brand.findMany({ select: { name: true } }),
+  ]);
+  if (!p) return [];
+  return publishChecks({
+    name: p.name,
+    priceSell: Number(p.priceSell),
+    priceBuy: p.priceBuy == null ? null : Number(p.priceBuy),
+    brandName: p.brand?.name ?? null,
+    imageCount: p._count.images,
+    allBrands: brands.map((b) => b.name),
+  });
+}
+
+/** Put a part on sale, if nothing blocks it; or take it off. */
+export async function setPublished(productId: string, published: boolean): Promise<{ ok?: string; error?: string }> {
+  await assertAdmin();
+  if (published) {
+    const checks = await checksFor(productId);
+    if (!canPublish(checks)) return { error: checks.filter((c) => c.blocking).map((c) => c.message).join(" ") };
+  }
+  await prisma.product.update({ where: { id: productId }, data: { active: published } });
+  revalidateProductSurfaces();
+  revalidatePath(`/admin/stock/${productId}`);
+  return { ok: published ? "En vente." : "Retiré de la vente." };
 }
 
 /**

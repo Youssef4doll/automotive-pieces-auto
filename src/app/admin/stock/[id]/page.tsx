@@ -4,10 +4,21 @@ import { toNumber } from "@/lib/money";
 import ProductForm from "@/components/admin/ProductForm";
 import ProductImageManager from "@/components/admin/ProductImageManager";
 import FitmentEditor, { type FitMake } from "@/components/admin/FitmentEditor";
+import ProductLinksEditor from "@/components/admin/ProductLinksEditor";
+import PublishPanel from "@/components/admin/PublishPanel";
+import { checksFor } from "@/app/actions/admin";
+import { formatTND } from "@/lib/money";
 import { formatOwnedReferenceList, groupOeReferences } from "@/lib/reference";
 
-export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditProductPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ nouveau?: string }>;
+}) {
   const { id } = await params;
+  const { nouveau } = await searchParams;
   const [product, categories, brands, makes] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
@@ -16,6 +27,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         references: { select: { type: true, brand: true, raw: true, normalized: true } },
         fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } },
         oldSlugs: { orderBy: { createdAt: "desc" }, select: { slug: true } },
+        links: { orderBy: { order: "asc" }, select: { linked: { select: { id: true, name: true, sku: true, active: true } } } },
       },
     }),
     prisma.category.findMany({ where: { parentId: { not: null } }, include: { parent: true }, orderBy: { name: "asc" } }),
@@ -42,6 +54,9 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     }),
   ]);
   if (!product) notFound();
+  const checks = await checksFor(product.id);
+  const brandName = brands.find((b) => b.id === product.brandId)?.name ?? null;
+  const family = await prisma.category.findUnique({ where: { id: product.categoryId }, select: { slug: true, parent: { select: { slug: true } } } });
 
   return (
     <div className="flex flex-col gap-5">
@@ -62,6 +77,23 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="rounded-xl border border-navy-900/10 bg-white p-4">
+        <PublishPanel
+          productId={product.id}
+          active={product.active}
+          checks={checks}
+          fresh={nouveau === "1"}
+          preview={{
+            name: product.name,
+            brand: brandName,
+            sku: product.sku,
+            price: formatTND(toNumber(product.priceSell)),
+            imageUrl: product.images[0] ? `/api/images/${product.images[0].id}` : `/api/part-art/${family?.parent?.slug ?? family?.slug ?? "freinage"}.svg`,
+            illustration: product.images.length === 0,
+          }}
+        />
+      </div>
+
+      <div className="rounded-xl border border-navy-900/10 bg-white p-4">
         <ProductImageManager productId={product.id} images={product.images} fallbackUrl={product.imageUrl} />
       </div>
 
@@ -71,6 +103,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           makes={makes as FitMake[]}
           initialEngineIds={product.fitments.map((f) => f.engineId)}
         />
+      </div>
+
+      <div className="rounded-xl border border-navy-900/10 bg-white p-4">
+        <ProductLinksEditor productId={product.id} links={product.links.map((l) => l.linked)} />
       </div>
 
       <ProductForm

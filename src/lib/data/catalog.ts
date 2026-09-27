@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { confirmedFitWhere, engineFuelOf } from "@/lib/data/fitment";
+import { confirmedFitWhere, engineFuelOf, fitContext } from "@/lib/data/fitment";
 import { CATALOG_TAG, CATALOG_TTL } from "@/lib/cache";
 import { toNumber } from "@/lib/money";
 import { normalizeReference, groupOeReferences } from "@/lib/reference";
@@ -860,7 +860,8 @@ export async function listAppProducts(options: {
     ]);
   }
 
-  const products = rows.map((p) => toAppProduct(p, options.engineId, engineFuel));
+  const fit = await fitContext(options.engineId, rows.map((r) => r.id));
+  const products = rows.map((p) => toAppProduct(p, options.engineId, fit));
 
   return { products, total, page, perPage, hasMore: page * perPage < total };
 }

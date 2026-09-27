@@ -126,6 +126,26 @@ try {
     check("nothing was written", (await prisma.product.count({ where: { sku: `${SKU}-BIS` } })) === 0);
   }
 
+  console.log("\n[3b] A NEW PART STARTS OFFLINE, ON ITS PREVIEW");
+  {
+    const draft = await prisma.product.findUnique({ where: { sku: SKU }, select: { id: true, active: true } });
+    check("a new part is saved offline", draft && draft.active === false);
+    await p.goto(`${BASE}/admin/stock/${draft.id}`);
+    await p.waitForTimeout(1200);
+    check("its page opens on the preview and the checks", (await p.getByText("Aperçu et mise en vente").count()) > 0);
+    check("without a brand it cannot be published", (await p.getByText("Aucune marque choisie.").count()) > 0 && !(await p.getByRole("button", { name: /^Publier/ }).isEnabled()));
+    // Give it a brand whose name the title does not contradict, then publish.
+    const brand = await prisma.brand.findFirst({ where: { name: "Bosch" }, select: { id: true } }) ?? await prisma.brand.findFirst({ select: { id: true } });
+    await prisma.product.update({ where: { id: draft.id }, data: { brandId: brand.id } });
+    await p.reload();
+    await p.waitForTimeout(1200);
+    const publish = p.getByRole("button", { name: /^Publier/ });
+    if (await publish.isEnabled()) await publish.click();
+    await p.waitForTimeout(1500);
+    const live = await prisma.product.findUnique({ where: { sku: SKU }, select: { active: true } });
+    check("« Publier » puts it on sale once the checks pass", live.active === true);
+  }
+
   console.log("\n[4] RENAMING A PART MOVES ITS ADDRESS AND KEEPS THE OLD ONE ALIVE");
   {
     const before = await prisma.product.findUnique({ where: { sku: SKU }, select: { id: true, slug: true } });

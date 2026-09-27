@@ -2,7 +2,8 @@ import "server-only";
 import type { Prisma, SupplyMode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fuelContradicts } from "@/lib/fitment-rules";
-import { engineFuelOf } from "@/lib/data/fitment";
+import { fitContext, type FitContext } from "@/lib/data/fitment";
+import { fitVerdict, type FitmentVerdict } from "@/lib/fitment-verdict";
 import { availabilityOf } from "@/lib/availability";
 import { toNumber } from "@/lib/money";
 import { getSettings } from "@/lib/settings";
@@ -36,7 +37,7 @@ import { taxPolicy } from "@/lib/tax";
 // different things about the same brake pad.
 // ---------------------------------------------------------------------------
 
-export type FitmentVerdict = "FITS" | "UNKNOWN" | "DOES_NOT_FIT";
+export type { FitmentVerdict } from "@/lib/fitment-verdict";
 
 export type AppProduct = {
   id: string;
@@ -101,23 +102,20 @@ type AppProductRow = {
   fitments?: { id: string; confidence: "VERIFIED" | "DERIVED" }[];
 };
 
-export function toAppProduct(p: AppProductRow, engineId?: string, engineFuel?: string | null): AppProduct {
+export function toAppProduct(p: AppProductRow, engineId?: string, fit?: FitContext): AppProduct {
   const state = availabilityOf({ stockQty: p.stockQty, supply: p.supply });
 
+  // The verdict, from evidence (lib/fitment-verdict): this engine's own row,
+  // the same model, the same engine code and fuel, and the fuel rule.
   let fitment: FitmentVerdict | null = null;
   if (engineId) {
-    // No fitment rows at all is UNKNOWN, never "fits everything". That
-    // distinction is the whole compatibility feature: most of this catalogue
-    // has no fitment data, and saying so is the honest answer.
-    //
-    // Two things no row can overrule: a part that needs the other fuel does
-    // not fit (lib/fitment-rules — a spark plug on a diesel), and a DERIVED
-    // row is a lead to check, not a confirmation, so it reads UNKNOWN.
-    const row = p.fitments?.[0];
-    if (fuelContradicts(p.category.slug, p.name, engineFuel)) fitment = "DOES_NOT_FIT";
-    else if (p._count.fitments === 0) fitment = "UNKNOWN";
-    else if (!row) fitment = "DOES_NOT_FIT";
-    else fitment = row.confidence === "VERIFIED" ? "FITS" : "UNKNOWN";
+    const near = fit?.near.get(p.id);
+    fitment = fitVerdict({
+      mine: p.fitments?.[0]?.confidence ?? null,
+      sameModel: near?.sameModel ?? false,
+      sameCode: near?.sameCode ?? false,
+      wrongFuel: fuelContradicts(p.category.slug, p.name, fit?.fuel),
+    });
   }
 
   const uploaded = p.images[0]?.id;
@@ -210,7 +208,6 @@ export async function searchForApp(
     }),
   ]);
 
-  const engineFuel = await engineFuelOf(options.engineId);
   const rows = hits.length
     ? await prisma.product.findMany({
         where: { id: { in: hits.map((h) => h.id) } },
@@ -218,12 +215,13 @@ export async function searchForApp(
       })
     : [];
   const byId = new Map(rows.map((r) => [r.id, r]));
+  const fit = await fitContext(options.engineId, rows.map((r) => r.id));
 
   // Back into rank order, which Postgres cannot preserve through an `in`.
   const products = hits
     .map((h) => {
       const row = byId.get(h.id);
-      return row ? { ...toAppProduct(row, options.engineId, engineFuel), match: MATCH[h.tier] ?? "text" } : null;
+      return row ? { ...toAppProduct(row, options.engineId, fit), match: MATCH[h.tier] ?? "text" } : null;
     })
     .filter((p): p is AppProduct & { match: AppSearchMatch } => p !== null);
 
@@ -301,6 +299,12 @@ export type AppProductDetail = AppProduct & {
   oeGroups: OeGroup[];
   aftermarketRefs: { type: string; brand: string; raw: string }[];
   packContents: { name: string; slug: string; price: number }[];
+  /**
+   * "Souvent achetés ensemble": the parts the shop linked to this one, then
+   * parts that were actually in the same order at least twice. Never a
+   * guess — an empty list when neither exists. At most four, on sale only.
+   */
+  boughtTogether: AppProduct[];
   compatibility: {
     /** Every engine this part is listed for. The list below may be shorter. */
     total: number;
@@ -360,7 +364,7 @@ export async function getAppProduct(slug: string, engineId?: string): Promise<Ap
     getSettings(),
   ]);
   if (!row) return null;
-  const engineFuel = await engineFuelOf(engineId);
+  const fit = await fitContext(engineId, [row.id]);
 
   const [fitments, packContents] = await Promise.all([
     prisma.productFitment.findMany({
@@ -441,7 +445,7 @@ export async function getAppProduct(slug: string, engineId?: string): Promise<Ap
       images: row.images.slice(0, 1),
     },
     engineId,
-    engineFuel,
+    fit,
   );
 
   return {
@@ -463,10 +467,41 @@ export async function getAppProduct(slug: string, engineId?: string): Promise<Ap
       .filter((r) => r.type !== "OEM")
       .map((r) => ({ type: r.type, brand: r.brand, raw: r.raw })),
     packContents,
+    boughtTogether: await boughtTogether(row.id, engineId),
     compatibility: { total: vehicles.length, vehicles: vehicles.slice(0, COMPATIBILITY_SHOWN) },
     manufacturer,
     leadTime: settings.supplier_lead_time?.trim() || null,
   };
+}
+
+const BOUGHT_TOGETHER = 4;
+/** Orders a pair must share before "bought together" says so. One is a coincidence. */
+const CO_PURCHASE_MIN = 2;
+
+async function boughtTogether(productId: string, engineId?: string): Promise<AppProduct[]> {
+  const [links, pairs] = await Promise.all([
+    prisma.productLink.findMany({ where: { productId, linked: { active: true } }, orderBy: { order: "asc" }, select: { linkedId: true }, take: BOUGHT_TOGETHER }),
+    prisma.$queryRaw<{ productId: string; n: bigint }[]>`
+      SELECT b."productId" AS "productId", COUNT(DISTINCT a."orderId") AS n
+      FROM "OrderItem" a
+      JOIN "OrderItem" b ON b."orderId" = a."orderId" AND b."productId" IS NOT NULL AND b."productId" <> a."productId"
+      JOIN "Order" o ON o.id = a."orderId" AND o.status <> 'CANCELLED'
+      WHERE a."productId" = ${productId}
+      GROUP BY b."productId"
+      HAVING COUNT(DISTINCT a."orderId") >= ${CO_PURCHASE_MIN}
+      ORDER BY n DESC
+      LIMIT ${BOUGHT_TOGETHER}
+    `,
+  ]);
+  const ids = [...new Set([...links.map((l) => l.linkedId), ...pairs.map((p) => p.productId)])].slice(0, BOUGHT_TOGETHER);
+  if (!ids.length) return [];
+  const rows = await prisma.product.findMany({ where: { id: { in: ids }, active: true }, select: appProductSelect(engineId) });
+  const fit = await fitContext(engineId, rows.map((r) => r.id));
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return ids.flatMap((id) => {
+    const r = byId.get(id);
+    return r ? [toAppProduct(r, engineId, fit)] : [];
+  });
 }
 
 /** A pack's contents by SKU, in the order the pack declares them. */
@@ -541,7 +576,7 @@ export async function quoteAppCart(input: {
   const method = input.deliveryMethod ?? "DELIVERY";
   const ids = [...new Set(input.items.map((i) => i.productId))];
 
-  const [rows, settings, engineFuel] = await Promise.all([
+  const [rows, settings] = await Promise.all([
     ids.length
       ? prisma.product.findMany({
           where: { id: { in: ids }, active: true },
@@ -549,14 +584,14 @@ export async function quoteAppCart(input: {
         })
       : Promise.resolve([]),
     getSettings(),
-    engineFuelOf(input.engineId),
   ]);
   const byId = new Map(rows.map((r) => [r.id, r]));
+  const fit = await fitContext(input.engineId, rows.map((r) => r.id));
 
   const lines: AppCartLine[] = input.items.map((item) => {
     const row = byId.get(item.productId);
     if (!row) return { productId: item.productId, qty: item.qty, product: null, lineTotal: 0, buyable: false, backorder: false };
-    const product = toAppProduct(row, input.engineId, engineFuel);
+    const product = toAppProduct(row, input.engineId, fit);
     const buyable = product.availability !== "UNAVAILABLE";
     return {
       productId: item.productId,

@@ -272,6 +272,9 @@ model Product {
   orderItems OrderItem[]
   stockMoves StockMovement[]
   images     ProductImage[]
+  /// "Souvent achetés ensemble", as the shop set it: this part → the others.
+  links      ProductLink[] @relation("ProductLinks")
+  linkedFrom ProductLink[] @relation("ProductLinkedFrom")
 
   @@index([categoryId])
   @@index([brandId])
@@ -823,4 +826,20 @@ model AnalyticsEvent {
   @@index([name])
   @@index([sessionId])
   @@index([createdAt])
+}
+
+/// A part the shop recommends with another — a disc with its pads, an oil
+/// with its filter. Set in /admin/stock/[id]; the product page shows these
+/// first, then parts actually bought together in past orders.
+model ProductLink {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation("ProductLinks", fields: [productId], references: [id], onDelete: Cascade)
+  linkedId  String
+  linked    Product  @relation("ProductLinkedFrom", fields: [linkedId], references: [id], onDelete: Cascade)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([productId, linkedId])
+  @@index([productId])
 }

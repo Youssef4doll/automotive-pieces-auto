@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { revalidateCatalog } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
+import { publishChecks } from "@/lib/publish-checks";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/slug";
 import { normalizeReference } from "@/lib/reference";
@@ -46,6 +47,20 @@ export async function stageImport(_prev: ImportState, formData: FormData): Promi
   }
 
   const parsed = flagDuplicates(rows.map((r, i) => normalizeRow(r, map, i + 2)));
+
+  // The same publishing checks as the admin form (lib/publish-checks): an
+  // insane price, a missing brand or a title naming another brand stops the
+  // row; no photo is said (an import carries none) but lets it through.
+  const knownBrands = (await prisma.brand.findMany({ select: { name: true } })).map((b) => b.name);
+  const allBrands = [...new Set([...knownBrands, ...parsed.map((r) => r.brand).filter((b): b is string => Boolean(b))])];
+  for (const r of parsed) {
+    for (const c of publishChecks({ name: r.name, priceSell: r.priceSell ?? 0, priceBuy: r.priceBuy ?? null, brandName: r.brand ?? null, imageCount: 0, allBrands })) {
+      if (c.key === "photo") continue;
+      if (c.key === "price" && (r.priceSell ?? 0) <= 0) continue; // already refused by the parser
+      if (!r.errors.includes(c.message)) r.errors.push(c.message);
+    }
+    r.warnings = r.warnings.filter((w) => w !== "Prix d'achat supérieur au prix de vente");
+  }
 
   // Which of these already exist decides created vs updated in the preview.
   const skus = parsed.map((r) => r.sku).filter(Boolean);

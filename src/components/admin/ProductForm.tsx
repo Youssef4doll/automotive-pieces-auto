@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { upsertProduct, type ProductFormState } from "@/app/actions/admin";
 import SearchableSelect from "./SearchableSelect";
 
@@ -106,6 +107,12 @@ export default function ProductForm({
   useEffect(() => {
     if (state?.ok && photoRef.current) photoRef.current.value = "";
   }, [state]);
+  // A new part is saved offline and opens on its own page, where its preview
+  // and the publishing checks are (PublishPanel).
+  const router = useRouter();
+  useEffect(() => {
+    if (state?.createdId) router.push(`/admin/stock/${state.createdId}?nouveau=1#publication`);
+  }, [state, router]);
 
   /** Highlight the exact field the server refused, not the whole form. */
   const bad = (name: string) => (state?.error && state.field === name ? "border-red-500 bg-red-50" : "border-navy-900/15");
@@ -297,9 +304,14 @@ export default function ProductForm({
           {state.values && <span className="block text-red-600/80 mt-0.5">Rien n&apos;a été perdu — corrigez et réessayez.</span>}
         </p>
       )}
-      {state?.ok && !state.error && (
+      {state?.ok && !state.error && !state.draftReasons && (
         <p role="status" className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
           Enregistré ✓
+        </p>
+      )}
+      {state?.draftReasons && (
+        <p role="status" className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
+          Enregistré, mais laissé hors ligne : {state.draftReasons.join(" ")}
         </p>
       )}
 
