@@ -42,7 +42,7 @@ async function load(params: Params) {
 
   const products = await prisma.product.findMany({
     where: { id: { in: ids } },
-    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
+    include: { brand: true, category: true, fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } }, ...primaryImageSelect },
   });
 
   // Whose number this is. Somebody arriving here typed a number off a part

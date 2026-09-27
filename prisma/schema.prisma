@@ -693,7 +693,9 @@ enum ContactStatus {
 model ContactMessage {
   id         String        @id @default(cuid())
   name       String
-  email      String
+  /// Null for a request sent from the app with a phone number only — the
+  /// phone is how most customers here are reached.
+  email      String?
   phone      String?
   subject    String
   body       String
@@ -708,9 +710,24 @@ model ContactMessage {
   vehicle    String?
   handledAt  DateTime?
   createdAt  DateTime      @default(now())
+  photos     ContactPhoto[]
 
   @@index([status, createdAt])
   @@index([userId])
+}
+
+/// A photograph a customer sent with a question — "which part is this?".
+/// Private: served only to an admin (/api/admin/contact-photos/[id]), never
+/// through the public /api/images route the catalogue uses.
+model ContactPhoto {
+  id        String         @id @default(cuid())
+  messageId String
+  message   ContactMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  data      Bytes
+  mime      String
+  createdAt DateTime       @default(now())
+
+  @@index([messageId])
 }
 
 model NewsletterSubscriber {

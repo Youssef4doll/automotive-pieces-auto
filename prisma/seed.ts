@@ -1,4 +1,5 @@
 import { PrismaClient, OrderStatus } from "@prisma/client";
+import { fuelContradicts } from "../src/lib/fitment-rules";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -225,6 +226,9 @@ const VEHICLES: Record<string, { model: string; years: [number, number]; engines
 /** Opt-in: restore demo stock quantities on an existing database. */
 const RESET_STOCK = process.env.SEED_RESET_STOCK === "1";
 
+const NAME_FIXES: Record<string, string> = { Carosserie: "Carrosserie" };
+const displayName = (n: string) => NAME_FIXES[n] ?? n;
+
 async function main() {
   console.log("Seeding categories…");
   const catByName = new Map<string, string>();
@@ -233,8 +237,10 @@ async function main() {
     order += 1;
     const parent = await prisma.category.upsert({
       where: { slug: slugify(family) },
-      update: { name: family, order },
-      create: { name: family, slug: slugify(family), order },
+      // The slug keeps the old spelling so existing links and rows stay
+      // put; the name a customer reads is spelled right.
+      update: { name: displayName(family), order },
+      create: { name: displayName(family), slug: slugify(family), order },
     });
     catByName.set(family, parent.id);
     let subOrder = 0;
@@ -300,11 +306,21 @@ async function main() {
     }
   }
 
-  const allEngineIds = [...engineByKey.values()];
-  function randomEngines(count: number) {
-    const shuffled = [...allEngineIds].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
+  const allEngines = await prisma.vehicleEngine.findMany({ where: { id: { in: [...engineByKey.values()] } }, select: { id: true, fuel: true } });
+  /**
+   * Demo fitments: a few engines per part, never one the part cannot
+   * physically fit (a spark plug on a diesel — lib/fitment-rules). They are
+   * invented for a demo shop, so they are written DERIVED ("to check") and
+   * tagged `seed-demo`; the storefront never shows them as "fits". Local
+   * development and the end-to-end suites need confirmed fits to exercise
+   * that path, and opt in with SEED_DEMO_FITMENTS=verified.
+   */
+  function demoEngines(count: number, categorySlug: string, name: string) {
+    const possible = allEngines.filter((e) => !fuelContradicts(categorySlug, name, e.fuel));
+    const shuffled = [...possible].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count).map((e) => e.id);
   }
+  const DEMO_CONFIDENCE = process.env.SEED_DEMO_FITMENTS === "verified" ? "VERIFIED" : "DERIVED";
 
   console.log(RESET_STOCK ? "Seeding products… (restoring demo stock)" : "Seeding products…");
 
@@ -451,14 +467,27 @@ async function main() {
     productIdBySku.set(p.sku, created.id);
 
     const fitCount = p.engineFitCount ?? 3;
-    const engines = randomEngines(fitCount);
+    const [fam, sub] = p.category.split(">");
+    const engines = demoEngines(fitCount, sub ? slugify(`${fam}-${sub}`) : slugify(fam), p.name);
     for (const engineId of engines) {
       await prisma.productFitment.upsert({
         where: { productId_engineId: { productId: created.id, engineId } },
         update: {},
-        create: { productId: created.id, engineId },
+        create: { productId: created.id, engineId, confidence: DEMO_CONFIDENCE, source: "seed-demo" },
       });
     }
+  }
+
+  // Opted into confirmed demo fits: promote the demo rows already there,
+  // except the physically impossible ones an older seed wrote.
+  if (DEMO_CONFIDENCE === "VERIFIED") {
+    const demo = await prisma.productFitment.findMany({
+      where: { source: "seed-demo" },
+      select: { id: true, engine: { select: { fuel: true } }, product: { select: { name: true, category: { select: { slug: true } } } } },
+    });
+    const ok = demo.filter((f) => !fuelContradicts(f.product.category.slug, f.product.name, f.engine.fuel)).map((f) => f.id);
+    await prisma.productFitment.updateMany({ where: { id: { in: ok } }, data: { confidence: "VERIFIED" } });
+    await prisma.productFitment.deleteMany({ where: { source: "seed-demo", id: { notIn: ok } } });
   }
 
   console.log("Seeding settings…");

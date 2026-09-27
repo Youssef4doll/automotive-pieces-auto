@@ -91,7 +91,7 @@ export async function sendContactMessage(
     {
       id: message.id,
       name: message.name,
-      email: message.email,
+      email: parsed.data.email,
       phone: message.phone,
       subject: message.subject,
       body: message.body,

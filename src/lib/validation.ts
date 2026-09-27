@@ -42,14 +42,22 @@ export function nameProblem(raw: string): string | null {
 }
 
 /**
- * A Tunisian mobile is 8 digits; the country code and separators are the
- * customer's business. Counted rather than pattern-matched, so "+216 20 445
- * 566", "20445566" and "20 44 55 66" are all the same number.
+ * A Tunisian number is 8 digits, first digit 2–9; the country code and the
+ * separators are the customer's business. So "+216 20 445 566", "0021620445566",
+ * "20445566" and "20 44 55 66" are the same number — and "204455661" (nine
+ * digits, which the first version let through) is not a number at all.
  */
+export function tunisianDigits(raw: string): string | null {
+  let d = raw.replace(/\D/g, "");
+  if (d.startsWith("00216")) d = d.slice(5);
+  else if (d.length === 11 && d.startsWith("216")) d = d.slice(3);
+  return /^[2-9]\d{7}$/.test(d) ? d : null;
+}
+
 export function phoneProblem(raw: string): string | null {
   const v = raw.trim();
   if (v.length > 30) return "Ce numéro est trop long.";
-  if (v.replace(/\D/g, "").length < 8) return "Un numéro de téléphone compte 8 chiffres.";
+  if (!tunisianDigits(v)) return "Un numéro tunisien compte 8 chiffres (ex. 20 123 456).";
   return null;
 }
 

@@ -1,6 +1,8 @@
 import "server-only";
 import type { Prisma, SupplyMode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { fuelContradicts } from "@/lib/fitment-rules";
+import { engineFuelOf } from "@/lib/data/fitment";
 import { availabilityOf } from "@/lib/availability";
 import { toNumber } from "@/lib/money";
 import { getSettings } from "@/lib/settings";
@@ -78,7 +80,7 @@ export function appProductSelect(engineId?: string) {
     _count: { select: { fitments: true } },
     // Only the rows matching THIS engine come back, so the verdict is "some
     // row matched" without fetching the part's whole fitment list.
-    ...(engineId ? { fitments: { where: { engineId }, take: 1, select: { id: true } } } : {}),
+    ...(engineId ? { fitments: { where: { engineId }, take: 1, select: { id: true, confidence: true } } } : {}),
   } satisfies Prisma.ProductSelect;
 }
 
@@ -96,10 +98,10 @@ type AppProductRow = {
   category: { slug: string; parent: { slug: string } | null };
   images: { id: string }[];
   _count: { fitments: number };
-  fitments?: { id: string }[];
+  fitments?: { id: string; confidence: "VERIFIED" | "DERIVED" }[];
 };
 
-export function toAppProduct(p: AppProductRow, engineId?: string): AppProduct {
+export function toAppProduct(p: AppProductRow, engineId?: string, engineFuel?: string | null): AppProduct {
   const state = availabilityOf({ stockQty: p.stockQty, supply: p.supply });
 
   let fitment: FitmentVerdict | null = null;
@@ -107,8 +109,15 @@ export function toAppProduct(p: AppProductRow, engineId?: string): AppProduct {
     // No fitment rows at all is UNKNOWN, never "fits everything". That
     // distinction is the whole compatibility feature: most of this catalogue
     // has no fitment data, and saying so is the honest answer.
-    if (p._count.fitments === 0) fitment = "UNKNOWN";
-    else fitment = p.fitments?.length ? "FITS" : "DOES_NOT_FIT";
+    //
+    // Two things no row can overrule: a part that needs the other fuel does
+    // not fit (lib/fitment-rules — a spark plug on a diesel), and a DERIVED
+    // row is a lead to check, not a confirmation, so it reads UNKNOWN.
+    const row = p.fitments?.[0];
+    if (fuelContradicts(p.category.slug, p.name, engineFuel)) fitment = "DOES_NOT_FIT";
+    else if (p._count.fitments === 0) fitment = "UNKNOWN";
+    else if (!row) fitment = "DOES_NOT_FIT";
+    else fitment = row.confidence === "VERIFIED" ? "FITS" : "UNKNOWN";
   }
 
   const uploaded = p.images[0]?.id;
@@ -201,6 +210,7 @@ export async function searchForApp(
     }),
   ]);
 
+  const engineFuel = await engineFuelOf(options.engineId);
   const rows = hits.length
     ? await prisma.product.findMany({
         where: { id: { in: hits.map((h) => h.id) } },
@@ -213,7 +223,7 @@ export async function searchForApp(
   const products = hits
     .map((h) => {
       const row = byId.get(h.id);
-      return row ? { ...toAppProduct(row, options.engineId), match: MATCH[h.tier] ?? "text" } : null;
+      return row ? { ...toAppProduct(row, options.engineId, engineFuel), match: MATCH[h.tier] ?? "text" } : null;
     })
     .filter((p): p is AppProduct & { match: AppSearchMatch } => p !== null);
 
@@ -350,6 +360,7 @@ export async function getAppProduct(slug: string, engineId?: string): Promise<Ap
     getSettings(),
   ]);
   if (!row) return null;
+  const engineFuel = await engineFuelOf(engineId);
 
   const [fitments, packContents] = await Promise.all([
     prisma.productFitment.findMany({
@@ -378,7 +389,11 @@ export async function getAppProduct(slug: string, engineId?: string): Promise<Ap
     resolvePackContents(row.specs),
   ]);
 
-  const vehicles: AppCompatibleVehicle[] = fitments.map((f) => ({
+  // An engine the part cannot physically fit is left out of "compatible
+  // vehicles", whatever its row says (lib/fitment-rules).
+  const vehicles: AppCompatibleVehicle[] = fitments
+    .filter((f) => !fuelContradicts(row.category.slug, row.name, f.engine.fuel))
+    .map((f) => ({
     make: f.engine.model.make.name,
     model: f.engine.model.name,
     engine: f.engine.name,
@@ -426,6 +441,7 @@ export async function getAppProduct(slug: string, engineId?: string): Promise<Ap
       images: row.images.slice(0, 1),
     },
     engineId,
+    engineFuel,
   );
 
   return {
@@ -525,7 +541,7 @@ export async function quoteAppCart(input: {
   const method = input.deliveryMethod ?? "DELIVERY";
   const ids = [...new Set(input.items.map((i) => i.productId))];
 
-  const [rows, settings] = await Promise.all([
+  const [rows, settings, engineFuel] = await Promise.all([
     ids.length
       ? prisma.product.findMany({
           where: { id: { in: ids }, active: true },
@@ -533,13 +549,14 @@ export async function quoteAppCart(input: {
         })
       : Promise.resolve([]),
     getSettings(),
+    engineFuelOf(input.engineId),
   ]);
   const byId = new Map(rows.map((r) => [r.id, r]));
 
   const lines: AppCartLine[] = input.items.map((item) => {
     const row = byId.get(item.productId);
     if (!row) return { productId: item.productId, qty: item.qty, product: null, lineTotal: 0, buyable: false, backorder: false };
-    const product = toAppProduct(row, input.engineId);
+    const product = toAppProduct(row, input.engineId, engineFuel);
     const buyable = product.availability !== "UNAVAILABLE";
     return {
       productId: item.productId,

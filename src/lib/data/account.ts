@@ -40,7 +40,7 @@ export async function getBuyAgain(userId: string, take = 6): Promise<BuyAgainIte
       id: true, name: true, sku: true, slug: true, imageUrl: true,
       priceSell: true, stockQty: true,
       images: { orderBy: { order: "asc" }, take: 1, select: { id: true } },
-      fitments: { select: { engineId: true } },
+      fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } },
     },
   });
 

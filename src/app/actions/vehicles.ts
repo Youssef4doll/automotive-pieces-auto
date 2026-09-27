@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { fuelContradicts } from "@/lib/fitment-rules";
 import { requireAdmin } from "@/lib/session";
 import { readImageFile, mediaAssetIdFromUrl, assetUrl } from "@/lib/image-upload";
 
@@ -285,10 +286,17 @@ export async function setFitment(
   fits: boolean,
 ): Promise<VehicleActionState> {
   await assertAdmin();
-  const product = await prisma.product.findUnique({ where: { id: productId }, select: { slug: true } });
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { slug: true, name: true, category: { select: { slug: true } } },
+  });
   if (!product) return { error: "Produit introuvable." };
 
   if (fits) {
+    const engine = await prisma.vehicleEngine.findUnique({ where: { id: engineId }, select: { fuel: true } });
+    if (fuelContradicts(product.category.slug, product.name, engine?.fuel)) {
+      return { error: `Impossible : cette pièce ne peut pas équiper un moteur ${engine?.fuel?.toLowerCase() ?? ""}.` };
+    }
     await prisma.productFitment.upsert({
       where: { productId_engineId: { productId, engineId } },
       create: { productId, engineId, confidence: "VERIFIED", source: "admin" },
@@ -311,8 +319,14 @@ export async function setModelFitment(
   fits: boolean,
 ): Promise<VehicleActionState> {
   await assertAdmin();
-  const engines = await prisma.vehicleEngine.findMany({ where: { modelId }, select: { id: true } });
-  if (engines.length === 0) return { error: "Ce modèle n'a aucune motorisation." };
+  const all = await prisma.vehicleEngine.findMany({ where: { modelId }, select: { id: true, fuel: true } });
+  if (all.length === 0) return { error: "Ce modèle n'a aucune motorisation." };
+  const part = await prisma.product.findUnique({ where: { id: productId }, select: { name: true, category: { select: { slug: true } } } });
+  // A model's diesel engines are skipped for a spark plug, and so on
+  // (lib/fitment-rules): ticking "the whole model" must not assert the
+  // physically impossible for half of it.
+  const engines = fits && part ? all.filter((e) => !fuelContradicts(part.category.slug, part.name, e.fuel)) : all;
+  if (engines.length === 0) return { error: "Aucune motorisation de ce modèle ne peut recevoir cette pièce (carburant)." };
 
   if (fits) {
     await prisma.productFitment.createMany({
@@ -327,5 +341,10 @@ export async function setModelFitment(
   revalidatePath(`/admin/stock/${productId}`);
   if (product) revalidatePath(`/produit/${product.slug}`);
   revalidatePath("/", "layout");
-  return { ok: fits ? `${engines.length} motorisation(s) ajoutée(s)` : `${engines.length} retirée(s)` };
+  const skipped = all.length - engines.length;
+  return {
+    ok: fits
+      ? `${engines.length} motorisation(s) ajoutée(s)${skipped ? ` · ${skipped} ignorée(s) (carburant incompatible)` : ""}`
+      : `${engines.length} retirée(s)`,
+  };
 }

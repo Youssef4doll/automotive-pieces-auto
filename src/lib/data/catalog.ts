@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { confirmedFitWhere, engineFuelOf } from "@/lib/data/fitment";
 import { CATALOG_TAG, CATALOG_TTL } from "@/lib/cache";
 import { toNumber } from "@/lib/money";
 import { normalizeReference, groupOeReferences } from "@/lib/reference";
@@ -220,7 +221,7 @@ export async function getProductsForCategory(
   const include = {
     brand: true,
     category: true,
-    fitments: { select: { engineId: true } },
+    fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } },
     ...primaryImageSelect,
   };
 
@@ -387,7 +388,7 @@ export const getRelatedProducts = cache(async (categoryId: string, excludeId: st
     // plug, directly under the part's own description. Every other listing
     // includes it; this one was written without it and nothing caught it
     // because the fallback renders perfectly well, just of something else.
-    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
+    include: { brand: true, category: true, fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } }, ...primaryImageSelect },
     take,
   });
   return products.map(serializeProduct);
@@ -401,7 +402,7 @@ export const getTopSellers = cache(async (take = 8) => {
   // out-of-stock top seller only appears if there are not enough to fill it.
   const products = await prisma.product.findMany({
     where: { isTopSeller: true, active: true },
-    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
+    include: { brand: true, category: true, fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } }, ...primaryImageSelect },
   });
   const ranked = [
     ...products.filter((p) => p.stockQty > 0),
@@ -426,7 +427,7 @@ export const searchProducts = cache(async (query: string, take = 40) => {
 
   const products = await prisma.product.findMany({
     where: { id: { in: hits.map((h) => h.id) } },
-    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
+    include: { brand: true, category: true, fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } }, ...primaryImageSelect },
   });
 
   const byId = new Map(products.map((p) => [p.id, p]));
@@ -538,6 +539,7 @@ export const getVehicleMakes = cache(async () => {
       SELECT md."makeId" AS "makeId", COUNT(DISTINCT p.id) AS n
       FROM "ProductFitment" f
       JOIN "VehicleEngine" e ON e.id = f."engineId"
+        AND f.confidence = 'VERIFIED'
       JOIN "VehicleModel" md ON md.id = e."modelId"
       JOIN "Product" p ON p.id = f."productId" AND p.active
       GROUP BY md."makeId"
@@ -631,7 +633,7 @@ export const getBrandPage = cache(async (slug: string, take = CATALOG_PAGE_SIZE)
   const include = {
     brand: true,
     category: true,
-    fitments: { select: { engineId: true } },
+    fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } },
     ...primaryImageSelect,
   };
   const orderBy = [{ isTopSeller: "desc" as const }, { name: "asc" as const }];
@@ -664,6 +666,7 @@ export const getBrandPage = cache(async (slug: string, take = CATALOG_PAGE_SIZE)
       FROM "Product" p
       JOIN "ProductFitment" f ON f."productId" = p.id
       JOIN "VehicleEngine" e  ON e.id = f."engineId"
+        AND f.confidence = 'VERIFIED'
       JOIN "VehicleModel" md  ON md.id = e."modelId"
       JOIN "VehicleMake" mk   ON mk.id = md."makeId"
       WHERE p.active AND p."brandId" = ${brand.id}
@@ -808,10 +811,9 @@ export async function listAppProducts(options: {
         }
       : {};
 
-  const fitmentWhere =
-    options.engineId && options.fitsEngineOnly
-      ? { fitments: { some: { engineId: options.engineId } } }
-      : {};
+  const engineFuel = await engineFuelOf(options.engineId);
+  const confirmed = options.engineId ? confirmedFitWhere(options.engineId, engineFuel) : null;
+  const fitmentWhere = confirmed && options.fitsEngineOnly ? confirmed : {};
 
   const brandWhere = options.brandSlug ? { brand: { slug: options.brandSlug } } : {};
 
@@ -833,8 +835,9 @@ export async function listAppProducts(options: {
     // everything else) paged as one. Inside each segment the order above
     // holds. A part with no fitment rows is in the second segment; it is
     // unverified, not compatible.
-    const fitsWhere = { ...where, fitments: { some: { engineId: options.engineId } } };
-    const restWhere = { ...where, fitments: { none: { engineId: options.engineId } } };
+    // "Confirmed" is a VERIFIED row and no fuel contradiction (data/fitment).
+    const fitsWhere = { AND: [where, confirmed!] };
+    const restWhere = { AND: [where, { NOT: confirmed! }] };
     const [fitsTotal, restTotal] = await Promise.all([
       prisma.product.count({ where: fitsWhere }),
       prisma.product.count({ where: restWhere }),
@@ -857,7 +860,7 @@ export async function listAppProducts(options: {
     ]);
   }
 
-  const products = rows.map((p) => toAppProduct(p, options.engineId));
+  const products = rows.map((p) => toAppProduct(p, options.engineId, engineFuel));
 
   return { products, total, page, perPage, hasMore: page * perPage < total };
 }

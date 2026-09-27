@@ -14,7 +14,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       include: {
         images: { orderBy: { order: "asc" }, select: { id: true, alt: true } },
         references: { select: { type: true, brand: true, raw: true, normalized: true } },
-        fitments: { select: { engineId: true } },
+        fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } },
         oldSlugs: { orderBy: { createdAt: "desc" }, select: { slug: true } },
       },
     }),

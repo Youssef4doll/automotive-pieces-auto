@@ -836,9 +836,12 @@ export function orderStatusMail(order: OrderForEmail, status: string, shop: Shop
 export type ContactMessageForEmail = {
   id: string;
   name: string;
-  email: string;
+  /** Null for an app request left with a phone number only. */
+  email: string | null;
   phone: string | null;
   subject: string;
+  /** Photos attached — counted here, looked at in the admin. */
+  photoCount?: number;
   body: string;
   orderRef: string | null;
   productSku: string | null;
@@ -870,6 +873,7 @@ export function contactMessageMail(m: ContactMessageForEmail, shop: ShopForEmail
     m.orderRef ? ["Commande", m.orderRef] : null,
     m.productSku ? ["Pièce", m.productSku] : null,
     m.vehicle ? ["Véhicule", m.vehicle] : null,
+    m.photoCount ? ["Photos", `${m.photoCount} — à voir dans l'admin`] : null,
     ["Compte", m.signedIn ? "client connecté" : "visiteur"],
   ].filter((r): r is [string, string] => r !== null);
 
@@ -886,7 +890,7 @@ export function contactMessageMail(m: ContactMessageForEmail, shop: ShopForEmail
     hero({
       tone: "navy",
       headline: esc(m.subject),
-      sub: `${esc(m.name)} &nbsp;·&nbsp; <a href="mailto:${esc(m.email)}" style="color:${NAVY};text-decoration:underline;">${esc(m.email)}</a> &nbsp;·&nbsp; ${esc(fmtWhen(m.createdAt))}`,
+      sub: `${esc(m.name)} &nbsp;·&nbsp; ${m.email ? `<a href="mailto:${esc(m.email)}" style="color:${NAVY};text-decoration:underline;">${esc(m.email)}</a>` : esc(m.phone ?? "")} &nbsp;·&nbsp; ${esc(fmtWhen(m.createdAt))}`,
     }),
     row(
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border-radius:10px;"><tr><td style="padding:16px 18px;font-family:${FONT};font-size:15px;line-height:1.65;color:${INK};white-space:pre-wrap;">${esc(m.body)}</td></tr></table>`,
@@ -910,7 +914,7 @@ export function contactMessageMail(m: ContactMessageForEmail, shop: ShopForEmail
     m.body,
     ``,
     ...context.map(([k, v]) => `${k} : ${v}`),
-    `E-mail : ${m.email}`,
+    m.email ? `E-mail : ${m.email}` : `Téléphone : ${m.phone ?? "—"}`,
     ``,
     `Boîte de réception : ${adminUrl}`,
   ].join("\n");
@@ -927,7 +931,7 @@ export function contactMessageMail(m: ContactMessageForEmail, shop: ShopForEmail
     }),
     text,
     // So the shop answers the customer, not itself.
-    replyTo: m.email,
+    replyTo: m.email ?? undefined,
   };
 }
 

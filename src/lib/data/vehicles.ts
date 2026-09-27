@@ -38,6 +38,7 @@ export async function getFamiliesForModel(modelId: string): Promise<VehicleFamil
     SELECT fam.id, fam.name, fam.slug, COUNT(DISTINCT p.id) AS n
     FROM "ProductFitment" f
     JOIN "VehicleEngine" e ON e.id = f."engineId" AND e."modelId" = ${modelId}
+      AND f.confidence = 'VERIFIED'
     JOIN "Product" p ON p.id = f."productId" AND p.active
     JOIN "Category" c ON c.id = p."categoryId"
     JOIN "Category" fam ON fam.id = COALESCE(c."parentId", c.id)
@@ -52,7 +53,7 @@ export async function getProductsForModel(modelId: string, familySlug?: string, 
   const products = await prisma.product.findMany({
     where: {
       active: true,
-      fitments: { some: { engine: { modelId } } },
+      fitments: { some: { engine: { modelId }, confidence: "VERIFIED" } },
       ...(familySlug
         ? {
             category: {
@@ -61,7 +62,7 @@ export async function getProductsForModel(modelId: string, familySlug?: string, 
           }
         : {}),
     },
-    include: { brand: true, category: true, fitments: { select: { engineId: true } }, ...primaryImageSelect },
+    include: { brand: true, category: true, fitments: { where: { confidence: "VERIFIED" as const }, select: { engineId: true } }, ...primaryImageSelect },
     orderBy: [{ isTopSeller: "desc" }, { stockQty: "desc" }, { priceSell: "asc" }],
     take,
   });
@@ -89,6 +90,7 @@ export async function listVehiclePages() {
            COUNT(DISTINCT p.id) AS n
     FROM "ProductFitment" f
     JOIN "VehicleEngine" e ON e.id = f."engineId"
+      AND f.confidence = 'VERIFIED'
     JOIN "VehicleModel" md ON md.id = e."modelId"
     JOIN "VehicleMake" mk ON mk.id = md."makeId"
     JOIN "Product" p ON p.id = f."productId" AND p.active
@@ -121,6 +123,7 @@ export async function listVehicleMakePages() {
            COUNT(DISTINCT p.id) AS n
     FROM "ProductFitment" f
     JOIN "VehicleEngine" e ON e.id = f."engineId"
+      AND f.confidence = 'VERIFIED'
     JOIN "VehicleModel" md ON md.id = e."modelId"
     JOIN "VehicleMake" mk ON mk.id = md."makeId"
     JOIN "Product" p ON p.id = f."productId" AND p.active
@@ -146,6 +149,7 @@ export async function listVehicleFamilyPages() {
            COUNT(DISTINCT p.id) AS n
     FROM "ProductFitment" f
     JOIN "VehicleEngine" e ON e.id = f."engineId"
+      AND f.confidence = 'VERIFIED'
     JOIN "VehicleModel" md ON md.id = e."modelId"
     JOIN "VehicleMake" mk ON mk.id = md."makeId"
     JOIN "Product" p ON p.id = f."productId" AND p.active
@@ -232,7 +236,8 @@ export async function listPickerMakes(): Promise<PickerMake[]> {
         name: true,
         slug: true,
         logoUrl: true,
-        _count: { select: { models: true } },
+        // Only models a customer can finish choosing: with at least one engine.
+        _count: { select: { models: { where: { engines: { some: {} } } } } },
       },
     }),
     // Distinct parts per make, counted by Postgres. Counting in JS would mean
@@ -242,6 +247,7 @@ export async function listPickerMakes(): Promise<PickerMake[]> {
       SELECT md."makeId" AS "makeId", COUNT(DISTINCT p.id) AS n
       FROM "ProductFitment" f
       JOIN "VehicleEngine" e ON e.id = f."engineId"
+        AND f.confidence = 'VERIFIED'
       JOIN "VehicleModel" md ON md.id = e."modelId"
       JOIN "Product" p ON p.id = f."productId" AND p.active
       GROUP BY md."makeId"
@@ -249,7 +255,10 @@ export async function listPickerMakes(): Promise<PickerMake[]> {
   ]);
 
   const parts = new Map(counts.map((c) => [c.makeId, Number(c.n)]));
-  return makes.map((m) => ({
+  // A make with nothing to pick under it is a dead end in the picker (the
+  // audit found Mercedes listed with 0 models): it is left out until the
+  // shop adds a model and an engine for it.
+  return makes.filter((m) => m._count.models > 0).map((m) => ({
     id: m.id,
     name: m.name,
     slug: m.slug,
@@ -281,7 +290,8 @@ export async function listPickerModels(makeSlug: string): Promise<PickerModel[] 
 
   const [models, counts] = await Promise.all([
     prisma.vehicleModel.findMany({
-      where: { makeId: make.id },
+      // A model with no engine cannot be finished in the picker; left out.
+      where: { makeId: make.id, engines: { some: {} } },
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -296,6 +306,7 @@ export async function listPickerModels(makeSlug: string): Promise<PickerModel[] 
       SELECT e."modelId" AS "modelId", COUNT(DISTINCT p.id) AS n
       FROM "ProductFitment" f
       JOIN "VehicleEngine" e ON e.id = f."engineId"
+        AND f.confidence = 'VERIFIED'
       JOIN "VehicleModel" md ON md.id = e."modelId" AND md."makeId" = ${make.id}
       JOIN "Product" p ON p.id = f."productId" AND p.active
       GROUP BY e."modelId"
@@ -360,6 +371,7 @@ export async function listPickerEngines(
       SELECT f."engineId" AS "engineId", COUNT(DISTINCT p.id) AS n
       FROM "ProductFitment" f
       JOIN "VehicleEngine" e ON e.id = f."engineId" AND e."modelId" = ${model.id}
+        AND f.confidence = 'VERIFIED'
       JOIN "Product" p ON p.id = f."productId" AND p.active
       GROUP BY f."engineId"
     `,

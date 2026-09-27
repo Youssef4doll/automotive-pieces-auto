@@ -17,6 +17,8 @@ npm install                 # postinstall runs `prisma generate`
 cp .env.example .env        # then fill in the values below
 npm run db:migrate          # 24 migrations
 npm run db:seed             # catalogue, vehicles, demo customer, admin
+# local development and the e2e suites want confirmed demo fits:
+# SEED_DEMO_FITMENTS=verified npm run db:seed   (see 5.ff — never on production)
 npm run dev                 # http://localhost:3000
 ```
 
@@ -987,6 +989,61 @@ out any suite that waits for `networkidle` on the home page — a restart
 clears it; worth watching on the real host.
 
 ---
+
+### 5.ff Fitment honesty, photo requests, and the audit of September 27 (September 2026)
+
+An outside audit (54/100) found the product's one promise broken: NGK spark
+plugs "fitted" a BMW 320d, a diesel, and a customer had ordered them.
+
+**Cause.** `prisma/seed.ts` attached every demo product to three *random*
+engines and left the rows VERIFIED with no source; the production database
+was seeded from it. Separately, every read counted any row — DERIVED
+included — as "fits".
+
+**What changed.**
+- `src/lib/fitment-rules.ts` (tested): parts that exist for one fuel only —
+  spark plugs, coils, coil packs are petrol; glow plugs, glow relays, DPFs are
+  diesel. No row can overrule it: the app's verdict says DOES_NOT_FIT, the
+  "confirmed for your car" list excludes it, the admin refuses to tick it
+  (`setFitment` errors, `setModelFitment` skips those engines and says how
+  many), and the product page leaves such engines out of "compatible vehicles".
+- Only VERIFIED rows are "fits", everywhere: the app API (`data/fitment.ts`
+  `confirmedFitWhere`), and every storefront query and raw count
+  (`fitments: { where: { confidence: "VERIFIED" } }`, `AND f.confidence =
+  'VERIFIED'`). A DERIVED row now reads "à vérifier".
+- Migration `20260927090000_fitment_honesty` — **nothing deleted**: rows with
+  no source (the seed's) become DERIVED, source `seed-demo`; any row pairing a
+  fuel-only part with the other fuel becomes DERIVED with the note
+  "carburant incompatible — à revoir". Real rows entered in the admin
+  (`source = 'admin'`) keep their VERIFIED status.
+- The seed now writes demo fits DERIVED unless `SEED_DEMO_FITMENTS=verified`
+  (local development and the e2e suites), and never an impossible fuel pair.
+  Do not run that flag against production: the demo fits are invented.
+- `20260927091000_category_spelling`: "Carosserie" → "Carrosserie" (name only;
+  the slug keeps the old spelling so links hold).
+
+**Data the owner must fix in /admin** (code cannot know the right answer):
+the subcategory "rrr", TOTAL/VAICO products named after DELPHI/DENSO, the TRW
+brake-pad photo that shows another part. `/admin/qualite` now lists these as
+**Anomalies**: brand named in the title that is not the product's brand,
+test-looking category names, fuel-demoted rows, makes/models the picker cannot
+finish (now hidden from it — Mercedes with 0 models), and engines with more
+than three VERIFIED parts of one kind ("8 air filters fit the 320d").
+
+**Photo requests.** `POST /api/v1/expert-requests` (multipart, 1–3 photos
+checked by their bytes, name, phone, optional note/vehicle/sku; optional
+customer bearer; rate-limited) writes a `ContactMessage` with `ContactPhoto`
+rows (migration `20260927100000_contact_photos`; `email` is now nullable — a
+phone is enough). The inbox (/admin/messages) shows the photos, served only to
+an admin by `/api/admin/contact-photos/[id]`, never through the public image
+route; "Répondre" opens WhatsApp on the customer's number when there is no
+e-mail. The owner gets the usual e-mail with the photo count.
+
+**Phone numbers** are now exactly 8 digits, first digit 2–9, after an optional
++216/00216 (`tunisianDigits` in lib/validation) — a 9-digit number used to pass.
+
+**Cache.** `Cache.catalogue` is now `s-maxage=30, stale-while-revalidate=300`
+(it was 300/3600): phones were seeing prices and promotions minutes late.
 
 ## 6. Working on it
 

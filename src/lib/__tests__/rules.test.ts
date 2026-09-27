@@ -27,6 +27,8 @@ describe("names and phones (checkout, signup, app)", () => {
   it("counts eight digits whatever the separators", () => {
     for (const p of ["20445566", "+216 20 445 566", "20 44 55 66"]) assert.equal(phoneProblem(p), null, p);
     assert.notEqual(phoneProblem("2044"), null);
+    for (const p of ["204455661", "10445566", "+33 6 12 34 56 78"]) assert.notEqual(phoneProblem(p), null, p);
+    assert.equal(phoneProblem("0021620445566"), null);
     assert.notEqual(phoneProblem("1".repeat(31)), null);
   });
 });

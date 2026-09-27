@@ -154,6 +154,8 @@ export const LIMITS = {
    *  but not so low that a household on one carrier address cannot write
    *  twice about two different orders. */
   contact: { limit: 8, windowMs: 30 * 60_000 },
+  /** Photo requests from the app: a few photos a person, not a gallery upload. */
+  expertRequest: { limit: 6, windowMs: 30 * 60_000 },
   /** Reference lookup, the one endpoint that can be walked for the catalogue. */
   reference: { limit: 60, windowMs: 60_000 },
   /** The app's analytics batches — one every few seconds from an active phone. */

@@ -7,7 +7,7 @@ import { setMessageHandled } from "@/app/actions/contact-admin";
 export type AdminMessage = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   subject: string;
   body: string;
@@ -18,6 +18,13 @@ export type AdminMessage = {
   createdAt: string;
   handledAt: string | null;
   user: { id: string; email: string } | null;
+  photoIds: string[];
+};
+
+/** A Tunisian number as wa.me wants it: 216 and eight digits. */
+const whatsappNumber = (phone: string | null) => {
+  const d = (phone ?? "").replace(/\D/g, "");
+  return d.length === 8 ? `216${d}` : d;
 };
 
 const fmt = (iso: string) =>
@@ -68,9 +75,11 @@ export default function MessageRow({ message: m }: { message: AdminMessage }) {
 
       <p className="mt-1 text-sm text-gray-600">
         <span className="font-semibold text-navy-900">{m.name}</span>{" "}
-        <a href={`mailto:${m.email}`} dir="ltr" className="underline underline-offset-2 hover:text-red-600">
-          {m.email}
-        </a>
+        {m.email && (
+          <a href={`mailto:${m.email}`} dir="ltr" className="underline underline-offset-2 hover:text-red-600">
+            {m.email}
+          </a>
+        )}
         {m.phone && (
           <>
             {" · "}
@@ -92,6 +101,17 @@ export default function MessageRow({ message: m }: { message: AdminMessage }) {
       </p>
 
       <p className="mt-2.5 whitespace-pre-wrap text-sm leading-relaxed text-gray-800">{m.body}</p>
+
+      {m.photoIds.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {m.photoIds.map((id) => (
+            <a key={id} href={`/api/admin/contact-photos/${id}`} target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element -- private, admin-only bytes; next/image would cache them publicly */}
+              <img src={`/api/admin/contact-photos/${id}`} alt="Photo envoyée par le client" className="h-28 w-28 rounded-lg border border-navy-900/10 object-cover" />
+            </a>
+          ))}
+        </div>
+      )}
 
       {context.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -115,7 +135,11 @@ export default function MessageRow({ message: m }: { message: AdminMessage }) {
 
       <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-navy-900/8 pt-3">
         <a
-          href={`mailto:${m.email}?subject=${encodeURIComponent(`Re : ${m.subject}`)}`}
+          href={
+            m.email
+              ? `mailto:${m.email}?subject=${encodeURIComponent(`Re : ${m.subject}`)}`
+              : `https://wa.me/${whatsappNumber(m.phone)}?text=${encodeURIComponent(`Bonjour ${m.name}, au sujet de votre photo :`)}`
+          }
           className="inline-flex min-h-tap-compact items-center rounded-lg bg-navy-900 px-4 text-xs font-display font-bold uppercase tracking-wide text-white hover:bg-navy-950"
         >
           Répondre

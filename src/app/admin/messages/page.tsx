@@ -35,6 +35,7 @@ export default async function AdminMessagesPage() {
       createdAt: true,
       handledAt: true,
       user: { select: { id: true, email: true } },
+      photos: { select: { id: true }, orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -68,6 +69,7 @@ export default async function AdminMessagesPage() {
                 key={m.id}
                 message={{
                   ...m,
+                  photoIds: m.photos.map((p) => p.id),
                   createdAt: m.createdAt.toISOString(),
                   handledAt: m.handledAt ? m.handledAt.toISOString() : null,
                 }}
