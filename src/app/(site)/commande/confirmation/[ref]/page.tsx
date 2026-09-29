@@ -7,6 +7,8 @@ import Price from "@/components/Price";
 import type { Metadata } from "next";
 import OrderTracker from "@/components/account/OrderTracker";
 import { NEXT_STEP } from "@/components/account/OrderBits";
+import OrderReturnsPanel from "@/components/returns/OrderReturnsPanel";
+import { getSettings, publicContact } from "@/lib/settings";
 
 // Never indexed and never followed: this page exists for one customer, once.
 export async function generateMetadata({
@@ -30,6 +32,7 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
   // is reachable on its own, page guard or no page guard.
   const order = await getOrderByRef(ref);
   if (!order) notFound();
+  const contact = publicContact(await getSettings());
 
   const shipping = toNumber(order.shippingFee);
   const discount = toNumber(order.discount);
@@ -124,6 +127,10 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ r
             </p>
           )}
         </div>
+      </div>
+
+      <div className="mb-6">
+        <OrderReturnsPanel orderId={order.id} orderRef={order.ref} address={contact.address} hours={contact.hours} />
       </div>
 
       {/* Offered after the order, never before it. A guest has just proved

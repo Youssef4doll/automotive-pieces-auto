@@ -80,3 +80,35 @@ export function backInStockPush(locale: PushLocale, name: string) {
 
 /** Expo's token shape; anything else is refused before it is stored. */
 export const EXPO_TOKEN = /^Expo(nent)?PushToken\[[A-Za-z0-9_-]{8,200}\]$/;
+
+/**
+ * A return request moved. Facts only: what the shop just did, and — once it
+ * is settled — what it settled on, with the amount when it is a refund.
+ */
+export type ReturnPushStatus = "APPROVED" | "REFUSED" | "RECEIVED" | "RESOLVED";
+
+const RETURN: Record<PushLocale, Record<ReturnPushStatus, { title: string; body: (ref: string) => string }>> = {
+  fr: {
+    APPROVED: { title: "Retour accepté", body: (r) => `La boutique a accepté votre demande ${r}. Ouvrez-la pour savoir comment rendre la pièce.` },
+    REFUSED: { title: "Demande de retour refusée", body: (r) => `La boutique a répondu à votre demande ${r}. Ouvrez-la pour lire sa réponse.` },
+    RECEIVED: { title: "Pièce reçue", body: (r) => `La boutique a reçu la pièce de votre demande ${r}.` },
+    RESOLVED: { title: "Retour terminé", body: (r) => `Votre demande ${r} est réglée.` },
+  },
+  en: {
+    APPROVED: { title: "Return accepted", body: (r) => `The shop accepted your request ${r}. Open it to see how to send the part back.` },
+    REFUSED: { title: "Return request declined", body: (r) => `The shop answered your request ${r}. Open it to read the answer.` },
+    RECEIVED: { title: "Part received", body: (r) => `The shop received the part from your request ${r}.` },
+    RESOLVED: { title: "Return settled", body: (r) => `Your request ${r} is settled.` },
+  },
+  ar: {
+    APPROVED: { title: "تم قبول الإرجاع", body: (r) => `قبل المتجر طلبك ${r}. افتحه لمعرفة كيفية إرجاع القطعة.` },
+    REFUSED: { title: "رُفض طلب الإرجاع", body: (r) => `ردّ المتجر على طلبك ${r}. افتحه لقراءة الرد.` },
+    RECEIVED: { title: "تم استلام القطعة", body: (r) => `استلم المتجر القطعة الخاصة بطلبك ${r}.` },
+    RESOLVED: { title: "اكتمل الإرجاع", body: (r) => `تمت تسوية طلبك ${r}.` },
+  },
+};
+
+export function returnStatusPush(status: ReturnPushStatus, locale: PushLocale, returnRef: string) {
+  const c = RETURN[locale][status];
+  return { title: c.title, body: c.body(returnRef) };
+}

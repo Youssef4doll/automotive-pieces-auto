@@ -6,6 +6,9 @@ import { taxBreakdown, vatRateLabel } from "@/lib/tax";
 import { ORDER_STATUS_LABEL } from "@/lib/order-status";
 import OrderStatusButtons from "@/components/admin/OrderStatusButtons";
 import StatusBadge from "@/components/admin/StatusBadge";
+import ReturnStatusBadge from "@/components/admin/ReturnStatusBadge";
+import { returnsOfOrder } from "@/lib/returns";
+import { RETURN_REASON_LABEL } from "@/lib/returns-labels";
 
 export default async function AdminOrderDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,6 +17,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
     include: { items: true, history: { orderBy: { createdAt: "asc" } }, user: true, review: true },
   });
   if (!order) notFound();
+  const returns = await returnsOfOrder(order.id);
 
   const discount = toNumber(order.discount);
   const tax = taxBreakdown({
@@ -192,6 +196,24 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             </div>
           </div>
         </div>
+
+        {returns.length > 0 && (
+          <div className="border-t border-navy-900/8 pt-4">
+            <h2 className="text-xs font-display font-bold text-navy-900/45 uppercase tracking-wide mb-2">Retours</h2>
+            <ul className="flex flex-col gap-1.5">
+              {returns.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/admin/retours/${r.id}`} className="flex items-center justify-between gap-2 text-sm hover:text-red-500">
+                    <span>
+                      <span className="font-mono font-semibold">{r.ref}</span> · {RETURN_REASON_LABEL[r.reason]}
+                    </span>
+                    <ReturnStatusBadge status={r.status} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {order.review && (
           <div className="border-t border-navy-900/8 pt-4">

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { backInStockPush, EXPO_TOKEN, orderLabel, orderStatusPush, pushLocale } from "./push-copy";
+import { backInStockPush, EXPO_TOKEN, orderLabel, orderStatusPush, pushLocale, returnStatusPush } from "./push-copy";
 
 test("an order is named by what is in it", () => {
   assert.equal(orderLabel("Amortisseur avant SACHS", 0), "Amortisseur avant SACHS");
@@ -43,4 +43,12 @@ test("only Expo tokens are accepted", () => {
   assert.ok(EXPO_TOKEN.test("ExpoPushToken[abcdefgh1234]"));
   assert.ok(!EXPO_TOKEN.test("https://evil.example/"));
   assert.ok(!EXPO_TOKEN.test("ExponentPushToken[]"));
+});
+
+test("a return's notification names the request and says only what the shop did", () => {
+  const p = returnStatusPush("APPROVED", "fr", "RET-1001");
+  assert.equal(p.title, "Retour accepté");
+  assert.ok(p.body.includes("RET-1001"));
+  assert.ok(returnStatusPush("RESOLVED", "ar", "RET-1001").body.includes("RET-1001"));
+  assert.equal(returnStatusPush("REFUSED", "en", "RET-7").title, "Return request declined");
 });

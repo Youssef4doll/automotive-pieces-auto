@@ -3,7 +3,8 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/session";
-import { getSettings } from "@/lib/settings";
+import { getSettings, publicContact } from "@/lib/settings";
+import OrderReturnsPanel from "@/components/returns/OrderReturnsPanel";
 import { prisma } from "@/lib/prisma";
 import { toNumber, formatTNDfr } from "@/lib/money";
 import { taxBreakdown, vatRateLabel } from "@/lib/tax";
@@ -262,6 +263,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ re
             </dl>
           </section>
         </div>
+
+        <OrderReturnsPanel
+          orderId={order.id}
+          orderRef={order.ref}
+          address={publicContact(settings).address}
+          hours={publicContact(settings).hours}
+        />
 
         <HelpPanel contact={contact} orderRef={order.ref} />
 

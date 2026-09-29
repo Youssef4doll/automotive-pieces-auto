@@ -1,5 +1,6 @@
 import { getDashboardData } from "@/lib/data/admin";
 import { toNumber } from "@/lib/money";
+import { openReturnCounts } from "@/lib/returns";
 import { ok, preflightWrite } from "../../_lib/respond";
 import { ADMIN, asAdmin } from "../_lib/admin";
 
@@ -12,7 +13,7 @@ export const OPTIONS = preflightWrite;
 
 export async function GET(request: Request) {
   return asAdmin(request, "dashboard", async (admin) => {
-    const d = await getDashboardData();
+    const [d, returns] = await Promise.all([getDashboardData(), openReturnCounts()]);
     return ok(
       {
         admin: { name: admin.name },
@@ -20,6 +21,8 @@ export async function GET(request: Request) {
         pendingCount: d.pendingCount,
         outOfStock: d.outOfStock,
         lowStockCount: d.lowStockCount,
+        /** Return requests waiting on the shop: to answer, the part to arrive, to settle. */
+        returns,
         recentOrders: d.recentOrders.map((o) => ({
           id: o.id,
           ref: o.ref,

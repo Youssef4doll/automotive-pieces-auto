@@ -164,6 +164,14 @@ export const LIMITS = {
    *  re-pricing a basket with a good code never gets near it, and guessing
    *  "ETE10", "ETE15", "ETE20"… stops after a handful. */
   promoMiss: { limit: 10, windowMs: 15 * 60_000 },
+  /** Return requests FILED: each is a row the shop answers and two e-mails.
+   *  A customer with a bad batch files a few; nobody needs dozens an hour.
+   *  Only filings count (peek before, hit after), so a customer correcting a
+   *  refused form is never locked out by their own mistakes. */
+  returnRequest: { limit: 8, windowMs: 60 * 60_000 },
+  /** Attempts at all, filed or refused — the flood ceiling in front of the
+   *  photo parsing and the locked transaction. */
+  returnAttempt: { limit: 40, windowMs: 10 * 60_000 },
   /** A phone asking to be told about an order or a part: a few per visit. */
   pushRegister: { limit: 30, windowMs: 10 * 60_000 },
   /** Type-ahead fires per keystroke (debounced), so the ceiling is higher. */

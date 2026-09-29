@@ -1,5 +1,6 @@
 import { GOVERNORATES, GRAND_TUNIS } from "@/lib/governorates";
 import { RETURN_DAYS, WARRANTY_MONTHS } from "@/lib/policy";
+import { SHOP_ERROR_HOURS } from "@/lib/returns-rules";
 import { getSettings, publicContact } from "@/lib/settings";
 import { FLAT_DELIVERY_FEE } from "@/lib/shipping";
 import { taxPolicy } from "@/lib/tax";
@@ -47,6 +48,8 @@ export async function GET() {
           supplierLeadTime: text(settings.supplier_lead_time),
           warrantyMonths: WARRANTY_MONTHS,
           returnDays: RETURN_DAYS,
+          /** "Signalez-le-nous dans les 48 heures avec une photo" — the shop's-error window (lib/returns-rules). */
+          shopErrorHours: SHOP_ERROR_HOURS,
           /**
            * Cash on delivery only. The checkout refuses CARD outright, so
            * listing it here would put a button in the app that always fails.

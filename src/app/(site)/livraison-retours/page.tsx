@@ -30,7 +30,7 @@ export default async function DeliveryReturnsPage() {
     <PolicyPage
       title="Livraison et retours"
       path="/livraison-retours"
-      updated="17 septembre 2026"
+      updated="29 septembre 2026"
       contact={contact}
       intro="Ce que coûte la livraison, quand elle arrive, comment vous payez, et ce qui se passe si la pièce ne convient pas."
     >
@@ -123,7 +123,12 @@ export default async function DeliveryReturnsPage() {
           48 heures avec une photo.
         </p>
         <p>
-          Pour lancer un retour, contactez-nous depuis la{" "}
+          <strong>Pour lancer un retour</strong>, ouvrez votre commande — dans{" "}
+          <Link href="/compte/commandes">vos commandes</Link>, depuis{" "}
+          <Link href="/suivi">Suivre ma commande</Link> ou dans l&apos;application — et choisissez
+          « Retourner une pièce » : la pièce, ce qui ne va pas, une photo. La demande nous arrive avec
+          votre commande et votre véhicule, et nous vous répondons sur la commande elle-même, par
+          e-mail et, dans l&apos;application, par notification. Vous pouvez aussi nous écrire depuis la{" "}
           <Link href="/contact">page contact</Link> en indiquant votre numéro de commande.
         </p>
       </PolicySection>

@@ -5,6 +5,15 @@ import { siteUrl } from "@/lib/site";
 import { GRAND_TUNIS } from "@/lib/governorates";
 import { ORDER_STATUS_FLOW, ORDER_STATUS_LABEL } from "@/lib/order-status";
 import type { Mail } from "@/lib/email";
+import {
+  RETURN_COVER_LINE,
+  RETURN_METHOD_LABEL,
+  RETURN_OUTCOME_LABEL,
+  RETURN_REASON_LABEL,
+  RETURN_STATUS_LABEL,
+  RETURN_WISH_LABEL,
+} from "@/lib/returns-labels";
+import type { ReturnCover, ReturnReason, ReturnWish } from "@/lib/returns-rules";
 
 /**
  * What the shop actually writes to people.
@@ -781,7 +790,7 @@ const STATUS_COPY: Record<string, { subject: string; headline: string; line: (o:
   DELIVERED: {
     subject: "livrée",
     headline: "Votre commande est livrée",
-    line: () => "Merci de votre confiance. Si une pièce ne correspond pas, répondez à cet e-mail : nous nous en occupons.",
+    line: () => "Merci de votre confiance. Si une pièce ne convient pas, ouvrez votre commande et choisissez « Retourner une pièce » : c'est là que nous suivons les retours.",
     tone: "green",
   },
   CANCELLED: {
@@ -838,6 +847,211 @@ export function orderStatusMail(order: OrderForEmail, status: string, shop: Shop
       shop,
       body,
     }),
+    text,
+    replyTo: shop.email ?? undefined,
+  };
+}
+
+/* ------------------------------------------------------------ returns ---- */
+
+export type ReturnForEmail = {
+  id: string;
+  ref: string;
+  orderRef: string;
+  /** The order's account, when there is one — decides where "voir" links to. */
+  orderUserId: string | null;
+  customerName: string;
+  phone: string;
+  email: string | null;
+  vehicleLabel: string | null;
+  reason: ReturnReason;
+  wish: ReturnWish;
+  cover: ReturnCover;
+  note: string | null;
+  unmounted: boolean;
+  method: "DROP_OFF" | "PICKUP" | null;
+  shopNote: string | null;
+  outcome: "EXCHANGED" | "REFUNDED" | null;
+  refundAmount: number | null;
+  photoCount: number;
+  createdAt: Date;
+  items: { name: string; sku: string; qty: number }[];
+};
+
+function returnLines(r: ReturnForEmail) {
+  const lines = r.items
+    .map(
+      (i) => `<tr>
+        <td style="padding:8px 0;border-bottom:1px solid ${LINE};font-family:${FONT};font-size:14px;line-height:1.45;color:${INK};">${esc(i.name)}<br><span style="font-size:12px;color:${MUTED};">Réf. ${esc(i.sku)}</span></td>
+        <td align="right" style="padding:8px 0 8px 12px;border-bottom:1px solid ${LINE};font-family:${FONT};font-size:14px;color:${INK};white-space:nowrap;">× ${i.qty}</td>
+      </tr>`,
+    )
+    .join("");
+  return row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${lines}</table>`, "padding:18px 28px 0;");
+}
+
+function factsBox(rows: [string, string][]) {
+  const inner = rows
+    .map(
+      ([k, v]) => `<tr>
+        <td valign="top" style="padding:4px 0;font-family:${FONT};font-size:13px;color:${MUTED};white-space:nowrap;">${esc(k)}</td>
+        <td style="padding:4px 0 4px 14px;font-family:${FONT};font-size:14px;line-height:1.5;color:${INK};">${esc(v)}</td>
+      </tr>`,
+    )
+    .join("");
+  return row(
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${LINE};border-radius:10px;"><tr><td style="padding:12px 16px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0">${inner}</table></td></tr></table>`,
+    "padding:16px 28px 0;",
+  );
+}
+
+function returnUrl(r: ReturnForEmail) {
+  return orderUrl({ ref: r.orderRef, userId: r.orderUserId });
+}
+
+function approvedLine(r: ReturnForEmail, shop: ShopForEmail) {
+  if (r.method === "DROP_OFF") {
+    const where = [shop.address, shop.hours].filter(Boolean).join(" — ");
+    return where
+      ? `Déposez la pièce au magasin : ${where}. Apportez-la dans son emballage, avec ce numéro de demande.`
+      : "Déposez la pièce au magasin, dans son emballage, avec ce numéro de demande.";
+  }
+  if (r.method === "PICKUP") return "Nous récupérons la pièce chez vous. Gardez-la dans son emballage, avec ce numéro de demande.";
+  return "Nous revenons vers vous pour organiser le retour de la pièce.";
+}
+
+/** To the customer, on the moment they send it. */
+export function returnRequestedMail(r: ReturnForEmail, shop: ShopForEmail): Mail | null {
+  if (!r.email) return null;
+  const url = returnUrl(r);
+  const line = "Nous avons bien reçu votre demande. La boutique l'étudie et vous répond sur votre commande ; vous recevrez un e-mail à chaque étape.";
+  const body = [
+    hero({ tone: "navy", glyph: "&#8617;", headline: `Demande de retour ${esc(r.ref)}`, sub: esc(line) }),
+    factsBox([
+      ["Commande", r.orderRef],
+      ["Motif", RETURN_REASON_LABEL[r.reason]],
+      ["Vous souhaitez", RETURN_WISH_LABEL[r.wish]],
+      ["Conditions", RETURN_COVER_LINE[r.cover]],
+    ]),
+    returnLines(r),
+    button("Suivre ma demande", url),
+    signoff(shop),
+  ].join("");
+  const text = [
+    `Demande de retour ${r.ref} — commande ${r.orderRef}`,
+    ``,
+    line,
+    ``,
+    `Motif : ${RETURN_REASON_LABEL[r.reason]}`,
+    `Vous souhaitez : ${RETURN_WISH_LABEL[r.wish]}`,
+    `Conditions : ${RETURN_COVER_LINE[r.cover]}`,
+    ...r.items.map((i) => `- ${i.name} (réf. ${i.sku}) × ${i.qty}`),
+    ``,
+    `Suivre ma demande : ${url}`,
+    ``,
+    `L'équipe ${shop.name}`,
+  ].join("\n");
+  return {
+    to: r.email,
+    subject: `Demande de retour ${r.ref} reçue — ${shop.name}`,
+    html: shell({ title: `Retour ${r.ref}`, preheader: `Demande ${r.ref} · commande ${r.orderRef}`, kicker: `Retour ${r.ref}`, shop, body }),
+    text,
+    replyTo: shop.email ?? undefined,
+  };
+}
+
+/** To the shop: a new request is waiting in /admin/retours. */
+export function newReturnAlertMail(r: ReturnForEmail, shop: ShopForEmail): Mail | null {
+  if (!shop.email) return null;
+  const adminUrl = `${siteUrl()}/admin/retours/${r.id}`;
+  const facts: [string, string][] = [
+    ["Commande", r.orderRef],
+    ["Client", `${r.customerName} · ${r.phone}`],
+    ["Motif", RETURN_REASON_LABEL[r.reason]],
+    ["Souhaite", RETURN_WISH_LABEL[r.wish]],
+    ["Politique", RETURN_COVER_LINE[r.cover]],
+    ...(r.vehicleLabel ? ([["Véhicule", r.vehicleLabel]] as [string, string][]) : []),
+    ...(r.unmounted ? ([["Déclaré", "non montée, dans son emballage"]] as [string, string][]) : []),
+    ["Photos", r.photoCount ? `${r.photoCount} — à voir dans l'admin` : "aucune"],
+  ];
+  const body = [
+    hero({ tone: "navy", glyph: "&#8617;", headline: `Retour ${esc(r.ref)}`, sub: `${esc(r.customerName)} &nbsp;·&nbsp; ${esc(fmtWhen(r.createdAt))}` }),
+    r.note
+      ? row(
+          `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border-radius:10px;"><tr><td style="padding:14px 16px;font-family:${FONT};font-size:15px;line-height:1.6;color:${INK};white-space:pre-wrap;">${esc(r.note)}</td></tr></table>`,
+          "padding:22px 28px 0;",
+        )
+      : "",
+    factsBox(facts),
+    returnLines(r),
+    button("Ouvrir la demande", adminUrl, "navy"),
+    row("", "padding:0 0 28px;"),
+  ].join("");
+  const text = [
+    `Retour ${r.ref} — ${r.customerName}`,
+    ``,
+    ...(r.note ? [r.note, ``] : []),
+    ...facts.map(([k, v]) => `${k} : ${v}`),
+    ...r.items.map((i) => `- ${i.name} (réf. ${i.sku}) × ${i.qty}`),
+    ``,
+    `Ouvrir : ${adminUrl}`,
+  ].join("\n");
+  return {
+    to: shop.email,
+    subject: `Retour ${r.ref} — ${RETURN_REASON_LABEL[r.reason]} (${r.orderRef})`,
+    html: shell({ title: `Retour ${r.ref}`, preheader: `${r.customerName} · ${r.orderRef}`, kicker: "Espace boutique", shop, body, reason: "qu'une demande de retour a été envoyée sur %HOST%" }),
+    text,
+    replyTo: r.email ?? undefined,
+  };
+}
+
+/** To the customer, each time the shop moves the request on. */
+export function returnStatusMail(r: ReturnForEmail, status: "APPROVED" | "REFUSED" | "RECEIVED" | "RESOLVED", shop: ShopForEmail): Mail | null {
+  if (!r.email) return null;
+  const url = returnUrl(r);
+  const settled =
+    r.outcome === "REFUNDED"
+      ? `Remboursement${r.refundAmount !== null ? ` de ${formatTNDfr(r.refundAmount)}` : ""}.`
+      : r.outcome === "EXCHANGED"
+        ? "La pièce est échangée."
+        : "";
+  const copy = {
+    APPROVED: { tone: "green" as const, headline: "Votre retour est accepté", line: approvedLine(r, shop) },
+    REFUSED: { tone: "red" as const, headline: "Votre demande de retour est refusée", line: "La boutique a répondu à votre demande. Si vous n'êtes pas d'accord, répondez à cet e-mail : nous en parlerons." },
+    RECEIVED: { tone: "navy" as const, headline: "Nous avons reçu la pièce", line: "La pièce est arrivée au magasin. Nous vous écrivons dès que le retour est réglé." },
+    RESOLVED: { tone: "green" as const, headline: "Votre retour est terminé", line: settled || "Votre demande est réglée." },
+  }[status];
+  const facts: [string, string][] = [
+    ["Demande", r.ref],
+    ["Commande", r.orderRef],
+    ["Statut", RETURN_STATUS_LABEL[status]],
+    ...(r.method && status === "APPROVED" ? ([["Retour", RETURN_METHOD_LABEL[r.method]]] as [string, string][]) : []),
+    ...(r.outcome && status === "RESOLVED" ? ([["Solution", RETURN_OUTCOME_LABEL[r.outcome]]] as [string, string][]) : []),
+    ...(r.shopNote ? ([["Message de la boutique", r.shopNote]] as [string, string][]) : []),
+  ];
+  const body = [
+    hero({ tone: copy.tone, glyph: copy.tone === "red" ? undefined : "&#8617;", headline: copy.headline, sub: esc(copy.line) }),
+    factsBox(facts),
+    returnLines(r),
+    button("Voir ma demande", url),
+    signoff(shop),
+  ].join("");
+  const text = [
+    `${copy.headline} — ${r.ref}`,
+    ``,
+    copy.line,
+    ``,
+    ...facts.map(([k, v]) => `${k} : ${v}`),
+    ...r.items.map((i) => `- ${i.name} (réf. ${i.sku}) × ${i.qty}`),
+    ``,
+    `Voir ma demande : ${url}`,
+    ``,
+    `L'équipe ${shop.name}`,
+  ].join("\n");
+  return {
+    to: r.email,
+    subject: `Retour ${r.ref} : ${RETURN_STATUS_LABEL[status].toLowerCase()} — ${shop.name}`,
+    html: shell({ title: `Retour ${r.ref}`, preheader: `${copy.headline} · ${r.ref}`, kicker: `Retour ${r.ref}`, shop, body }),
     text,
     replyTo: shop.email ?? undefined,
   };

@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/money";
+import { returnsForOrder } from "@/lib/returns";
 
 /**
  * One order, as the phone that placed it may see it.
@@ -44,6 +45,7 @@ export async function appOrderView(orderId: string) {
       items: {
         orderBy: { id: "asc" },
         select: {
+          id: true,
           productId: true,
           name: true,
           sku: true,
@@ -62,6 +64,7 @@ export async function appOrderView(orderId: string) {
     },
   });
   if (!order) return null;
+  const returns = await returnsForOrder(orderId);
 
   return {
     ref: order.ref,
@@ -77,6 +80,8 @@ export async function appOrderView(orderId: string) {
     paymentMethod: order.paymentMethod,
     vehicleLabel: order.vehicleLabel,
     items: order.items.map((i) => ({
+      /** The line's own id — what a return request points at. */
+      id: i.id,
       productId: i.productId,
       // Only a part still on sale can be opened or bought again.
       slug: i.product?.active ? i.product.slug : null,
@@ -98,6 +103,14 @@ export async function appOrderView(orderId: string) {
     total: toNumber(order.total),
     /** The customer's own rating, once given (DELIVERED orders only). */
     review: order.review,
+    /** Return requests on this order, newest first, with the shop's answers. */
+    returns: returns.requests,
+    /**
+     * For a delivered order: what can still be returned, reason by reason
+     * with its deadline and conditions, and how many of each line are free
+     * to return. Null before delivery.
+     */
+    returnOptions: returns.options,
   };
 }
 

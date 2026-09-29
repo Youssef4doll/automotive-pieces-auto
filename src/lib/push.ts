@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { backInStockPush, orderLabel, orderStatusPush, pushLocale, type PushStatus } from "@/lib/push-copy";
+import { backInStockPush, orderLabel, orderStatusPush, pushLocale, returnStatusPush, type PushStatus, type ReturnPushStatus } from "@/lib/push-copy";
 
 /**
  * Push notifications, through Expo's push service.
@@ -81,6 +81,31 @@ export async function pushOrderStatus(orderId: string, status: PushStatus): Prom
     if (dead.size) await prisma.orderPushToken.deleteMany({ where: { token: { in: [...dead] } } });
   } catch (e) {
     console.warn("push: order status", e instanceof Error ? e.message : e);
+  }
+}
+
+/**
+ * Tell the phones following an order that one of its return requests moved.
+ * Tapping it opens the order, where the request and the shop's answer are.
+ */
+export async function pushReturnStatus(returnId: string, status: ReturnPushStatus): Promise<void> {
+  try {
+    const request = await prisma.returnRequest.findUnique({
+      where: { id: returnId },
+      select: { ref: true, order: { select: { ref: true, pushTokens: { select: { token: true, locale: true } } } } },
+    });
+    if (!request || !request.order.pushTokens.length) return;
+    const messages = request.order.pushTokens.map((t) => ({
+      to: t.token,
+      ...returnStatusPush(status, pushLocale(t.locale), request.ref),
+      sound: "default" as const,
+      channelId: "orders",
+      data: { ref: request.order.ref },
+    }));
+    const { dead } = await send(messages);
+    if (dead.size) await prisma.orderPushToken.deleteMany({ where: { token: { in: [...dead] } } });
+  } catch (e) {
+    console.warn("push: return status", e instanceof Error ? e.message : e);
   }
 }
 

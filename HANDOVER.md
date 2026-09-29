@@ -1109,6 +1109,75 @@ public — see §5.y.
 (an error screen was shown) and `app_crash` (an error nothing caught),
 14 days, one line per message.
 
+### 5.hh Returns, end to end (September 29, 2026)
+
+"Pour lancer un retour, contactez-nous" was the whole process. Now a
+customer asks on the order itself — app, account page, or the guest
+confirmation page reopened from /suivi — and the shop answers step by step.
+The app side is its ARCHITECTURE §23.
+
+**The rules are the policy page's, not new ones** (`lib/returns-rules.ts`,
+tested; quoted sentence by sentence at its top). Per delivered order, per
+reason, the server works out whether it is still open, until when, whether a
+photo is needed, whether the "never fitted, in its packaging" declaration is
+needed, and who carries the cost *as the page says it*:
+
+| Reason | Window | Photo | Cost, per /livraison-retours |
+|---|---|---|---|
+| Pas la pièce commandée | 48 h | required | the shop's error: return and replacement on us |
+| Abîmée à la livraison | 48 h | required | the shop's error |
+| Ne va pas sur mon véhicule | 14 days, unfitted | required within 48 h when the order carried the car; optional otherwise | the shop's error within 48 h when the order carried the car; a standard return otherwise |
+| Défectueuse | 12 months | optional | warranty: the part, not the labour |
+| Plus besoin | 14 days, unfitted | optional | standard return — the page says nothing about who pays the trip back, so nothing does |
+
+Delivered = the last DELIVERED step in the order's history. The page's own
+figures (`lib/policy.ts`) feed the windows; `SHOP_ERROR_HOURS` is exposed in
+`/api/v1/settings/public` for the app's guarantee page.
+
+**Model** (migration `20260929100000_returns`): `ReturnRequest` (ref
+`RET-1001…`, reason, wish EXCHANGE|REFUND, status, the customer's note, the
+declaration, `cover` — what the policy said *when it was filed*, so a later
+policy change cannot rewrite what the customer was told — method, the shop's
+message, outcome, refund amount, restocked, one timestamp per step),
+`ReturnItem` (order line + qty, CHECK qty > 0), `ReturnPhoto` (bytes, private
+like ContactPhoto). Everything in `lib/returns.ts`.
+
+**Filing** checks every rule again and claims quantities under the order
+row's `FOR UPDATE`, so two taps cannot return the same last part twice.
+Doors: `POST /api/v1/orders/{ref}/returns` (multipart: `request` JSON + up to
+4 `photos`; same key as reading the order) and the website's
+`/commande/{ref}/retour` (server action; the order's owner or the browser
+that placed or looked it up). Refusals come back by reason: `closed`,
+`no_items`, `qty`, `photo_required`, `unmounted_required`, `not_delivered`.
+A request can be withdrawn while the shop has not answered
+(`…/returns/{RET}/cancel`, or the button on the order page). Limits: 8 filed
+per hour per caller (`LIMITS.returnRequest`, only filings count, so fixing a
+refused form never locks anyone out) and 40 attempts per 10 minutes.
+
+**Answering** — **Admin → Retours** (badge = requests waiting), each request
+with the policy's line for its case, the customer's words and photos
+(`/api/admin/return-photos/{id}`, admin only, never cached), the order's car
+and each line's fitment verdict, the value at the prices paid. Steps, one at
+a time (`RETURN_NEXT`, written only if the request is still where the shop
+saw it): accept (drop-off at the shop or collection, optional message) or
+refuse (message required, the customer reads it) → part received (optionally
+back in stock: `adjustProductStock`, which also sends waiting back-in-stock
+alerts) → settled (exchanged, or refunded with the amount). The staff app
+does the same through `/api/v1/admin/returns`, `/returns/{id}` and
+`/returns/photos/{id}` (bearer only, so it can answer any origin); the
+dashboard API now carries the open counts.
+
+**Telling the customer**: every step shows on the order (app and website),
+pushes to the phones following the order (`pushReturnStatus`, copy in
+`push-copy.ts`, tested), and e-mails the order's address if it has one
+(`returnRequestedMail`, `returnStatusMail`); the shop gets
+`newReturnAlertMail`. Nothing states a date or promises a refund before the
+shop has set one. The "livrée" e-mail and the policy page now point at
+« Retourner une pièce ».
+
+Suite: `scripts/e2e-returns.mjs` (every door: API rules, staff steps, photos,
+the guest's website form, the admin refusing it, the windows closing).
+
 ## 6. Working on it
 
 **Read the comments.** The codebase explains *why* far more than *what* —

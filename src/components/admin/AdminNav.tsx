@@ -65,6 +65,12 @@ const ICONS: Record<string, React.ReactNode> = {
       <circle cx="8.5" cy="9.5" r="1.3" />
     </svg>
   ),
+  returns: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h11a5 5 0 0 1 0 10h-3" />
+    </svg>
+  ),
   analytics: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M3 3v18h18" />
@@ -76,6 +82,7 @@ const ICONS: Record<string, React.ReactNode> = {
 const ITEMS = [
   { href: "/admin", label: "Dashboard", icon: "dashboard", exact: true },
   { href: "/admin/commandes", label: "Commandes", icon: "orders" },
+  { href: "/admin/retours", label: "Retours", icon: "returns" },
   { href: "/admin/catalogue", label: "Catalogue", icon: "catalogue" },
   { href: "/admin/import", label: "Import", icon: "import" },
   { href: "/admin/qualite", label: "Qualité", icon: "quality" },
@@ -91,7 +98,8 @@ const ITEMS = [
   { href: "/admin/parametres", label: "Paramètres", icon: "settings" },
 ];
 
-export default function AdminNav({ horizontal = false }: { horizontal?: boolean }) {
+/** `badges`: a count to show beside an entry — the returns waiting for an answer. */
+export default function AdminNav({ horizontal = false, badges = {} }: { horizontal?: boolean; badges?: Record<string, number> }) {
   const pathname = usePathname();
 
   return (
@@ -110,6 +118,11 @@ export default function AdminNav({ horizontal = false }: { horizontal?: boolean 
           >
             <span className={active ? "text-gold-500" : "text-white/40"}>{ICONS[item.icon]}</span>
             {item.label}
+            {badges[item.href] ? (
+              <span className="ms-auto rounded-full bg-red-500 px-1.5 text-[11px] leading-5 text-white" aria-label={`${badges[item.href]} en attente`}>
+                {badges[item.href]}
+              </span>
+            ) : null}
           </Link>
         );
       })}

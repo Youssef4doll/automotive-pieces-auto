@@ -547,6 +547,7 @@ model Order {
   accessTokens OrderAccessToken[]
   pushTokens   OrderPushToken[]
   review       OrderReview?
+  returns      ReturnRequest[]
 
   @@index([status])
   @@index([userId])
@@ -658,6 +659,7 @@ model OrderItem {
   /// than per order: one basket can mix what is here with what is not, and
   /// the picking bench needs to know which is which.
   backorder Boolean       @default(false)
+  returnLines ReturnItem[]
 
   @@index([orderId])
 }
@@ -935,4 +937,106 @@ model OrderReview {
   updatedAt DateTime @updatedAt
 
   @@index([createdAt])
+}
+
+/// Why a part is coming back. Each reason is a rule of the policy page
+/// (/livraison-retours) — see lib/returns-rules.ts.
+enum ReturnReason {
+  WRONG_PART
+  DAMAGED
+  DOES_NOT_FIT
+  DEFECTIVE
+  NOT_NEEDED
+}
+
+/// What the customer would like; the shop decides and says so.
+enum ReturnWish {
+  EXCHANGE
+  REFUND
+}
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REFUSED
+  RECEIVED
+  RESOLVED
+  CANCELLED
+}
+
+/// How the part goes back, chosen by the shop when it accepts.
+enum ReturnMethod {
+  DROP_OFF
+  PICKUP
+}
+
+enum ReturnOutcome {
+  EXCHANGED
+  REFUNDED
+}
+
+/// "Retourner une pièce": the customer's request, and everything the shop
+/// answered, on the order it belongs to. The customer sees all of it except
+/// the photos' bytes (theirs already) and nothing the shop writes for itself
+/// — `shopNote` is the message TO the customer, and is shown to them.
+model ReturnRequest {
+  id           String         @id @default(cuid())
+  ref          String         @unique // RET-1001
+  orderId      String
+  order        Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason       ReturnReason
+  wish         ReturnWish
+  status       ReturnStatus   @default(REQUESTED)
+  /// The customer's own words.
+  note         String?
+  /// Declared by the customer: never fitted, in its packaging.
+  unmounted    Boolean        @default(false)
+  /// What the policy said about the cost when the request was filed
+  /// (shop | warranty | standard), kept so a later policy change cannot
+  /// rewrite what the customer was told.
+  cover        String
+  /// Set by the shop when it accepts: how the part comes back.
+  method       ReturnMethod?
+  /// The shop's message to the customer, shown on their order.
+  shopNote     String?
+  outcome      ReturnOutcome?
+  refundAmount Decimal?       @db.Decimal(10, 2)
+  /// The returned parts went back on the shelf when received.
+  restocked    Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  decidedAt    DateTime?
+  receivedAt   DateTime?
+  resolvedAt   DateTime?
+  cancelledAt  DateTime?
+
+  items  ReturnItem[]
+  photos ReturnPhoto[]
+
+  @@index([orderId])
+  @@index([status, createdAt])
+}
+
+model ReturnItem {
+  id          String        @id @default(cuid())
+  returnId    String
+  request     ReturnRequest @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItemId String
+  orderItem   OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  qty         Int
+
+  @@index([returnId])
+  @@index([orderItemId])
+}
+
+/// A customer's photograph of the part. Private, like ContactPhoto: served to
+/// the shop only, never through the public image route.
+model ReturnPhoto {
+  id        String        @id @default(cuid())
+  returnId  String
+  request   ReturnRequest @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  data      Bytes
+  mime      String
+  createdAt DateTime      @default(now())
+
+  @@index([returnId])
 }

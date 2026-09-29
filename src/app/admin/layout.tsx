@@ -5,12 +5,15 @@ import { requireAdmin } from "@/lib/session";
 import { logout } from "@/app/actions/auth";
 import AdminNav from "@/components/admin/AdminNav";
 import SignOut from "@/components/account/SignOut";
+import { openReturnCounts } from "@/lib/returns";
 
 export const metadata = { title: "Espace admin" };
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const admin = await requireAdmin();
   if (!admin) redirect("/compte");
+  const returns = await openReturnCounts();
+  const badges = { "/admin/retours": returns.requested };
 
   return (
     // The admin CRM is an internal French-only tool — force LTR regardless
@@ -23,7 +26,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
             Espace admin
           </span>
         </div>
-        <AdminNav />
+        <AdminNav badges={badges} />
         <div className="mt-auto p-4 border-t border-white/10 flex flex-col gap-2">
           <Link href="/" className="font-display font-bold uppercase text-[11px] tracking-wide text-white/50 hover:text-gold-500">
             ← Retour au site
@@ -42,7 +45,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           </Link>
         </header>
         <div className="lg:hidden bg-navy-900 text-white overflow-x-auto no-scrollbar">
-          <AdminNav horizontal />
+          <AdminNav horizontal badges={badges} />
         </div>
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1400px] w-full mx-auto">{children}</main>
       </div>
