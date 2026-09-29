@@ -39,7 +39,13 @@ export default async function OrderReturnsPanel({
   address: string | null;
   hours: string | null;
 }) {
-  const { requests, options } = await returnsForOrder(orderId);
+  // The order page shows without this panel rather than not at all.
+  const read = await returnsForOrder(orderId).catch((e) => {
+    console.error(`[returns] ${orderRef}: panel not read —`, e);
+    return null;
+  });
+  if (!read) return null;
+  const { requests, options } = read;
   const anyOpen = Boolean(options?.reasons.some((r) => r.open) && options.items.some((i) => i.returnable > 0));
   if (!requests.length && !options) return null;
 

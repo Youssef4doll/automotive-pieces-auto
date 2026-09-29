@@ -64,7 +64,12 @@ export async function appOrderView(orderId: string) {
     },
   });
   if (!order) return null;
-  const returns = await returnsForOrder(orderId);
+  // Returns are a part of the order screen, never a reason it fails to open:
+  // if they cannot be read, the order still shows, without them.
+  const returns = await returnsForOrder(orderId).catch((e) => {
+    console.error(`[orders] ${order.ref}: returns not read —`, e);
+    return { requests: [], options: null };
+  });
 
   return {
     ref: order.ref,

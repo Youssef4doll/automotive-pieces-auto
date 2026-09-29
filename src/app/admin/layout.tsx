@@ -12,7 +12,8 @@ export const metadata = { title: "Espace admin" };
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const admin = await requireAdmin();
   if (!admin) redirect("/compte");
-  const returns = await openReturnCounts();
+  // A badge, not a reason for the whole admin to fail.
+  const returns = await openReturnCounts().catch(() => ({ requested: 0, approved: 0, received: 0 }));
   const badges = { "/admin/retours": returns.requested };
 
   return (

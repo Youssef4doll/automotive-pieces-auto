@@ -15,12 +15,20 @@ worth reading first — what is not.
 ```bash
 npm install                 # postinstall runs `prisma generate`
 cp .env.example .env        # then fill in the values below
-npm run db:migrate          # 24 migrations
+npm run db:migrate          # applies migrations, then regenerates the client
 npm run db:seed             # catalogue, vehicles, demo customer, admin
 # local development and the e2e suites want confirmed demo fits:
 # SEED_DEMO_FITMENTS=verified npm run db:seed   (see 5.ff — never on production)
-npm run dev                 # http://localhost:3000
+npm run dev                 # http://localhost:3000 (regenerates the client first)
 ```
+
+**After every `git pull`**: `npm run db:migrate`, then restart `npm run dev`
+(or `dev:lan`). Both regenerate the Prisma client. A client generated from an
+older schema is what turned the new returns into "Cannot read properties of
+undefined (reading 'findMany')" on September 29: the tables were in the
+database, but `node_modules/@prisma/client` did not know them. If it happens
+another way, the dev server now says so in one line at start
+(`lib/prisma.ts`), and the order screen opens anyway, without its returns.
 
 Use the `npm run` scripts rather than a bare `prisma …`: the CLI is a local
 dependency, not a global command, so `prisma migrate deploy` in a fresh shell

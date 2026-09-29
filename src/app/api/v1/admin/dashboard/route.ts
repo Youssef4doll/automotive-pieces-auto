@@ -13,7 +13,7 @@ export const OPTIONS = preflightWrite;
 
 export async function GET(request: Request) {
   return asAdmin(request, "dashboard", async (admin) => {
-    const [d, returns] = await Promise.all([getDashboardData(), openReturnCounts()]);
+    const [d, returns] = await Promise.all([getDashboardData(), openReturnCounts().catch(() => undefined)]);
     return ok(
       {
         admin: { name: admin.name },

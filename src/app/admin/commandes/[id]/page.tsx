@@ -17,7 +17,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
     include: { items: true, history: { orderBy: { createdAt: "asc" } }, user: true, review: true },
   });
   if (!order) notFound();
-  const returns = await returnsOfOrder(order.id);
+  const returns = await returnsOfOrder(order.id).catch(() => []);
 
   const discount = toNumber(order.discount);
   const tax = taxBreakdown({
