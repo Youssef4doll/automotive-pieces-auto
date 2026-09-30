@@ -275,7 +275,8 @@ console.log("\n[6] WHAT THE SOURCE MUST AND MUST NOT SAY");
 {
   const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
 
-  const limiter = read("src/lib/rate-limit.ts");
+  // The address logic lives beside the windows, where src/proxy.ts can use it too.
+  const limiter = read("src/lib/rate-limit-core.ts");
   check(
     "CF-Connecting-IP is only trusted behind an explicit flag",
     limiter.includes("TRUST_CLOUDFLARE_IP") &&

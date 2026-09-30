@@ -545,7 +545,9 @@ console.log("\n[6] SIGNING OUT LEAVES THE NEXT PERSON NOTHING");
   // The server half. `logout()` lands on the home page, so the question is not
   // where the browser is but whether the profile is still reachable.
   await p.goto(`${BASE}/compte/profil`, { waitUntil: "domcontentloaded" });
-  await p.waitForTimeout(1000);
+  // Signed out, the profile redirects to /compte; on `next dev` that lands
+  // after about a second and a half, so wait for the form, not a fixed time.
+  await p.waitForSelector('input[name="password"]', { timeout: 10000 }).catch(() => {});
   check(
     "and the session with it — the profile asks for a password again",
     (await p.locator('input[name="password"]').count()) > 0,
