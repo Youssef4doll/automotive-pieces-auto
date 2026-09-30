@@ -26,7 +26,7 @@ function check(label, ok, detail = "") {
 
 const STAMP = Date.now();
 const EMAIL = `sec.${STAMP}@example.com`;
-const PASSWORD = "client1234";
+const PASSWORD = "Piston-bleu-42";
 
 /**
  * The reference API's limiter is per-address and lives in the server process,

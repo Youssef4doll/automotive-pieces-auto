@@ -6,7 +6,8 @@ import { toNumber } from "@/lib/money";
 import { looksLikeReference, normalizeReference } from "@/lib/reference";
 import { computeSegment } from "@/lib/segment";
 import { taxBreakdown, taxPolicy } from "@/lib/tax";
-import { nameProblem, phoneProblem, signupSchema } from "@/lib/validation";
+import { issueReason, nameProblem, phoneProblem, signupSchema } from "@/lib/validation";
+import { weakPassword } from "@/lib/weak-passwords";
 import { decodeVinMakeSlug, isValidVinFormat } from "@/lib/vin";
 import type { SettingsMap } from "@/lib/settings";
 
@@ -34,7 +35,7 @@ describe("names and phones (checkout, signup, app)", () => {
 });
 
 describe("signup schema (website form and app API)", () => {
-  const ok = { name: "Amina Ben Salah", email: "amina@exemple.tn", phone: "20445566", password: "secret1" };
+  const ok = { name: "Amina Ben Salah", email: "amina@exemple.tn", phone: "20445566", password: "vert-olivier-7" };
   it("accepts a complete account", () => {
     assert.equal(signupSchema.safeParse(ok).success, true);
   });
@@ -43,10 +44,35 @@ describe("signup schema (website form and app API)", () => {
     assert.equal(r.success, false);
     assert.equal(r.success ? null : r.error.issues[0]?.path[0], "name");
   });
-  it("holds passwords between 6 and 72 characters (bcrypt reads 72 bytes)", () => {
-    assert.equal(signupSchema.safeParse({ ...ok, password: "12345" }).success, false);
-    assert.equal(signupSchema.safeParse({ ...ok, password: "x".repeat(73) }).success, false);
-    assert.equal(signupSchema.safeParse({ ...ok, password: "x".repeat(72) }).success, true);
+  it("holds passwords between 8 characters and 72 bytes (bcrypt reads 72 bytes)", () => {
+    assert.equal(signupSchema.safeParse({ ...ok, password: "k7#pLm2" }).success, false);
+    assert.equal(signupSchema.safeParse({ ...ok, password: "k7#pLm2q" }).success, true);
+    assert.equal(signupSchema.safeParse({ ...ok, password: "k7#pLm2q".repeat(9) + "x" }).success, false);
+    // Forty Arabic letters are eighty bytes: over the ceiling bcrypt can read.
+    assert.equal(signupSchema.safeParse({ ...ok, password: "ب".repeat(40) }).success, false);
+  });
+  it("refuses the passwords tried first, and says why", () => {
+    for (const p of ["azerty123", "motdepasse", "tunisie2024", "12345678", "aaaaaaaa", "Password1!", "qsdfghjklm", "87654321"]) {
+      const r = signupSchema.safeParse({ ...ok, password: p });
+      assert.equal(r.success, false, p);
+      assert.equal(issueReason(r.success ? undefined : r.error.issues[0]), "common", p);
+    }
+  });
+  it("refuses a password built from the account's own e-mail or name", () => {
+    for (const p of ["amina2024", "Amina!!!", "salah1234"]) {
+      const r = signupSchema.safeParse({ ...ok, email: "amina@exemple.tn", password: p });
+      assert.equal(issueReason(r.success ? undefined : r.error.issues[0]), "personal", p);
+    }
+  });
+  it("stores the e-mail lower-cased and trimmed", () => {
+    const r = signupSchema.safeParse({ ...ok, email: "  Amina.BenSalah@Exemple.TN " });
+    assert.equal(r.success ? r.data.email : null, "amina.bensalah@exemple.tn");
+  });
+});
+
+describe("weak passwords", () => {
+  it("lets ordinary strong ones through", () => {
+    for (const p of ["vert-olivier-7", "Kx9!mQ2#", "jasmin sous la pluie", "7bus-du-soir"]) assert.equal(weakPassword(p), null, p);
   });
 });
 

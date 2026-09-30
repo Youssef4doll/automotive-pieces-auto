@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { weakPassword } from "./weak-passwords";
 
 /**
  * Field rules shared by the signup form and the checkout.
@@ -75,19 +76,67 @@ export const personName = fromProblem(nameProblem);
 export const phoneNumber = fromProblem(phoneProblem);
 
 /**
- * A new account — the website's signup form and the app's, one rule.
+ * A password — at signup, on a reset, on a change. One rule, four callers.
  *
- * The password ceiling is bcrypt's: it reads 72 bytes and silently ignores
- * the rest, so a longer one would "work" while only its start counted.
+ * Eight characters at least, and not one of the passwords every attacker
+ * tries first (lib/weak-passwords). The ceiling is bcrypt's: it reads 72
+ * BYTES and silently ignores the rest, so it is counted in bytes — an Arabic
+ * password of forty letters is eighty bytes, and past 72 only its start
+ * would count.
+ *
+ * Each refusal carries `params.reason` ("short", "long", "common"), which the
+ * app API sends as the field's reason so the phone can say it in its own
+ * three languages. Passwords already set under the old six-character rule
+ * keep working; the rule applies only when a password is chosen.
  */
-export const passwordRule = z
-  .string()
-  .min(6, "Le mot de passe doit contenir au moins 6 caractères.")
-  .max(72, "Le mot de passe est trop long.");
+export const PASSWORD_MIN = 8;
 
-export const signupSchema = z.object({
-  name: personName,
-  email: z.email("Cette adresse e-mail n'est pas valide.").max(200),
-  phone: phoneNumber,
-  password: passwordRule,
+export const passwordRule = z.string().superRefine((value, ctx) => {
+  if (value.length < PASSWORD_MIN) {
+    ctx.addIssue({ code: "custom", message: `Le mot de passe doit contenir au moins ${PASSWORD_MIN} caractères.`, params: { reason: "short" } });
+  } else if (new TextEncoder().encode(value).length > 72) {
+    ctx.addIssue({ code: "custom", message: "Le mot de passe est trop long.", params: { reason: "long" } });
+  } else if (weakPassword(value)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Ce mot de passe est parmi les plus utilisés : choisissez-en un autre.",
+      params: { reason: "common" },
+    });
+  }
 });
+
+/** Said when a password is built from the account's own e-mail or name. */
+export const PERSONAL_PASSWORD_MESSAGE = "Le mot de passe ne doit pas reprendre votre nom ou votre adresse e-mail.";
+
+/** The same rule, knowing whose password it is — for a schema's own superRefine. */
+export function checkPersonalPassword(password: string, person: { email?: string; name?: string }, ctx: z.RefinementCtx, path: string) {
+  if (weakPassword(password, person) === "personal") {
+    ctx.addIssue({ code: "custom", path: [path], message: PERSONAL_PASSWORD_MESSAGE, params: { reason: "personal" } });
+  }
+}
+
+/** The `reason` of the first refusal, for the app API's `invalid_field`. */
+export function issueReason(issue: z.core.$ZodIssue | undefined): string | undefined {
+  const params = (issue as { params?: { reason?: unknown } } | undefined)?.params;
+  return typeof params?.reason === "string" ? params.reason : undefined;
+}
+
+/**
+ * An e-mail address, as stored: trimmed and lower-cased. Addresses are
+ * case-insensitive in practice, and an account made as "Sami@…" used to be
+ * unreachable by somebody signing in as "sami@…".
+ */
+export const emailAddress = (message = "Cette adresse e-mail n'est pas valide.") =>
+  z.string().trim().toLowerCase().max(200, message).pipe(z.email(message));
+
+/**
+ * A new account — the website's signup form and the app's, one rule.
+ */
+export const signupSchema = z
+  .object({
+    name: personName,
+    email: emailAddress(),
+    phone: phoneNumber,
+    password: passwordRule,
+  })
+  .superRefine((d, ctx) => checkPersonalPassword(d.password, { email: d.email, name: d.name }, ctx, "password"));

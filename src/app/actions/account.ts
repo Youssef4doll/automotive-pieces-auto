@@ -5,18 +5,18 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { destroySession, getCurrentUser } from "@/lib/session";
+import { createSession, destroySession, getCurrentUser } from "@/lib/session";
+import { findUserByEmail, setPassword } from "@/lib/accounts";
+import { checkPersonalPassword, passwordRule, emailAddress } from "@/lib/validation";
 import { deleteCustomerAccount } from "@/lib/account-deletion";
 import { hit, clear, callerKey, LIMITS } from "@/lib/rate-limit";
 
 export type AccountState = { ok?: boolean; error?: string; message?: string } | undefined;
 
-/** Same cost factor the signup path uses — see src/app/actions/auth.ts. */
-const BCRYPT_COST = 12;
 
 const profileSchema = z.object({
   name: z.string().trim().min(2, "Le nom doit contenir au moins 2 caractères").max(80),
-  email: z.email("Email invalide"),
+  email: emailAddress("Email invalide"),
   // Optional because the column is: an account created before the phone field
   // was required should not be blocked from editing its name.
   phone: z
@@ -60,7 +60,7 @@ export async function updateProfile(_prev: AccountState, formData: FormData): Pr
   // The email is the login identifier and is unique in the schema. Checking
   // first turns a 500 into a sentence the customer can act on.
   if (email !== user.email) {
-    const taken = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    const taken = await findUserByEmail(email, { id: true });
     if (taken && taken.id !== user.id) return { error: "Un compte existe déjà avec cet email" };
   }
 
@@ -91,7 +91,7 @@ export async function updateProfile(_prev: AccountState, formData: FormData): Pr
 
 const passwordSchema = z.object({
   current: z.string().min(1, "Entrez votre mot de passe actuel"),
-  next: z.string().min(6, "Le nouveau mot de passe doit contenir au moins 6 caractères"),
+  next: passwordRule,
   confirm: z.string(),
 });
 
@@ -112,11 +112,13 @@ export async function changePassword(_prev: AccountState, formData: FormData): P
     return { error: `Trop de tentatives. Réessayez dans ${Math.ceil(gate.retryAfter / 60)} minute(s).` };
   }
 
-  const parsed = passwordSchema.safeParse({
-    current: formData.get("current"),
-    next: formData.get("next"),
-    confirm: formData.get("confirm"),
-  });
+  const parsed = passwordSchema
+    .superRefine((d, ctx) => checkPersonalPassword(d.next, { email: user.email, name: user.name }, ctx, "next"))
+    .safeParse({
+      current: formData.get("current"),
+      next: formData.get("next"),
+      confirm: formData.get("confirm"),
+    });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Champs invalides" };
   const { current, next, confirm } = parsed.data;
 
@@ -128,15 +130,13 @@ export async function changePassword(_prev: AccountState, formData: FormData): P
     return { error: "Mot de passe actuel incorrect" };
   }
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash: await bcrypt.hash(next, BCRYPT_COST) },
-    }),
-    // The phone apps signed in with the old password are signed out: a
-    // password is changed because somebody else might know it.
-    prisma.customerSession.deleteMany({ where: { userId: user.id } }),
-  ]);
+  if (next === current) return { error: "Choisissez un mot de passe différent de l'actuel." };
+
+  // Every phone, staff session and other browser signed in with the old
+  // password is signed out (lib/accounts); this browser gets a fresh cookie,
+  // since the one it holds predates the change and would now be refused.
+  await setPassword(user.id, next);
+  await createSession({ userId: user.id, role: user.role });
   clear(key);
 
   return { ok: true, message: "Mot de passe modifié." };

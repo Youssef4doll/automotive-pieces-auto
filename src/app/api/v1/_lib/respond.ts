@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 /**
  * The shared shape of every /api/v1 response.
@@ -43,6 +44,13 @@ export type ApiError =
    * the app can point at the line rather than at the whole basket.
    */
   | "unavailable"
+  /** The body is bigger than this route ever needs — refused before it is read. */
+  | "payload_too_large"
+  /**
+   * The shop could not reach its database, or ran out of time answering.
+   * Nothing was wrong with the request; `Retry-After` says when to ask again.
+   */
+  | "temporarily_unavailable"
   | "server_error";
 
 const STATUS: Record<ApiError, number> = {
@@ -51,9 +59,11 @@ const STATUS: Record<ApiError, number> = {
   forbidden: 403,
   not_found: 404,
   unavailable: 409,
+  payload_too_large: 413,
   invalid_field: 422,
   rate_limited: 429,
   server_error: 500,
+  temporarily_unavailable: 503,
 };
 
 /**
@@ -124,7 +134,7 @@ const PUBLIC_CORS = {
 const WRITE_CORS = {
   ...PUBLIC_CORS,
   "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, Idempotency-Key",
 } as const;
 
 type Options = {
@@ -186,18 +196,84 @@ export function preflightWrite() {
  * A JSON body, bounded.
  *
  * `request.json()` reads whatever it is sent. A basket is a few hundred
- * bytes; refusing anything over 32 KB before parsing keeps one malformed
- * client from being a way to make the server allocate.
+ * bytes, so each route names its own ceiling and the body is read a chunk at
+ * a time and dropped the moment it passes it — a declared Content-Length over
+ * the ceiling is refused without reading at all. (The first version read the
+ * whole body into a string and then measured it, which bounded the parse but
+ * not the allocation.)
  */
 export async function readJson(request: Request, maxBytes = 32_768): Promise<unknown | undefined> {
-  const text = await request.text();
-  if (text.length > maxBytes) return undefined;
+  const text = await readBounded(request, maxBytes);
+  if (text === undefined) return undefined;
   try {
     return JSON.parse(text);
   } catch {
     return undefined;
   }
 }
+
+async function readBounded(request: Request, maxBytes: number): Promise<string | undefined> {
+  const declared = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declared) && declared > maxBytes) return undefined;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      return undefined;
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
+/**
+ * The database is out of reach — not the request's fault, and worth asking
+ * again in a moment.
+ *
+ * On Neon this is the everyday case of a compute waking from sleep, or a
+ * pooled connection the provider closed while it was idle: "Can't reach
+ * database server" (P1001), "connection Closed", a pool that timed out
+ * waiting for a free connection (P2024). Answered as 503 with Retry-After, so
+ * the app retries on its own instead of telling the customer the shop broke.
+ */
+const TRANSIENT_MESSAGE =
+  /Can't reach database server|kind: Closed|Connection (terminated|reset|closed)|ECONNRESET|ETIMEDOUT|Timed out fetching a new connection/i;
+const TRANSIENT_CODES = new Set(["P1001", "P1002", "P1008", "P1017", "P2024", "P2034"]);
+
+export function isTransientDbError(err: unknown): boolean {
+  if (err instanceof Prisma.PrismaClientInitializationError) return true;
+  if (err instanceof Prisma.PrismaClientKnownRequestError) return TRANSIENT_CODES.has(err.code);
+  if (err instanceof Prisma.PrismaClientUnknownRequestError || err instanceof Error) {
+    return TRANSIENT_MESSAGE.test(err.message);
+  }
+  return false;
+}
+
+/** One line for the log: Prisma's message is a code frame with the cause at the end. */
+function dbCause(err: unknown) {
+  const code = err instanceof Prisma.PrismaClientKnownRequestError ? `${err.code} ` : "";
+  const lines = err instanceof Error ? err.message.split("\n").map((l) => l.trim()).filter(Boolean) : [String(err)];
+  return code + (lines.find((l) => TRANSIENT_MESSAGE.test(l)) ?? lines[lines.length - 1] ?? "");
+}
+
+/** Seconds a client should wait before asking again after a 503. */
+export const RETRY_AFTER_SECONDS = 3;
+
+/**
+ * How long a read may take before the caller is told to come back.
+ *
+ * Under the app's own twelve-second timeout, so the phone hears "busy, retry"
+ * in words it understands rather than giving up on silence. Only reads — a
+ * cacheable answer — are cut short: a write that is still running when its
+ * answer is sent would leave the customer unsure whether it happened.
+ */
+const READ_DEADLINE_MS = 9_000;
 
 /**
  * The last line of defence around a handler.
@@ -209,10 +285,27 @@ export async function readJson(request: Request, maxBytes = 32_768): Promise<unk
  * in the body, which would hand a stack trace to anyone with curl.
  */
 export async function guard(handler: () => Promise<Response>, label: string, options: Options = {}) {
+  const read = options.cache !== undefined && options.cache !== Cache.private;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await handler();
+    if (!read) return await handler();
+    const deadline = new Promise<"deadline">((resolve) => {
+      timer = setTimeout(() => resolve("deadline"), READ_DEADLINE_MS);
+    });
+    const answer = await Promise.race([handler(), deadline]);
+    if (answer === "deadline") {
+      console.error(`api/v1 ${label} took longer than ${READ_DEADLINE_MS} ms`);
+      return fail("temporarily_unavailable", options, { "Retry-After": String(RETRY_AFTER_SECONDS) });
+    }
+    return answer;
   } catch (err) {
+    if (isTransientDbError(err)) {
+      console.error(`api/v1 ${label}: database unreachable, answered 503 — ${dbCause(err)}`);
+      return fail("temporarily_unavailable", options, { "Retry-After": String(RETRY_AFTER_SECONDS) });
+    }
     console.error(`api/v1 ${label} failed`, err);
     return fail("server_error", options);
+  } finally {
+    clearTimeout(timer);
   }
 }

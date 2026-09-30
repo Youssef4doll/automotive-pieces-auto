@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { confirmedFitWhere, engineFuelOf, fitContext } from "@/lib/data/fitment";
 import { CATALOG_TAG, CATALOG_TTL } from "@/lib/cache";
@@ -766,6 +767,79 @@ export const getCatalogueScale = cache(readCatalogueScale)
 export type { AppProduct, FitmentVerdict } from "./app-catalog";
 
 /**
+ * How the app may order a list of parts. Every one of them is a figure the
+ * database holds — never a "popularity" nobody measured:
+ *
+ *   relevance   what a customer can have first (see listAppProducts), then
+ *               parts with a photograph, then the most ordered, then price;
+ *   price_asc / price_desc;
+ *   newest      the date the part was added to the catalogue;
+ *   popular     how many order lines have named the part — orders placed in
+ *               this shop, counted, not estimated.
+ *
+ * Each ends on the id, so two parts that tie are always in the same order and
+ * paging never shows one twice or skips one. (The old default, stock then
+ * price, did not: two parts with the same stock and price could swap between
+ * page one and page two.)
+ */
+export const APP_SORTS = ["relevance", "price_asc", "price_desc", "newest", "popular"] as const;
+export type AppSort = (typeof APP_SORTS)[number];
+
+const SORT_ORDER: Record<AppSort, Prisma.ProductOrderByWithRelationInput[]> = {
+  relevance: [{ images: { _count: "desc" } }, { orderItems: { _count: "desc" } }, { priceSell: "asc" }, { id: "asc" }],
+  price_asc: [{ priceSell: "asc" }, { id: "asc" }],
+  price_desc: [{ priceSell: "desc" }, { id: "asc" }],
+  newest: [{ createdAt: "desc" }, { id: "asc" }],
+  popular: [{ orderItems: { _count: "desc" } }, { images: { _count: "desc" } }, { priceSell: "asc" }, { id: "asc" }],
+};
+
+/** lib/availability's three states, as filters. */
+const IN_STOCK: Prisma.ProductWhereInput = { stockQty: { gt: 0 } };
+const ON_ORDER: Prisma.ProductWhereInput = { stockQty: { lte: 0 }, supply: "ON_ORDER" };
+const UNAVAILABLE: Prisma.ProductWhereInput = { stockQty: { lte: 0 }, NOT: { supply: "ON_ORDER" } };
+const BUYABLE: Prisma.ProductWhereInput = { OR: [IN_STOCK, { supply: "ON_ORDER" }] };
+
+/** Marked down by the shop: a compare-at price above today's. */
+const ON_SALE: Prisma.ProductWhereInput = { compareAtPrice: { gt: prisma.product.fields.priceSell } };
+
+type AppSelect = ReturnType<typeof appProductSelect>;
+
+/**
+ * One page across several ordered segments, as if they were one list.
+ *
+ * Two round trips whatever the page: every segment counted at once, then
+ * the slices the page needs read at once. Going to the database a segment at
+ * a time would cost a round trip each, and from Tunis to the database each
+ * one is felt.
+ */
+async function pageSegments(
+  segments: Prisma.ProductWhereInput[],
+  orderBy: Prisma.ProductOrderByWithRelationInput[],
+  skip: number,
+  take: number,
+  select: AppSelect,
+) {
+  const counts = await Promise.all(segments.map((where) => prisma.product.count({ where })));
+  const plans: { where: Prisma.ProductWhereInput; skip: number; take: number }[] = [];
+  let offset = skip;
+  let room = take;
+  for (let i = 0; i < segments.length && room > 0; i++) {
+    if (offset >= counts[i]) {
+      offset -= counts[i];
+      continue;
+    }
+    const n = Math.min(room, counts[i] - offset);
+    plans.push({ where: segments[i], skip: offset, take: n });
+    room -= n;
+    offset = 0;
+  }
+  const slices = await Promise.all(
+    plans.map((p) => prisma.product.findMany({ where: p.where, orderBy, skip: p.skip, take: p.take, select })),
+  );
+  return { rows: slices.flat(), total: counts.reduce((a, b) => a + b, 0) };
+}
+
+/**
  * Products in a family, or in one subcategory of it.
  *
  * Paged, because a family like Filtres will hold hundreds once the catalogue
@@ -801,8 +875,10 @@ export async function listAppProducts(options: {
   ids?: string[];
   /** Only packs: products whose specs list the parts they bundle (`packContents`). */
   packsOnly?: boolean;
-  /** "price_asc" | "price_desc"; the default keeps stock first, then price. */
-  sort?: "price_asc" | "price_desc";
+  /** See APP_SORTS. Anything else is "relevance". */
+  sort?: AppSort;
+  /** Only parts the shop has marked down (a compare-at price above today's). */
+  onSaleOnly?: boolean;
   page?: number;
   perPage?: number;
 }) {
@@ -825,6 +901,7 @@ export async function listAppProducts(options: {
 
   const brandWhere = options.brandSlug ? { brand: { slug: options.brandSlug } } : {};
   const stockWhere = options.inStockOnly ? { stockQty: { gt: 0 } } : {};
+  const saleWhere = options.onSaleOnly ? ON_SALE : {};
   const idsWhere = options.ids?.length ? { id: { in: options.ids } } : {};
   // A pack is a product whose specs name the parts inside it — the shop's own
   // bundle, not something inferred from a name containing "kit". Asked of the
@@ -834,53 +911,33 @@ export async function listAppProducts(options: {
     : null;
   const packsWhere = packIds ? { AND: [{ id: { in: packIds } }] } : {};
 
-  const where = { active: true, ...categoryWhere, ...fitmentWhere, ...brandWhere, ...stockWhere, ...idsWhere, ...packsWhere };
+  const where: Prisma.ProductWhereInput = {
+    active: true,
+    ...categoryWhere,
+    ...fitmentWhere,
+    ...brandWhere,
+    ...stockWhere,
+    ...idsWhere,
+    ...packsWhere,
+    ...saleWhere,
+  };
 
-  // In stock first, then whatever the shop can source, then the rest.
-  // Never by "popularity" — there is no such figure in this database and
-  // ordering by one would be inventing it.
-  const orderBy =
-    options.sort === "price_asc"
-      ? [{ priceSell: "asc" as const }, { stockQty: "desc" as const }]
-      : options.sort === "price_desc"
-        ? [{ priceSell: "desc" as const }, { stockQty: "desc" as const }]
-        : [{ stockQty: "desc" as const }, { priceSell: "asc" as const }];
+  const sort: AppSort = options.sort && APP_SORTS.includes(options.sort) ? options.sort : "relevance";
   const select = appProductSelect(options.engineId);
   const skip = (page - 1) * perPage;
 
-  let rows: Awaited<ReturnType<typeof prisma.product.findMany<{ select: typeof select }>>>;
-  let total: number;
+  // The list is a run of segments, each ordered on its own and paged as one
+  // (pageSegments): with a car chosen, the parts confirmed for it first —
+  // across the whole list, not just within a page — and inside that, the
+  // parts a customer can have: on the shelf, then ordered in, then the ones
+  // the shop cannot supply. A part with no fitment rows sits with the
+  // others; it is unverified, not compatible.
+  const fitSplit: Prisma.ProductWhereInput[] =
+    options.engineId && !options.fitsEngineOnly ? [confirmed!, { NOT: confirmed! }] : [{}];
+  const stockSplit = sort === "relevance" ? [IN_STOCK, ON_ORDER, UNAVAILABLE] : [BUYABLE, UNAVAILABLE];
+  const segments = fitSplit.flatMap((f) => stockSplit.map((s) => ({ AND: [where, f, s] })));
 
-  if (options.engineId && !options.fitsEngineOnly) {
-    // With a car chosen, the parts confirmed for it come first — across the
-    // whole list, not just within a page: two segments (fits, then
-    // everything else) paged as one. Inside each segment the order above
-    // holds. A part with no fitment rows is in the second segment; it is
-    // unverified, not compatible.
-    // "Confirmed" is a VERIFIED row and no fuel contradiction (data/fitment).
-    const fitsWhere = { AND: [where, confirmed!] };
-    const restWhere = { AND: [where, { NOT: confirmed! }] };
-    const [fitsTotal, restTotal] = await Promise.all([
-      prisma.product.count({ where: fitsWhere }),
-      prisma.product.count({ where: restWhere }),
-    ]);
-    const fromFits =
-      skip < fitsTotal
-        ? await prisma.product.findMany({ where: fitsWhere, orderBy, skip, take: Math.min(perPage, fitsTotal - skip), select })
-        : [];
-    const room = perPage - fromFits.length;
-    const fromRest =
-      room > 0
-        ? await prisma.product.findMany({ where: restWhere, orderBy, skip: Math.max(0, skip - fitsTotal), take: room, select })
-        : [];
-    rows = [...fromFits, ...fromRest];
-    total = fitsTotal + restTotal;
-  } else {
-    [rows, total] = await Promise.all([
-      prisma.product.findMany({ where, orderBy, skip, take: perPage, select }),
-      prisma.product.count({ where }),
-    ]);
-  }
+  const { rows, total } = await pageSegments(segments, SORT_ORDER[sort], skip, perPage, select);
 
   const fit = await fitContext(options.engineId, rows.map((r) => r.id));
   const products = rows.map((p) => toAppProduct(p, options.engineId, fit));
@@ -899,7 +956,11 @@ export async function listAppProducts(options: {
   const brandRows = brands.length
     ? await prisma.brand.findMany({ where: { id: { in: brands.map((b) => b.brandId!) } }, select: { id: true, name: true, slug: true } })
     : [];
+  const onSale = options.familySlug || options.subcategorySlug
+    ? await prisma.product.count({ where: { active: true, ...categoryWhere, ...fitmentWhere, ...stockWhere, ...brandWhere, ...ON_SALE } })
+    : 0;
   const facets = {
+    onSale,
     brands: brandRows
       .map((b) => ({ name: b.name, slug: b.slug, count: brands.find((x) => x.brandId === b.id)?._count._all ?? 0 }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),

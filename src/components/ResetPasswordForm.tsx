@@ -18,7 +18,7 @@ export default function ResetPasswordForm({ token }: { token: string }) {
           Nouveau mot de passe
         </label>
         <div className="relative">
-          <input id="new-password" name="password" type={show ? "text" : "password"} required minLength={6} autoComplete="new-password" className={INPUT} />
+          <input id="new-password" name="password" type={show ? "text" : "password"} required minLength={8} autoComplete="new-password" className={INPUT} />
           <button
             type="button"
             onClick={() => setShow((v) => !v)}
@@ -29,13 +29,13 @@ export default function ResetPasswordForm({ token }: { token: string }) {
             {show ? "🙈" : "👁"}
           </button>
         </div>
-        <p className="mt-1 text-xs text-gray-500">Six caractères au minimum.</p>
+        <p className="mt-1 text-xs text-gray-500">Huit caractères au minimum, et pas un mot de passe courant.</p>
       </div>
       <div>
         <label htmlFor="confirm-password" className="mb-1.5 block text-sm font-semibold text-navy-950">
           Confirmez-le
         </label>
-        <input id="confirm-password" name="confirm" type={show ? "text" : "password"} required minLength={6} autoComplete="new-password" className={INPUT} />
+        <input id="confirm-password" name="confirm" type={show ? "text" : "password"} required minLength={8} autoComplete="new-password" className={INPUT} />
       </div>
       {state?.error && (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

@@ -187,8 +187,8 @@ export function PasswordCard() {
             required
             className="sm:col-span-2"
           />
-          <Input label="Nouveau mot de passe" name="next" type="password" value={pw.next} onChange={set("next")} autoComplete="new-password" minLength={6} required />
-          <Input label="Confirmer" name="confirm" type="password" value={pw.confirm} onChange={set("confirm")} autoComplete="new-password" minLength={6} required />
+          <Input label="Nouveau mot de passe" name="next" type="password" value={pw.next} onChange={set("next")} autoComplete="new-password" minLength={8} required />
+          <Input label="Confirmer" name="confirm" type="password" value={pw.confirm} onChange={set("confirm")} autoComplete="new-password" minLength={8} required />
 
           {state?.error && (
             <p role="alert" className="sm:col-span-2 text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">

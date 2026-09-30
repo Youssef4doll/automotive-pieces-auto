@@ -1,6 +1,6 @@
 import "server-only";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { findUserByEmail } from "@/lib/accounts";
 import { hit, peek, clear, callerKey, LIMITS } from "@/lib/rate-limit";
 
 /**
@@ -39,7 +39,7 @@ function decoyHash() {
 }
 
 export async function checkCredentials(email: string, password: string): Promise<CredentialCheck> {
-  const accountKey = `login:acct:${email.toLowerCase()}`;
+  const accountKey = `login:acct:${email.trim().toLowerCase()}`;
   const ipKey = await callerKey("login");
   const accountGate = peek(accountKey, LIMITS.loginPerAccount.limit);
   const ipGate = peek(ipKey, LIMITS.loginPerIp.limit);
@@ -55,10 +55,7 @@ export async function checkCredentials(email: string, password: string): Promise
     return { ok: false, reason: "invalid" };
   };
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, name: true, email: true, role: true, passwordHash: true },
-  });
+  const user = await findUserByEmail(email, { id: true, name: true, email: true, role: true, passwordHash: true });
   if (!user) {
     await bcrypt.compare(password, await decoyHash());
     return charge();

@@ -16,8 +16,8 @@ const check = (label, ok, detail = "") => {
 
 const EMAIL = `qa-profil-${Date.now()}@example.test`;
 const NEW_EMAIL = `qa-profil-${Date.now()}-b@example.test`;
-const PASSWORD = "motdepasse1";
-const NEXT_PASSWORD = "motdepasse2";
+const PASSWORD = "Piston-bleu-42";
+const NEXT_PASSWORD = "Soupape-verte-7";
 
 const user = await prisma.user.create({
   data: {

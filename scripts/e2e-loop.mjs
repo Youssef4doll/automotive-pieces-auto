@@ -28,7 +28,7 @@ function check(label, ok, detail = "") {
 
 const STAMP = Date.now();
 const EMAIL = `loop.${STAMP}@example.com`;
-const PASSWORD = "client1234";
+const PASSWORD = "Piston-bleu-42";
 const ADMIN = { email: "admin@automotive-pieces-auto.tn", password: "admin1234" };
 
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });

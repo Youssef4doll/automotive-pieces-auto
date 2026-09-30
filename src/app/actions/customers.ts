@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { emailAddress } from "@/lib/validation";
+import { findUserByEmail } from "@/lib/accounts";
 import { requireAdmin } from "@/lib/session";
 
 async function assertAdmin() {
@@ -18,7 +20,7 @@ export type CustomerState =
 const schema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(2, "Le nom doit contenir au moins 2 caractères").max(80),
-  email: z.email("Email invalide"),
+  email: emailAddress("Email invalide"),
   phone: z
     .string()
     .trim()
@@ -69,7 +71,7 @@ export async function adminUpdateCustomer(_prev: CustomerState, formData: FormDa
   }
 
   if (email !== before.email) {
-    const taken = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    const taken = await findUserByEmail(email, { id: true });
     if (taken && taken.id !== id) return { error: "Un autre compte utilise déjà cet email." };
   }
 

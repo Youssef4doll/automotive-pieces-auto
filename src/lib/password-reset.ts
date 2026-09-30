@@ -5,6 +5,8 @@ import { sendMail } from "@/lib/email";
 import { passwordResetMail } from "@/lib/email-templates";
 import { loadShopForEmail } from "@/lib/order-emails";
 import { siteUrl } from "@/lib/site";
+import { findUserByEmail } from "@/lib/accounts";
+import { hit, LIMITS } from "@/lib/rate-limit";
 
 /** How long a "forgot my password" link works. Long enough to find the
  *  e-mail; short enough that one found in an old inbox is useless. */
@@ -41,11 +43,10 @@ export async function findValidResetToken(token: string) {
  * and `POST /api/v1/auth/password-reset`, which both come through here.
  */
 export async function startPasswordReset(email: string) {
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, name: true, email: true },
-  });
+  const user = await findUserByEmail(email, { id: true, name: true, email: true });
   if (!user) return;
+  const perAccount = LIMITS.passwordResetPerAccount;
+  if (!hit(`pwreset:acct:${user.id}`, perAccount.limit, perAccount.windowMs).ok) return;
 
   const token = newResetToken();
   await prisma.$transaction([

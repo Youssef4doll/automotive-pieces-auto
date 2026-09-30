@@ -46,7 +46,7 @@ const BRAND = `MarqueAZ${STAMP}`;
 const SKU = `AZ-${STAMP}`;
 const PRODUCT = `Amortisseur avant AZ ${STAMP}`;
 const EMAIL = `client.az.${STAMP}@example.com`;
-const PASSWORD = "client1234";
+const PASSWORD = "Piston-bleu-42";
 
 /**
  * Sweeps every run's fixtures, not just this one's.

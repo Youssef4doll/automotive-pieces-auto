@@ -62,7 +62,7 @@ await p.waitForTimeout(400);
 await p.fill('input[name="name"]', "Client UX");
 await p.fill('input[name="email"]', EMAIL);
 await p.fill('input[name="phone"]', "20777666");
-await p.fill('input[name="password"]', "client1234");
+await p.fill('input[name="password"]', "Piston-bleu-42");
 await p.getByRole("button", { name: /Créer mon compte|Créer un compte/ }).last().click();
 await p.waitForTimeout(2500);
 

@@ -48,6 +48,11 @@ const nextConfig: NextConfig = {
       // sending so the shop never uploads into a rejection.
       bodySizeLimit: "12mb",
     },
+    // src/proxy.ts sits in front of every route, and Next buffers a request
+    // body for it up to this size — past it, the body is silently cut short
+    // and a photo upload arrives broken. The proxy refuses anything over the
+    // upload ceiling (20 MB) itself, so the buffer is set just above it.
+    proxyClientMaxBodySize: "21mb",
   },
 
   async headers() {

@@ -16,7 +16,7 @@ const check = (label, ok, detail = "") => {
 };
 
 const EMAIL = `qa-delete-${Date.now()}@example.test`;
-const PASSWORD = "motdepasse1";
+const PASSWORD = "Piston-bleu-42";
 const user = await prisma.user.create({
   data: { email: EMAIL, name: "Qa Suppression", phone: "20000001", passwordHash: await bcrypt.hash(PASSWORD, 12), role: "CUSTOMER" },
 });

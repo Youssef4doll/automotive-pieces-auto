@@ -22,6 +22,26 @@ function cached(): PrismaClient | undefined {
 }
 
 /**
+ * DATABASE_URL with a connect timeout, unless it already names one.
+ *
+ * Prisma's default is five seconds, and a Neon compute waking from sleep can
+ * take longer than that — which surfaced as "Can't reach database server"
+ * on the first request after a quiet spell, on a database that was fine.
+ * Fifteen is Neon's own suggestion. Anything the URL already says wins.
+ */
+function datasourceUrl(): string | undefined {
+  const raw = process.env.DATABASE_URL;
+  if (!raw || !/^postgres(ql)?:\/\//.test(raw)) return undefined;
+  try {
+    const url = new URL(raw);
+    if (!url.searchParams.has("connect_timeout")) url.searchParams.set("connect_timeout", "15");
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * PRISMA_LOG_QUERIES=1 prints every statement the app runs.
  *
  * How many queries a page costs is the thing that decides whether it feels
@@ -34,6 +54,7 @@ function cached(): PrismaClient | undefined {
 export const prisma =
   cached() ??
   new PrismaClient({
+    datasourceUrl: datasourceUrl(),
     log:
       process.env.PRISMA_LOG_QUERIES === "1"
         ? ["query", "error", "warn"]

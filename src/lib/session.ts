@@ -97,12 +97,12 @@ export async function destroySession() {
   });
 }
 
-async function readSession(): Promise<SessionPayload | null> {
+async function readSession(): Promise<(SessionPayload & { iat?: number }) | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, SECRET) as SessionPayload;
+    const decoded = jwt.verify(token, SECRET) as SessionPayload & { iat?: number };
     return decoded;
   } catch {
     return null;
@@ -113,11 +113,16 @@ async function readSession(): Promise<SessionPayload | null> {
 export const getCurrentUser = cache(async () => {
   const session = await readSession();
   if (!session) return null;
-  const user = await prisma.user.findUnique({
+  const row = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: SAFE_USER_FIELDS,
+    select: { ...SAFE_USER_FIELDS, passwordChangedAt: true },
   });
-  if (!user) return null;
+  if (!row) return null;
+  // A cookie signed before the password last changed is somebody holding the
+  // old password's session: refused (lib/accounts, setPassword). JWT times
+  // are whole seconds, so the change time is compared at the same grain.
+  const { passwordChangedAt, ...user } = row;
+  if (passwordChangedAt && (session.iat ?? 0) < Math.floor(passwordChangedAt.getTime() / 1000)) return null;
   // The role is re-read from the database rather than trusted from the token:
   // a demoted admin must lose access on their next request, not in 30 days.
   return user;

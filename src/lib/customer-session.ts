@@ -15,8 +15,14 @@ import { bearerToken } from "@/lib/order-token";
 
 const TOKEN_BYTES = 32;
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/;
-/** Thirty days, as the website's "se souvenir de moi". */
+/**
+ * Thirty days from the last time the phone used it — a customer who opens
+ * the app every week stays signed in — but never more than six months from
+ * the sign-in itself, so a token copied off a phone does not live for ever.
+ * (It was thirty days flat: a regular customer was signed out every month.)
+ */
 const LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
 /** `lastUsedAt` is bookkeeping, not worth a write on every read. */
 const TOUCH_EVERY_MS = 5 * 60 * 1000;
 
@@ -25,10 +31,10 @@ function hashToken(token: string) {
 }
 
 /** Mint a session for a user whose password has just been checked. Returns the raw token — the only time it exists. */
-export async function issueCustomerSession(userId: string) {
+export async function issueCustomerSession(userId: string, device: string | null = null) {
   const token = randomBytes(TOKEN_BYTES).toString("base64url");
   await prisma.customerSession.create({
-    data: { userId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + LIFETIME_MS) },
+    data: { userId, device, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + LIFETIME_MS) },
   });
   return token;
 }
@@ -41,6 +47,8 @@ export type AppCustomer = {
   phone: string | null;
   role: "CUSTOMER" | "ADMIN";
   createdAt: Date;
+  /** The session this request came in on — "this phone" in the device list. */
+  sessionId: string;
 };
 
 /**
@@ -57,6 +65,7 @@ export async function customerForRequest(request: Request): Promise<AppCustomer 
     where: { tokenHash: hashToken(token) },
     select: {
       id: true,
+      createdAt: true,
       expiresAt: true,
       lastUsedAt: true,
       user: { select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true } },
@@ -68,12 +77,14 @@ export async function customerForRequest(request: Request): Promise<AppCustomer 
     await prisma.customerSession.deleteMany({ where: { id: row.id } });
     return null;
   }
+  // Each use slides the end thirty days on, up to the six-month cap.
   if (!row.lastUsedAt || now - row.lastUsedAt.getTime() > TOUCH_EVERY_MS) {
+    const expiresAt = new Date(Math.min(now + LIFETIME_MS, row.createdAt.getTime() + MAX_AGE_MS));
     prisma.customerSession
-      .update({ where: { id: row.id }, data: { lastUsedAt: new Date(now) } })
+      .update({ where: { id: row.id }, data: { lastUsedAt: new Date(now), expiresAt } })
       .catch(() => undefined);
   }
-  return row.user;
+  return { ...row.user, sessionId: row.id };
 }
 
 /** Sign out this phone. */
@@ -89,4 +100,29 @@ export async function revokeCustomerSession(request: Request) {
  */
 export async function revokeAllCustomerSessions(userId: string) {
   await prisma.customerSession.deleteMany({ where: { userId } });
+}
+
+/** The phones signed in to this account, most recently used first. */
+export async function listCustomerSessions(userId: string, currentId: string) {
+  const rows = await prisma.customerSession.findMany({
+    where: { userId, expiresAt: { gt: new Date() } },
+    orderBy: [{ lastUsedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    select: { id: true, device: true, createdAt: true, lastUsedAt: true },
+    take: 50,
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    device: r.device,
+    signedInAt: r.createdAt.toISOString(),
+    lastUsedAt: (r.lastUsedAt ?? r.createdAt).toISOString(),
+    current: r.id === currentId,
+  }));
+}
+
+/** Sign out one phone, or every phone but this one. Only ever this account's own sessions. */
+export async function revokeOtherCustomerSessions(userId: string, keepId: string, onlyId?: string) {
+  const { count } = await prisma.customerSession.deleteMany({
+    where: { userId, id: onlyId ? { equals: onlyId, not: keepId } : { not: keepId } },
+  });
+  return count;
 }

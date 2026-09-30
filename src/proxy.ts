@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { callerIp, hit } from "@/lib/rate-limit-core";
+import { fail } from "@/app/api/v1/_lib/respond";
 
 /** Loopback and `*.local` — a TLS redirect there is a redirect to nothing. */
 function isLocalHost(host: string) {
@@ -6,6 +8,59 @@ function isLocalHost(host: string) {
     /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$/.test(host) ||
     host.replace(/:\d+$/, "").endsWith(".local")
   );
+}
+
+/**
+ * The app API's outer wall: how often one address may ask, and how much it
+ * may send. Every /api/v1 request passes here before its route runs.
+ *
+ * Flood ceilings, not the real gates. The real ones are per route and per
+ * identity (lib/rate-limit's LIMITS: eight wrong passwords per account, ten
+ * order lookups…); these only stop one address hammering the whole API —
+ * a scraper walking the catalogue, a script replaying a request in a loop —
+ * before it costs a database round trip. Loose on purpose: a Tunisian mobile
+ * carrier puts a neighbourhood behind one address, and a customer browsing
+ * quickly makes a few dozen reads a minute. Reads and writes are counted
+ * apart, so a flood of reads never blocks somebody's checkout.
+ *
+ * The size check reads Content-Length only; a body that lies about it, or
+ * has none, still meets each route's own bounded reader (readJson).
+ */
+export const API_FLOOD = {
+  read: { limit: 600, windowMs: 60_000 },
+  write: { limit: 120, windowMs: 60_000 },
+} as const;
+
+/** Photo uploads: four phone photos at the 4 MB each the routes accept, plus multipart overhead. */
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+/** Everything else is JSON, and the largest a route accepts is 32 KB. */
+const MAX_JSON_BYTES = 256 * 1024;
+const UPLOAD_ROUTES = [
+  /^\/api\/v1\/orders\/[^/]+\/returns$/,
+  /^\/api\/v1\/expert-requests$/,
+  /^\/api\/v1\/admin\/products\/[^/]+\/images$/,
+  /^\/api\/v1\/admin\/categories\/[^/]+\/image$/,
+];
+
+function apiGate(request: NextRequest) {
+  const method = request.method.toUpperCase();
+  // A preflight carries no body and costs nothing; refusing it would only
+  // turn a 429 into a CORS error the app cannot read.
+  if (method === "OPTIONS") return NextResponse.next();
+  const write = method !== "GET" && method !== "HEAD";
+  const policy = { cors: "write" as const };
+  const cap = write ? API_FLOOD.write : API_FLOOD.read;
+  const gate = hit(`api:${write ? "w" : "r"}:${callerIp(request.headers)}`, cap.limit, cap.windowMs);
+  if (!gate.ok) return fail("rate_limited", policy, { "Retry-After": String(gate.retryAfter) });
+
+  if (write) {
+    const path = request.nextUrl.pathname;
+    const max = UPLOAD_ROUTES.some((r) => r.test(path)) ? MAX_UPLOAD_BYTES : MAX_JSON_BYTES;
+    const length = Number(request.headers.get("content-length") ?? "0");
+    if (Number.isFinite(length) && length > max) return fail("payload_too_large", policy);
+  }
+  // JSON answers carry no HTML, so no nonce and no CSP.
+  return NextResponse.next();
 }
 
 /**
@@ -36,6 +91,8 @@ export function proxy(request: NextRequest) {
     url.protocol = "https:";
     return NextResponse.redirect(url, 308);
   }
+
+  if (request.nextUrl.pathname.startsWith("/api/v1/")) return apiGate(request);
 
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const gaEnabled = !!process.env.NEXT_PUBLIC_GA_ID?.trim();

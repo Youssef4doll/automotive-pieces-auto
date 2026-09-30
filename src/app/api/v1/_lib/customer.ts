@@ -28,6 +28,6 @@ export function asCustomer(request: Request, label: string, run: (customer: AppC
 }
 
 /** The account as the app may show it. */
-export function accountView(c: AppCustomer) {
+export function accountView(c: Pick<AppCustomer, "name" | "email" | "phone" | "createdAt">) {
   return { name: c.name, email: c.email, phone: c.phone, createdAt: c.createdAt.toISOString() };
 }

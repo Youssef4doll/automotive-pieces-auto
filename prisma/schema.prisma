@@ -50,22 +50,26 @@ enum CustomerSegment {
 }
 
 model User {
-  id              String               @id @default(cuid())
-  email           String               @unique
-  passwordHash    String
-  name            String
-  phone           String?
-  role            Role                 @default(CUSTOMER)
-  segment         CustomerSegment      @default(NEW)
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  orders          Order[]
-  profileChanges  UserProfileChange[]
-  carts           Cart[]
-  passwordResets  PasswordResetToken[]
-  contactMessages ContactMessage[]
-  adminSessions   AdminSession[]
-  appSessions     CustomerSession[]
+  id                String               @id @default(cuid())
+  email             String               @unique
+  passwordHash      String
+  /// When the password last changed. A website cookie signed before this is
+  /// refused (lib/session): changing a password signs out every copy of the
+  /// old session, including one somebody else is holding.
+  passwordChangedAt DateTime?
+  name              String
+  phone             String?
+  role              Role                 @default(CUSTOMER)
+  segment           CustomerSegment      @default(NEW)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  orders            Order[]
+  profileChanges    UserProfileChange[]
+  carts             Cart[]
+  passwordResets    PasswordResetToken[]
+  contactMessages   ContactMessage[]
+  adminSessions     AdminSession[]
+  appSessions       CustomerSession[]
 
   @@index([role])
 }
@@ -138,16 +142,16 @@ model Brand {
   // filled in with a plausible guess: a brand whose address we do not have
   // shows no address, and a brand with none of these shows no panel at all.
   /// Full registered company name, e.g. "HELLA GmbH & Co. KGaA".
-  legalName    String?
-  street       String?
-  postalCode   String?
-  city         String?
+  legalName  String?
+  street     String?
+  postalCode String?
+  city       String?
   /// Written as the manufacturer writes it — "DE", "Allemagne", "Tunisie".
-  country      String?
-  phone        String?
-  email        String?
+  country    String?
+  phone      String?
+  email      String?
   /// Stored with its scheme; rendered without it.
-  website      String?
+  website    String?
 }
 
 model Category {
@@ -214,30 +218,30 @@ model VehicleEngine {
 }
 
 model Product {
-  id                String   @id @default(cuid())
-  sku               String   @unique // reference stamped on the part
+  id                String     @id @default(cuid())
+  sku               String     @unique // reference stamped on the part
   name              String
-  slug              String   @unique
+  slug              String     @unique
   brandId           String?
-  brand             Brand?   @relation(fields: [brandId], references: [id])
+  brand             Brand?     @relation(fields: [brandId], references: [id])
   categoryId        String
-  category          Category @relation(fields: [categoryId], references: [id])
-  description       String   @default("")
-  imageUrl          String   @default("/images/parts-lineup.png")
-  oemRefs           String[] @default([])
-  specs             Json     @default("{}")
-  priceBuy          Decimal  @default(0) @db.Decimal(10, 2) // prix d'achat
-  priceSell         Decimal  @db.Decimal(10, 2) // prix de vente
-  compareAtPrice    Decimal? @db.Decimal(10, 2) // struck-through reference price
-  currency          String   @default("TND")
-  stockQty          Int      @default(0)
-  lowStockThreshold Int      @default(5)
+  category          Category   @relation(fields: [categoryId], references: [id])
+  description       String     @default("")
+  imageUrl          String     @default("/images/parts-lineup.png")
+  oemRefs           String[]   @default([])
+  specs             Json       @default("{}")
+  priceBuy          Decimal    @default(0) @db.Decimal(10, 2) // prix d'achat
+  priceSell         Decimal    @db.Decimal(10, 2) // prix de vente
+  compareAtPrice    Decimal?   @db.Decimal(10, 2) // struck-through reference price
+  currency          String     @default("TND")
+  stockQty          Int        @default(0)
+  lowStockThreshold Int        @default(5)
   /// What an empty shelf means for this part — see SupplyMode.
   supply            SupplyMode @default(ON_ORDER)
-  isTopSeller       Boolean  @default(false)
-  active            Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  isTopSeller       Boolean    @default(false)
+  active            Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   /// Everything a shopper might type to reach this part, in one accent-free
   /// lower-case blob: name, brand, category, family, SKU and every reference.
@@ -265,17 +269,17 @@ model Product {
   /// reversible and its products are traceable to their source file.
   importBatchId String?
 
-  fitments   ProductFitment[]
-  oldSlugs   ProductSlugHistory[]
-  references PartReference[]
-  cartItems  CartItem[]
-  orderItems OrderItem[]
-  stockMoves StockMovement[]
-  images     ProductImage[]
+  fitments    ProductFitment[]
+  oldSlugs    ProductSlugHistory[]
+  references  PartReference[]
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  stockMoves  StockMovement[]
+  images      ProductImage[]
   /// "Souvent achetés ensemble", as the shop set it: this part → the others.
-  links      ProductLink[] @relation("ProductLinks")
+  links       ProductLink[]        @relation("ProductLinks")
   stockAlerts StockAlert[]
-  linkedFrom ProductLink[] @relation("ProductLinkedFrom")
+  linkedFrom  ProductLink[]        @relation("ProductLinkedFrom")
 
   @@index([categoryId])
   @@index([brandId])
@@ -378,10 +382,10 @@ enum ReferenceType {
 /// part and types it in. `normalized` strips separators and case so that
 /// "GDB 1330", "gdb-1330" and "GDB1330" all resolve to the same row.
 model PartReference {
-  id        String        @id @default(cuid())
-  productId String
-  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  type      ReferenceType
+  id         String        @id @default(cuid())
+  productId  String
+  product    Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type       ReferenceType
   /// Whose number this is — the carmaker for an OE number (RENAULT, PEUGEOT),
   /// the equipment manufacturer for the rest. Empty rather than null, because
   /// it is part of the identity of the row and Postgres treats two NULLs as
@@ -390,10 +394,10 @@ model PartReference {
   /// The same OE number genuinely belongs to more than one carmaker inside a
   /// group — PSA stamps 1611349280 as both a Citroën and a Peugeot part — so
   /// it is the pair, not the number, that has to be unique.
-  brand      String       @default("")
+  brand      String        @default("")
   raw        String // exactly as printed, for display
   normalized String // uppercase alphanumerics only, for matching
-  createdAt  DateTime     @default(now())
+  createdAt  DateTime      @default(now())
 
   @@unique([productId, type, brand, normalized])
   @@index([normalized])
@@ -542,12 +546,16 @@ model Order {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  items        OrderItem[]
-  history      OrderStatusEvent[]
-  accessTokens OrderAccessToken[]
-  pushTokens   OrderPushToken[]
-  review       OrderReview?
-  returns      ReturnRequest[]
+  items              OrderItem[]
+  history            OrderStatusEvent[]
+  /// SHA-256 of the Idempotency-Key the app sent with the order. A second
+  /// POST with the same key — a retry after a timeout — gets this order back
+  /// instead of placing another (api/v1/orders). Null for website orders.
+  idempotencyKeyHash String?            @unique
+  accessTokens       OrderAccessToken[]
+  pushTokens         OrderPushToken[]
+  review             OrderReview?
+  returns            ReturnRequest[]
 
   @@index([status])
   @@index([userId])
@@ -579,6 +587,10 @@ model AdminSession {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash  String    @unique
   createdAt  DateTime  @default(now())
+  /// What the phone called itself at sign-in ("iPhone · iOS 18"), for the
+  /// list of signed-in devices. Free text from the client — shown back to the
+  /// account's owner only, never trusted for anything.
+  device     String?
   /// Hard end. Used or not, a session is signed in again after this.
   expiresAt  DateTime
   lastUsedAt DateTime?
@@ -602,6 +614,10 @@ model CustomerSession {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash  String    @unique
   createdAt  DateTime  @default(now())
+  /// What the phone called itself at sign-in ("iPhone · iOS 18"), for the
+  /// list of signed-in devices. Free text from the client — shown back to the
+  /// account's owner only, never trusted for anything.
+  device     String?
   expiresAt  DateTime
   lastUsedAt DateTime?
 
@@ -638,27 +654,27 @@ model OrderAccessToken {
 }
 
 model OrderItem {
-  id        String        @id @default(cuid())
-  orderId   String
-  order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String?
-  product   Product?      @relation(fields: [productId], references: [id])
-  name      String // snapshot
-  sku       String // snapshot
-  imageUrl  String        @default("/images/parts-lineup.png")
-  unitPrice Decimal       @db.Decimal(10, 2)
-  qty       Int
-  lineTotal Decimal       @db.Decimal(10, 2)
+  id          String        @id @default(cuid())
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product?      @relation(fields: [productId], references: [id])
+  name        String // snapshot
+  sku         String // snapshot
+  imageUrl    String        @default("/images/parts-lineup.png")
+  unitPrice   Decimal       @db.Decimal(10, 2)
+  qty         Int
+  lineTotal   Decimal       @db.Decimal(10, 2)
   // What the fitment table said about this part on the order's car, at the
   // moment the order was placed. Null when no vehicle was given, which is the
   // honest answer rather than UNLISTED — "we were not told" and "we hold no
   // row for it" are different facts and the shop acts on them differently.
-  fit       OrderItemFit?
+  fit         OrderItemFit?
   /// True when this line was sold with nothing on the shelf, so the shop has
   /// to order it in before it can pick the rest. Recorded per line rather
   /// than per order: one basket can mix what is here with what is not, and
   /// the picking bench needs to know which is which.
-  backorder Boolean       @default(false)
+  backorder   Boolean       @default(false)
   returnLines ReturnItem[]
 
   @@index([orderId])
@@ -709,7 +725,7 @@ enum ContactStatus {
 /// is the difference between "my part does not fit" and a message the shop can
 /// act on without a second round of questions.
 model ContactMessage {
-  id         String        @id @default(cuid())
+  id         String         @id @default(cuid())
   name       String
   /// Null for a request sent from the app with a phone number only — the
   /// phone is how most customers here are reached.
@@ -717,17 +733,17 @@ model ContactMessage {
   phone      String?
   subject    String
   body       String
-  status     ContactStatus @default(NEW)
+  status     ContactStatus  @default(NEW)
   /// Set when the customer was signed in. Null for a guest, who is still a
   /// real person with a real question.
   userId     String?
-  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user       User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// Context the page attached on its own.
   orderRef   String?
   productSku String?
   vehicle    String?
   handledAt  DateTime?
-  createdAt  DateTime      @default(now())
+  createdAt  DateTime       @default(now())
   photos     ContactPhoto[]
 
   @@index([status, createdAt])

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { listAppProducts } from "@/lib/data/catalog";
+import { APP_SORTS, listAppProducts, type AppSort } from "@/lib/data/catalog";
 import { Cache, fail, guard, ok, preflight } from "../../_lib/respond";
 
 const slug = z.string().trim().min(1).max(64);
@@ -27,6 +27,9 @@ const PUBLIC = { cache: Cache.catalogue, cors: true };
  * filtering a page client-side would report "nothing fits your car" whenever
  * the first twenty rows happened to hold none.
  *
+ * `sort` is one of APP_SORTS (lib/data/catalog) — relevance by default —
+ * and `onSale=1` keeps the parts the shop has marked down.
+ *
  * `packs=1` returns the shop's packs only — products whose specs list the
  * parts they bundle — for the app's maintenance-pack row.
  */
@@ -41,8 +44,11 @@ export async function GET(request: NextRequest) {
       const pageParam = params.get("page");
       const brand = params.get("brand");
       const sortParam = params.get("sort");
-      const sort = sortParam === "price_asc" || sortParam === "price_desc" ? sortParam : undefined;
+      // An unknown sort is the default rather than an error: an older app
+      // asking for an order this server has dropped still gets its parts.
+      const sort = APP_SORTS.includes(sortParam as AppSort) ? (sortParam as AppSort) : undefined;
       const inStockOnly = params.get("inStock") === "1";
+      const onSaleOnly = params.get("onSale") === "1";
       // Up to twenty ids, each shaped like one; anything else is a caller bug.
       const idsParam = params.get("ids");
       const ids = idsParam ? idsParam.split(",").filter(Boolean) : undefined;
@@ -77,6 +83,7 @@ export async function GET(request: NextRequest) {
         brandSlug: parsed.brand?.success ? parsed.brand.data : undefined,
         sort,
         inStockOnly,
+        onSaleOnly,
         ids,
         packsOnly: params.get("packs") === "1",
         page: parsed.page?.success ? parsed.page.data : 1,

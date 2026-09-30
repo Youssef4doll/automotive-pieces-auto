@@ -1186,6 +1186,99 @@ shop has set one. The "livrée" e-mail and the policy page now point at
 Suite: `scripts/e2e-returns.mjs` (every door: API rules, staff steps, photos,
 the guest's website form, the admin refusing it, the windows closing).
 
+### 5.ii Sign-in, the API's outer wall, failures, sorting (September 30, 2026)
+
+**Passwords** (`lib/validation` `passwordRule`, `lib/weak-passwords`, tested):
+eight characters at least, 72 *bytes* at most (bcrypt's ceiling, counted in
+bytes so a long Arabic password is refused rather than silently cut), not
+one of the passwords tried first (the leaked-password leaders, AZERTY
+keyboard runs, "tunisie2024"-style word-plus-year) and not built from the
+account's own e-mail or name. One rule for signup, reset and change, on the
+website and the app; each refusal carries `params.reason` (`short`, `long`,
+`common`, `personal`), which the app API returns as the field's `reason`.
+Passwords set under the old six-character rule keep working — the rule
+applies when a password is chosen. The e2e suites' sign-up passwords moved to
+`Piston-bleu-42` / `Soupape-verte-7`.
+
+**E-mails** are stored lower-cased (`emailAddress` in lib/validation) and
+looked up case-insensitively (`lib/accounts` `findUserByEmail`, exact match
+first, then the oldest case-insensitive one), so an account made as
+"Sami@…" before this is reachable as "sami@…", and cannot be made twice in
+two cases.
+
+**Changing or resetting a password signs out everything else**
+(`lib/accounts` `setPassword`): the phones' customer sessions (except the one
+that made the change), every staff session, and every website cookie —
+`User.passwordChangedAt` against the cookie's `iat` in `lib/session`. The
+website re-issues its own cookie after a change so that browser stays in. A
+reset link is now spent atomically *before* the password is set, so two
+submissions of one link cannot both win.
+
+**Sessions**: a customer session in the app lasts 30 days from its last use,
+at most 180 days from sign-in (it was 30 days flat — a weekly customer was
+signed out monthly). A staff session still ends 30 days after sign-in, and
+now also after 14 days unused. Each records the phone's own name at
+sign-in (`device`, free text, cleaned by `deviceLabel`).
+`GET /api/v1/account/sessions` lists the account's phones (`current` marks
+the asker); `DELETE` signs out every other one, `DELETE …/sessions/{id}` one
+(only ever inside the asker's own account). `POST /api/v1/account/password`
+`{ current, next }` changes it from the app (login budget per account;
+refusals `current`/`wrong`, `next`/`short|long|common|personal|same`).
+Reset e-mails: at most three an hour per account whoever asks
+(`LIMITS.passwordResetPerAccount`) — past it the answer is still "sent" and
+nothing is sent.
+
+**Orders are safe to retry.** `POST /api/v1/orders` takes an
+`Idempotency-Key` (16–64 URL-safe characters; stored as SHA-256 on
+`Order.idempotencyKeyHash`, migration `20260930100000_auth_hardening`). A
+repeat of the key within 24 h answers with the order the first request placed
+— same reference, a fresh order token, `replayed: true`, no second e-mail —
+and two simultaneous requests with one key are one order (the unique index
+decides; `createOrder` reports `duplicate` rather than retrying it as a
+reference collision). The app sends a new key whenever the basket or the
+details change.
+
+**The outer wall** (`src/proxy.ts`, `apiGate`): every `/api/v1` request is
+counted per address before its route runs — 600 reads and 120 writes a
+minute (`API_FLOOD`), loose on purpose for carrier NAT; the real gates stay
+per route and per identity (`LIMITS`). A declared body over 256 KB (20 MB on
+the four photo routes) is refused with 413 before anything reads it, and
+`readJson` now reads the body a chunk at a time and stops at the route's
+ceiling instead of reading it all and measuring after.
+`experimental.proxyClientMaxBodySize` is 21 MB: Next buffers bodies for the
+proxy and silently truncates past that size, which would break a four-photo
+return. JSON answers skip the CSP work. The limiter's windows live in
+`lib/rate-limit-core.ts` so the proxy and the routes share one
+implementation (not one map — they are separate bundles).
+
+**When the database is unreachable** (`respond.ts` `guard`): Prisma's
+connection failures — P1001 "Can't reach database server", P1017 / "kind:
+Closed", a pool timeout (P2024), a write conflict (P2034) — are answered
+`503 temporarily_unavailable` with `Retry-After: 3` and logged as one line,
+instead of a 500 with a stack. A cacheable read (a route whose options set a
+public cache) that takes more than 9 s is answered the same way, under the
+app's 12 s timeout; writes are never cut short. `lib/prisma` adds
+`connect_timeout=15` to DATABASE_URL unless it names one — Prisma's default
+of 5 s is shorter than a Neon compute takes to wake, which is what the
+"Can't reach database server" lines on the first request after a quiet spell
+were. The app retries reads (and idempotent writes) on 502/503/504, a
+timeout or no signal, honouring Retry-After up to 5 s.
+
+**Sorting** (`lib/data/catalog`, `APP_SORTS`): `relevance` (default — with
+a car, confirmed fits first across the whole list; then on the shelf, then
+orderable, then unavailable; within that photographed parts, the most
+ordered, the price), `price_asc`, `price_desc`, `newest` (date added),
+`popular` (order lines naming the part — real orders, counted). Every order
+ends on the id: the old default (stock, then price) could swap two tied
+parts between page one and page two. Segments are counted and read two round
+trips per page whatever their number (`pageSegments`). `onSale=1` keeps the
+parts with a compare-at price above today's; `facets.onSale` counts them.
+
+Suite: `scripts/e2e-auth-hardening.mjs` (passwords and reasons, e-mail case,
+devices, change password signing out phones/staff/cookies, reset limit,
+idempotent orders including two at once, 413, every sort paging without a
+repeat).
+
 ## 6. Working on it
 
 **Read the comments.** The codebase explains *why* far more than *what* —

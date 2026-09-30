@@ -9,15 +9,10 @@ import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
 import { checkCredentials } from "@/lib/credentials";
 import { checkForm } from "@/lib/bot-check";
 import { signupSchema } from "@/lib/validation";
+import { BCRYPT_COST, findUserByEmail } from "@/lib/accounts";
 import { claimOrdersForUser } from "./orders";
 
 
-/**
- * bcrypt work factor. 12 is the current sensible floor — ~250ms per hash on
- * commodity hardware, which is invisible on a login and expensive in bulk for
- * anyone who ever gets hold of the table.
- */
-const BCRYPT_COST = 12;
 
 export type AuthState = { error?: string } | undefined;
 
@@ -42,7 +37,7 @@ export async function signup(_prev: AuthState, formData: FormData): Promise<Auth
   }
   const { name, email, phone, password } = parsed.data;
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await findUserByEmail(email, { id: true });
   if (existing) {
     return { error: "Un compte existe déjà avec cet email" };
   }

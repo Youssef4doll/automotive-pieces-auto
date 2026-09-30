@@ -1,8 +1,9 @@
 import bcrypt from "bcryptjs";
+import { BCRYPT_COST, deviceLabel, findUserByEmail } from "@/lib/accounts";
 import { prisma } from "@/lib/prisma";
 import { issueCustomerSession } from "@/lib/customer-session";
 import { callerKey, hit, LIMITS } from "@/lib/rate-limit";
-import { signupSchema } from "@/lib/validation";
+import { issueReason, signupSchema } from "@/lib/validation";
 import { fail, guard, ok, preflightWrite, readJson } from "../../_lib/respond";
 import { CUSTOMER } from "../../_lib/customer";
 
@@ -30,19 +31,21 @@ export async function POST(request: Request) {
       if (body === undefined) return fail("bad_request", CUSTOMER);
       const parsed = signupSchema.safeParse(body);
       if (!parsed.success) {
-        const field = String(parsed.error.issues[0]?.path[0] ?? "form");
-        return fail("invalid_field", CUSTOMER, undefined, { field });
+        const issue = parsed.error.issues[0];
+        const field = String(issue?.path[0] ?? "form");
+        const reason = issueReason(issue);
+        return fail("invalid_field", CUSTOMER, undefined, { field, ...(reason ? { reason } : {}) });
       }
       const { name, email, phone, password } = parsed.data;
 
-      const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+      const existing = await findUserByEmail(email, { id: true });
       if (existing) return fail("invalid_field", CUSTOMER, undefined, { field: "email", reason: "taken" });
 
       const user = await prisma.user.create({
-        data: { name, email, phone, passwordHash: await bcrypt.hash(password, 12), role: "CUSTOMER" },
+        data: { name, email, phone, passwordHash: await bcrypt.hash(password, BCRYPT_COST), role: "CUSTOMER" },
         select: { id: true, name: true, email: true, phone: true, createdAt: true },
       });
-      const token = await issueCustomerSession(user.id);
+      const token = await issueCustomerSession(user.id, deviceLabel((body as { device?: unknown }).device));
       return ok(
         { token, account: { name: user.name, email: user.email, phone: user.phone, createdAt: user.createdAt.toISOString() } },
         CUSTOMER,

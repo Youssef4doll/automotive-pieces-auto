@@ -1,6 +1,5 @@
 "use server";
 
-import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -8,6 +7,9 @@ import { createSession } from "@/lib/session";
 import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
 import { checkForm } from "@/lib/bot-check";
 import { findValidResetToken, startPasswordReset } from "@/lib/password-reset";
+import { setPassword } from "@/lib/accounts";
+import { emailAddress, passwordRule, PERSONAL_PASSWORD_MESSAGE } from "@/lib/validation";
+import { weakPassword } from "@/lib/weak-passwords";
 
 /**
  * "Mot de passe oublié ?" — the two halves of it.
@@ -30,7 +32,7 @@ export async function requestPasswordReset(_prev: ResetRequestState, formData: F
     return { error: `Trop de demandes. Réessayez dans ${Math.ceil(gate.retryAfter / 60)} minute(s).` };
   }
 
-  const parsed = z.email().safeParse(formData.get("email"));
+  const parsed = emailAddress().safeParse(formData.get("email"));
   if (!parsed.success) return { error: "Adresse e-mail invalide" };
 
   await startPasswordReset(parsed.data);
@@ -40,7 +42,7 @@ export async function requestPasswordReset(_prev: ResetRequestState, formData: F
 const resetSchema = z
   .object({
     token: z.string().min(20),
-    password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+    password: passwordRule,
     confirm: z.string(),
   })
   .refine((d) => d.password === d.confirm, { message: "Les deux mots de passe ne correspondent pas", path: ["confirm"] });
@@ -58,15 +60,17 @@ export async function resetPassword(_prev: ResetState, formData: FormData): Prom
   const row = await findValidResetToken(parsed.data.token);
   if (!row) return { error: "Ce lien n'est plus valable. Demandez-en un nouveau." };
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-  await prisma.$transaction([
-    prisma.user.update({ where: { id: row.userId }, data: { passwordHash } }),
-    prisma.passwordResetToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
-    // A reset is what somebody does when they think the password is known to
-    // someone else. Every phone signed in with the old one is signed out.
-    prisma.customerSession.deleteMany({ where: { userId: row.userId } }),
-    prisma.adminSession.deleteMany({ where: { userId: row.userId } }),
-  ]);
+  if (weakPassword(parsed.data.password, { email: row.user.email }) === "personal") return { error: PERSONAL_PASSWORD_MESSAGE };
+
+  // Spent first, and only if still unspent: two submissions of one link (a
+  // double tap, or somebody else holding the e-mail) cannot both set a password.
+  const spent = await prisma.passwordResetToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } });
+  if (spent.count !== 1) return { error: "Ce lien n'est plus valable. Demandez-en un nouveau." };
+
+  // A reset is what somebody does when they think the password is known to
+  // someone else: every phone, staff session and website cookie signed in
+  // with the old one is signed out (lib/accounts).
+  await setPassword(row.userId, parsed.data.password);
 
   // Signed in on this device only: somebody resetting a password from a
   // borrowed phone should not leave a thirty-day session on it.

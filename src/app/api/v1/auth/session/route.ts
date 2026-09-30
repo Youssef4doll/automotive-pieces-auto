@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkCredentials } from "@/lib/credentials";
+import { deviceLabel } from "@/lib/accounts";
 import { issueCustomerSession, revokeCustomerSession } from "@/lib/customer-session";
 import { fail, guard, ok, preflightWrite, readJson } from "../../_lib/respond";
 import { accountView, asCustomer, CUSTOMER } from "../../_lib/customer";
@@ -23,6 +24,8 @@ export const OPTIONS = preflightWrite;
 const body = z.object({
   email: z.string().trim().max(200),
   password: z.string().min(1).max(200),
+  /** What the phone calls itself, for the list of signed-in devices. */
+  device: z.string().max(200).optional(),
 });
 
 export async function POST(request: Request) {
@@ -42,7 +45,7 @@ export async function POST(request: Request) {
         select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
       });
       if (!user) return fail("unauthorized", CUSTOMER);
-      const token = await issueCustomerSession(user.id);
+      const token = await issueCustomerSession(user.id, deviceLabel(parsed.data.device));
       return ok({ token, account: accountView(user) }, CUSTOMER);
     },
     "auth session POST",

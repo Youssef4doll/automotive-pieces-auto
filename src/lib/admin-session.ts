@@ -14,6 +14,13 @@ const TOKEN_BYTES = 32;
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/;
 /** Thirty days, as the website's "se souvenir de moi" — then sign in again. */
 const LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+/**
+ * And sooner if the phone stops using it: a staff session untouched for a
+ * fortnight — a phone in a drawer, a device that changed hands — is ended.
+ * The staff door opens orders, addresses and stock; it should not stay open
+ * on a phone nobody is watching.
+ */
+const IDLE_MS = 14 * 24 * 60 * 60 * 1000;
 /** `lastUsedAt` is bookkeeping; writing it on every request would be a write per read. */
 const TOUCH_EVERY_MS = 5 * 60 * 1000;
 
@@ -22,10 +29,10 @@ function hashToken(token: string) {
 }
 
 /** Mint a session for a user already proven to be an admin. Returns the raw token — the only time it exists. */
-export async function issueAdminSession(userId: string) {
+export async function issueAdminSession(userId: string, device: string | null = null) {
   const token = randomBytes(TOKEN_BYTES).toString("base64url");
   await prisma.adminSession.create({
-    data: { userId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + LIFETIME_MS) },
+    data: { userId, device, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + LIFETIME_MS) },
   });
   return token;
 }
@@ -47,6 +54,7 @@ export async function adminForRequest(request: Request): Promise<AppAdmin | null
     where: { tokenHash: hashToken(token) },
     select: {
       id: true,
+      createdAt: true,
       expiresAt: true,
       lastUsedAt: true,
       user: { select: { id: true, name: true, email: true, role: true } },
@@ -54,7 +62,8 @@ export async function adminForRequest(request: Request): Promise<AppAdmin | null
   });
   if (!row) return null;
   const now = Date.now();
-  if (row.expiresAt.getTime() <= now || row.user.role !== "ADMIN") {
+  const idle = now - (row.lastUsedAt ?? row.createdAt).getTime() > IDLE_MS;
+  if (row.expiresAt.getTime() <= now || idle || row.user.role !== "ADMIN") {
     await prisma.adminSession.deleteMany({ where: { id: row.id } });
     return null;
   }

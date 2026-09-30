@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { checkCredentials } from "@/lib/credentials";
+import { deviceLabel } from "@/lib/accounts";
 import { issueAdminSession, revokeAdminSession } from "@/lib/admin-session";
 import { fail, guard, ok, preflightWrite, readJson } from "../../_lib/respond";
 import { ADMIN, asAdmin } from "../_lib/admin";
@@ -23,6 +24,8 @@ export const OPTIONS = preflightWrite;
 const body = z.object({
   email: z.string().trim().max(200),
   password: z.string().min(1).max(200),
+  /** What the phone calls itself, for the list of signed-in devices. */
+  device: z.string().max(200).optional(),
 });
 
 export async function POST(request: Request) {
@@ -39,7 +42,7 @@ export async function POST(request: Request) {
       }
       if (checked.user.role !== "ADMIN") return fail("forbidden", ADMIN);
 
-      const token = await issueAdminSession(checked.user.id);
+      const token = await issueAdminSession(checked.user.id, deviceLabel(parsed.data.device));
       return ok({ token, admin: { name: checked.user.name, email: checked.user.email } }, ADMIN);
     },
     "admin session POST",

@@ -114,11 +114,13 @@ class PromoError extends Error {
 export type CreateOrderResult =
   | { ok: true; id: string; ref: string; token: string | null }
   | { ok: false; code: "gone" | "unsourceable"; productId: string; message: string }
-  | { ok: false; code: "promo"; reason: PromoProblem; minSubtotal?: number; message: string };
+  | { ok: false; code: "promo"; reason: PromoProblem; minSubtotal?: number; message: string }
+  /** An order already carries this Idempotency-Key (api/v1/orders answers with that order). */
+  | { ok: false; code: "duplicate"; message: string };
 
 export async function createOrder(
   data: PlaceOrderData,
-  ctx: { userId?: string; issueToken?: boolean } = {},
+  ctx: { userId?: string; issueToken?: boolean; idempotencyKeyHash?: string } = {},
 ): Promise<CreateOrderResult> {
   const settings = await getSettings();
   const freeShippingThreshold = Number(settings.free_shipping_threshold) || 150;
@@ -270,6 +272,7 @@ export async function createOrder(
         data: {
           ref,
           userId: ctx.userId,
+          idempotencyKeyHash: ctx.idempotencyKeyHash,
           customerName: data.customerName,
           phone: data.phone,
           email: data.email || undefined,
@@ -340,8 +343,12 @@ export async function createOrder(
     if (e instanceof PromoError) {
       return { ok: false, code: "promo", reason: e.reason, minSubtotal: e.minSubtotal, message: e.message };
     }
-    const isRefCollision =
-      typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "P2002";
+    const unique = typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "P2002";
+    // The same Idempotency-Key committed by a request that got there first —
+    // not a reference collision, and retrying would only collide again.
+    const target = unique ? JSON.stringify((e as { meta?: unknown }).meta ?? "") : "";
+    if (unique && target.includes("idempotencyKeyHash")) return { ok: false, code: "duplicate", message: "Cette commande a déjà été enregistrée." };
+    const isRefCollision = unique;
     if (isRefCollision && attempt < MAX_REF_ATTEMPTS) continue;
     throw e;
   }

@@ -15,7 +15,7 @@ const check = (label, ok, detail = "") => {
 
 const STAMP = Date.now().toString().slice(-6);
 const EMAIL = `space.${STAMP}@example.com`;
-const PASSWORD = "client1234";
+const PASSWORD = "Piston-bleu-42";
 
 /**
  * The signup limiter is per-address and lives in process memory, so a long run
