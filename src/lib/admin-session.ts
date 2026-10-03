@@ -37,7 +37,7 @@ export async function issueAdminSession(userId: string, device: string | null = 
   return token;
 }
 
-export type AppAdmin = { id: string; name: string; email: string };
+export type AppAdmin = { id: string; name: string; email: string | null };
 
 /**
  * The admin this request speaks for, or null.

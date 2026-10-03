@@ -1220,3 +1220,65 @@ export function passwordResetMail(user: { name: string; email: string }, url: st
     replyTo: shop.email ?? undefined,
   };
 }
+
+/**
+ * The shop answered a question asked from the app, and the asker gave an
+ * e-mail. The app shows the same answer under the question; this is the copy
+ * for someone who has not opened it, with the question quoted so it reads on
+ * its own.
+ */
+export function questionReplyMail(
+  q: { name: string; email: string; question: string; reply: string; orderRef: string | null },
+  shop: ShopForEmail,
+): Mail {
+  const firstName = q.name.trim().split(/\s+/)[0] || q.name;
+  const para = (text: string, color = BODY) =>
+    `<p style="margin:0;font-family:${FONT};font-size:15px;line-height:1.6;color:${color};white-space:pre-wrap;">${esc(text)}</p>`;
+  const body = [
+    hero({
+      tone: "navy",
+      glyph: "&#128172;",
+      headline: "La boutique vous a répondu",
+      sub: `Bonjour ${esc(firstName)}.${q.orderRef ? ` À propos de votre commande ${esc(q.orderRef)}.` : ""}`,
+    }),
+    row(
+      `<p style="margin:0 0 6px;font-family:${FONT};font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:${MUTED};">Votre question</p>${para(q.question, MUTED)}`,
+      "padding:22px 28px 0;",
+    ),
+    row(
+      `<p style="margin:0 0 6px;font-family:${FONT};font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:${MUTED};">Notre réponse</p>${para(q.reply, INK)}`,
+      "padding:18px 28px 0;",
+    ),
+    row(para("Vous la retrouvez aussi dans l'application. Répondez simplement à cet e-mail pour continuer.", MUTED), "padding:18px 28px 0;"),
+    signoff(shop),
+  ].join("");
+
+  const text = [
+    `La boutique vous a répondu — ${shop.name}`,
+    ``,
+    `Bonjour ${firstName}.${q.orderRef ? ` À propos de votre commande ${q.orderRef}.` : ""}`,
+    ``,
+    `Votre question :`,
+    q.question,
+    ``,
+    `Notre réponse :`,
+    q.reply,
+    ``,
+    `L'équipe ${shop.name}`,
+  ].join("\n");
+
+  return {
+    to: q.email,
+    subject: q.orderRef ? `Réponse à votre question sur ${q.orderRef} — ${shop.name}` : `Réponse à votre question — ${shop.name}`,
+    html: shell({
+      title: "La boutique vous a répondu",
+      preheader: q.reply.slice(0, 90),
+      kicker: "Votre question",
+      shop,
+      body,
+      reason: "que vous avez posé une question à la boutique depuis l'application %HOST%",
+    }),
+    text,
+    replyTo: shop.email ?? undefined,
+  };
+}

@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { checkCredentials } from "@/lib/credentials";
 import { deviceLabel } from "@/lib/accounts";
 import { issueCustomerSession, revokeCustomerSession } from "@/lib/customer-session";
+import { issueAdminSession } from "@/lib/admin-session";
 import { fail, guard, ok, preflightWrite, readJson } from "../../_lib/respond";
-import { accountView, asCustomer, CUSTOMER } from "../../_lib/customer";
+import { ACCOUNT_SELECT, accountView, asCustomer, CUSTOMER } from "../../_lib/customer";
 
 /**
  * The app's customer door.
@@ -17,6 +18,12 @@ import { accountView, asCustomer, CUSTOMER } from "../../_lib/customer";
  * door's — so the three share one lockout budget and one timing. Any account
  * may shop, the owner's included; a customer session never opens /gestion,
  * which has its own table.
+ *
+ * An ADMIN signing in here with the password gets the staff session too
+ * (`staff: { token, admin }`): the same proof the staff door asks for, so
+ * there is no second sign-in and no "Espace boutique" door shown to
+ * customers. A code sign-in (auth/phone) never does — an SMS is not enough
+ * to open the back office.
  */
 
 export const OPTIONS = preflightWrite;
@@ -40,13 +47,13 @@ export async function POST(request: Request) {
           ? fail("rate_limited", CUSTOMER, { "Retry-After": String(checked.retryAfter) })
           : fail("unauthorized", CUSTOMER);
       }
-      const user = await prisma.user.findUnique({
-        where: { id: checked.user.id },
-        select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
-      });
+      const user = await prisma.user.findUnique({ where: { id: checked.user.id }, select: ACCOUNT_SELECT });
       if (!user) return fail("unauthorized", CUSTOMER);
-      const token = await issueCustomerSession(user.id, deviceLabel(parsed.data.device));
-      return ok({ token, account: accountView(user) }, CUSTOMER);
+      const device = deviceLabel(parsed.data.device);
+      const token = await issueCustomerSession(user.id, device);
+      const staff =
+        user.role === "ADMIN" ? { token: await issueAdminSession(user.id, device), admin: { name: user.name, email: user.email } } : undefined;
+      return ok({ token, account: accountView(user), ...(staff ? { staff } : {}) }, CUSTOMER);
     },
     "auth session POST",
     CUSTOMER,

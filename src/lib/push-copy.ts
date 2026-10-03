@@ -112,3 +112,19 @@ export function returnStatusPush(status: ReturnPushStatus, locale: PushLocale, r
   const c = RETURN[locale][status];
   return { title: c.title, body: c.body(returnRef) };
 }
+
+const REPLY_TITLE: Record<PushLocale, string> = {
+  fr: "La boutique vous a répondu",
+  en: "The shop answered you",
+  ar: "ردّ عليك المتجر",
+};
+
+/**
+ * The shop answered a question asked from the app. The answer itself is the
+ * body — it is short, and it is what the customer is waiting for — cut to
+ * what a lock screen shows.
+ */
+export function questionReplyPush(locale: PushLocale, reply: string) {
+  const text = reply.replace(/\s+/g, " ").trim();
+  return { title: REPLY_TITLE[locale], body: text.length > 140 ? `${text.slice(0, 139)}…` : text };
+}

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { backInStockPush, EXPO_TOKEN, orderLabel, orderStatusPush, pushLocale, returnStatusPush } from "./push-copy";
+import { backInStockPush, EXPO_TOKEN, orderLabel, orderStatusPush, pushLocale, questionReplyPush, returnStatusPush } from "./push-copy";
 
 test("an order is named by what is in it", () => {
   assert.equal(orderLabel("Amortisseur avant SACHS", 0), "Amortisseur avant SACHS");
@@ -51,4 +51,13 @@ test("a return's notification names the request and says only what the shop did"
   assert.ok(p.body.includes("RET-1001"));
   assert.ok(returnStatusPush("RESOLVED", "ar", "RET-1001").body.includes("RET-1001"));
   assert.equal(returnStatusPush("REFUSED", "en", "RET-7").title, "Return request declined");
+});
+
+test("a reply is the answer itself, cut for a lock screen", () => {
+  const short = questionReplyPush("fr", "Oui,  elle va sur votre\nClio IV.");
+  assert.equal(short.title, "La boutique vous a répondu");
+  assert.equal(short.body, "Oui, elle va sur votre Clio IV.");
+  const long = questionReplyPush("ar", "x".repeat(300));
+  assert.equal(long.body.length, 140);
+  assert.ok(long.body.endsWith("…"));
 });

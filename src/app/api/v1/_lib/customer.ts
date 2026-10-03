@@ -27,7 +27,39 @@ export function asCustomer(request: Request, label: string, run: (customer: AppC
   );
 }
 
-/** The account as the app may show it. */
-export function accountView(c: Pick<AppCustomer, "name" | "email" | "phone" | "createdAt">) {
-  return { name: c.name, email: c.email, phone: c.phone, createdAt: c.createdAt.toISOString() };
+/** What a route selects to answer with an account — see `accountView`. */
+export const ACCOUNT_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  verifiedPhone: true,
+  passwordHash: true,
+  role: true,
+  createdAt: true,
+} as const;
+
+type AccountRow = { name: string; email: string | null; phone: string | null; verifiedPhone: string | null; role: string; createdAt: Date } & (
+  | { passwordHash: string | null }
+  | { hasPassword: boolean }
+);
+
+/**
+ * The account as the app may show it. Never the hash: only whether there is
+ * a password at all, which decides what "Connexion et sécurité" offers.
+ * `staff` is what puts "Espace boutique" on the account screen — the door
+ * itself still asks the staff API, which checks the role on every request.
+ */
+export function accountView(c: AccountRow) {
+  return {
+    name: c.name,
+    email: c.email,
+    phone: c.phone,
+    verifiedPhone: c.verifiedPhone,
+    hasPassword: "hasPassword" in c ? c.hasPassword : Boolean(c.passwordHash),
+    staff: c.role === "ADMIN",
+    createdAt: c.createdAt.toISOString(),
+  };
 }
+
+export type { AppCustomer };

@@ -92,4 +92,16 @@ export const LIMITS = {
   pushRegister: { limit: 30, windowMs: 10 * 60_000 },
   /** Type-ahead fires per keystroke (debounced), so the ceiling is higher. */
   suggest: { limit: 200, windowMs: 60_000 },
+  /** SMS codes to ONE number: each is a text on somebody's phone and a line
+   *  on the shop's bill. Three in a quarter of an hour covers "it did not
+   *  arrive" twice; past it the answer is still "sent" and nothing goes. */
+  phoneCodePerNumber: { limit: 3, windowMs: 15 * 60_000 },
+  /** …and eight a day, so a patient script cannot text one number all night. */
+  phoneCodePerNumberDay: { limit: 8, windowMs: 24 * 60 * 60_000 },
+  /** Codes asked from one address, to any numbers — the flood ceiling against
+   *  someone walking a list of numbers. Loose for carrier NAT (see above). */
+  phoneCodePerIp: { limit: 30, windowMs: 60 * 60_000 },
+  /** Code answers from one address. Each code also dies after five wrong
+   *  answers (lib/phone-code), which is the real gate. */
+  phoneVerifyPerIp: { limit: 60, windowMs: 15 * 60_000 },
 } as const;

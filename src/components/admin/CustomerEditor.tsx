@@ -7,7 +7,8 @@ import { adminUpdateCustomer, adminDeleteCustomer, type CustomerState } from "@/
 export type EditableCustomer = {
   id: string;
   name: string;
-  email: string;
+  /** Null for an account opened with a phone code in the app. */
+  email: string | null;
   phone: string | null;
   orderCount: number;
 };
@@ -32,7 +33,7 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
 
   const [v, setV] = useState({
     name: customer.name,
-    email: customer.email,
+    email: customer.email ?? "",
     phone: customer.phone ?? "",
   });
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -76,7 +77,7 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
             <input name="name" value={v.name} onChange={set("name")} required className={INPUT} />
           </Field>
           <Field label="Email">
-            <input name="email" type="email" value={v.email} onChange={set("email")} required className={INPUT} dir="ltr" />
+            <input name="email" type="email" value={v.email} onChange={set("email")} required={Boolean(customer.email)} className={INPUT} dir="ltr" />
           </Field>
           <Field label="Téléphone">
             <input name="phone" type="tel" value={v.phone} onChange={set("phone")} className={INPUT} dir="ltr" />
@@ -96,7 +97,7 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
             <button
               type="button"
               onClick={() => {
-                setV({ name: customer.name, email: customer.email, phone: customer.phone ?? "" });
+                setV({ name: customer.name, email: customer.email ?? "", phone: customer.phone ?? "" });
                 setEditing(false);
               }}
               className="min-h-tap px-5 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:border-gray-400"
@@ -108,7 +109,7 @@ export default function CustomerEditor({ customer }: { customer: EditableCustome
       ) : (
         <dl className="grid sm:grid-cols-2 gap-4">
           <Read label="Nom" value={customer.name} />
-          <Read label="Email" value={customer.email} dir="ltr" />
+          <Read label="Email" value={customer.email ?? "Aucun (connexion par code SMS)"} dir={customer.email ? "ltr" : undefined} />
           <Read label="Téléphone" value={customer.phone ?? "Non renseigné"} dir={customer.phone ? "ltr" : undefined} />
         </dl>
       )}

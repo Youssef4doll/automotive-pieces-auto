@@ -3,6 +3,7 @@ import { RETURN_DAYS, WARRANTY_MONTHS } from "@/lib/policy";
 import { SHOP_ERROR_HOURS } from "@/lib/returns-rules";
 import { getSettings, publicContact } from "@/lib/settings";
 import { FLAT_DELIVERY_FEE } from "@/lib/shipping";
+import { smsAvailable } from "@/lib/sms";
 import { taxPolicy } from "@/lib/tax";
 import { Cache, guard, ok, preflight } from "../../_lib/respond";
 
@@ -62,6 +63,12 @@ export async function GET() {
            */
           pickup: contact.address ? { address: contact.address, hours: contact.hours } : null,
           contact,
+          /**
+           * Whether "sign in with a code by SMS" can be offered: true once an
+           * SMS provider is configured (lib/sms). False means the app shows
+           * the e-mail sign-in only, rather than a code that never arrives.
+           */
+          auth: { phoneCode: smsAvailable() },
           governorates: GOVERNORATES,
           grandTunis: [...GRAND_TUNIS],
         },

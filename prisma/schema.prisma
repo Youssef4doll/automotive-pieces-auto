@@ -51,14 +51,23 @@ enum CustomerSegment {
 
 model User {
   id                String               @id @default(cuid())
-  email             String               @unique
-  passwordHash      String
+  /// Null for an account opened with a phone code and no e-mail.
+  email             String?              @unique
+  /// Null for an account that has only ever signed in with a phone code;
+  /// lib/credentials refuses it, and a password can be set later.
+  passwordHash      String?
   /// When the password last changed. A website cookie signed before this is
   /// refused (lib/session): changing a password signs out every copy of the
   /// old session, including one somebody else is holding.
   passwordChangedAt DateTime?
   name              String
+  /// What the customer typed. Never proof of anything: anybody can type a
+  /// number. Signing in by code uses `verifiedPhone` alone.
   phone             String?
+  /// The number this account proved it holds by entering the code sent to
+  /// it ("+21698765432"). The only phone a code sign-in is matched against,
+  /// and at most one account may hold it.
+  verifiedPhone     String?              @unique
   role              Role                 @default(CUSTOMER)
   segment           CustomerSegment      @default(NEW)
   createdAt         DateTime             @default(now())
@@ -70,6 +79,7 @@ model User {
   contactMessages   ContactMessage[]
   adminSessions     AdminSession[]
   appSessions       CustomerSession[]
+  phoneCodes        PhoneCode[]
 
   @@index([role])
 }
@@ -554,6 +564,7 @@ model Order {
   idempotencyKeyHash String?            @unique
   accessTokens       OrderAccessToken[]
   pushTokens         OrderPushToken[]
+  questions          ContactMessage[]
   review             OrderReview?
   returns            ReturnRequest[]
 
@@ -620,8 +631,47 @@ model CustomerSession {
   device     String?
   expiresAt  DateTime
   lastUsedAt DateTime?
+  /// The phone's Expo push token, when it allowed notifications: every
+  /// order of the account then reaches this phone as it moves, without the
+  /// customer switching it on order by order. Gone with the session.
+  pushToken  String?
+  /// fr, en or ar — the wording of those notifications.
+  pushLocale String?
 
   @@index([userId])
+  @@index([pushToken])
+}
+
+/// A code sent by SMS to sign in with a phone number, or to prove a number
+/// for an account that is already signed in.
+///
+/// Six digits are guessable in a million tries, so the code is never the
+/// only wall: it lives ten minutes, survives five wrong answers, and the
+/// sending is rate-limited per number and per caller (api/v1/auth/phone).
+/// Only an HMAC of it is stored, keyed with AUTH_SECRET, so a database dump
+/// is not a list of codes to type in.
+///
+/// `ticketHash` is what a right code turns into when the number has no
+/// account yet: a one-use proof, good for fifteen minutes, that this phone
+/// holds that number — enough to open an account on it.
+model PhoneCode {
+  id              String    @id @default(cuid())
+  /// "+216" and eight digits.
+  phone           String
+  /// "login" — sign in or open an account; "link" — add the number to the
+  /// signed-in `userId`.
+  purpose         String
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash        String
+  attempts        Int       @default(0)
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  ticketHash      String?   @unique
+  ticketExpiresAt DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([phone, createdAt])
 }
 
 /// Proof, held by a phone, that it may read one order.
@@ -740,14 +790,32 @@ model ContactMessage {
   user       User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// Context the page attached on its own.
   orderRef   String?
+  /// Set only when the asker proved the order is theirs — its token, or the
+  /// account that placed it. Such a question shows on the order's page in
+  /// the app, with the shop's answer under it. A typed `orderRef` alone is
+  /// context for a person to read, nothing more.
+  orderId    String?
+  order      Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
   productSku String?
   vehicle    String?
   handledAt  DateTime?
   createdAt  DateTime       @default(now())
   photos     ContactPhoto[]
+  /// The shop's written answer, shown to the asker in the app. Null until
+  /// the shop answers — calling back is just as good an answer, and is
+  /// recorded by marking the message handled.
+  reply      String?
+  repliedAt  DateTime?
+  /// SHA-256 of the token the app was given when it sent the question: the
+  /// asker's key to read the answer, as an order token is to its order.
+  accessTokenHash String?   @unique
+  /// Where to say "the shop answered", when the phone allowed it.
+  pushToken  String?
+  pushLocale String?
 
   @@index([status, createdAt])
   @@index([userId])
+  @@index([orderId])
 }
 
 /// A photograph a customer sent with a question — "which part is this?".

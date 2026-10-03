@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import SignOut from "./SignOut";
 import { IconUser } from "@/components/icons";
 
-export type AccountUser = { name: string; email: string; role: "CUSTOMER" | "ADMIN" };
+/** `email` is null for an account opened with a phone code in the app. */
+export type AccountUser = { name: string; email: string | null; role: "CUSTOMER" | "ADMIN" };
 
 /**
  * The avatar in the page header, as a menu rather than a link.

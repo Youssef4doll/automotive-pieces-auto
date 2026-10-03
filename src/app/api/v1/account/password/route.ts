@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const { current, next } = parsed.data;
 
     const rule = passwordRule
-      .superRefine((v, ctx) => checkPersonalPassword(v, { email: customer.email, name: customer.name }, ctx, "next"))
+      .superRefine((v, ctx) => checkPersonalPassword(v, { email: customer.email ?? undefined, name: customer.name }, ctx, "next"))
       .safeParse(next);
     if (!rule.success) {
       const reason = issueReason(rule.error.issues[0]);
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     if (next === current) return fail("invalid_field", CUSTOMER, undefined, { field: "next", reason: "same" });
 
     const row = await prisma.user.findUnique({ where: { id: customer.id }, select: { passwordHash: true } });
-    if (!row || !(await bcrypt.compare(current, row.passwordHash))) {
+    if (!row?.passwordHash || !(await bcrypt.compare(current, row.passwordHash))) {
       return fail("invalid_field", CUSTOMER, undefined, { field: "current", reason: "wrong" });
     }
     clear(key);

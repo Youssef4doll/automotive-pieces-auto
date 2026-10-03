@@ -46,3 +46,6 @@ next-env.d.ts
 .claude/
 skills-lock.json
 .e2e-fixtures/
+
+# SMS written by the development outbox provider (lib/sms)
+.sms-outbox.jsonl

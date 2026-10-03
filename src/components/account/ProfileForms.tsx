@@ -18,7 +18,8 @@ export function ProfileCard({
   memberSince,
 }: {
   name: string;
-  email: string;
+  /** Null for an account opened with a phone code in the app. */
+  email: string | null;
   phone: string | null;
   memberSince: string;
 }) {
@@ -29,7 +30,7 @@ export function ProfileCard({
   // action settles, so a rejected email ("already taken") wiped every field the
   // customer had just typed and handed them a blank form under an error
   // message. Holding the values here survives the re-render.
-  const [form, setForm] = useState({ name, email, phone: phone ?? "" });
+  const [form, setForm] = useState({ name, email: email ?? "", phone: phone ?? "" });
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -42,7 +43,7 @@ export function ProfileCard({
   }
 
   const cancel = () => {
-    setForm({ name, email, phone: phone ?? "" });
+    setForm({ name, email: email ?? "", phone: phone ?? "" });
     setEditing(false);
   };
 
@@ -116,7 +117,7 @@ export function ProfileCard({
       ) : (
         <dl className="grid sm:grid-cols-2 gap-4">
           <ReadField label="Nom" value={name} />
-          <ReadField label="Email" value={email} />
+          <ReadField label="Email" value={email ?? "Aucune adresse e-mail"} />
           <ReadField label="Téléphone" value={phone ?? "Non renseigné"} dir={phone ? "ltr" : undefined} />
           <ReadField label="Client depuis" value={memberSince} />
         </dl>

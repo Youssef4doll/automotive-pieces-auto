@@ -60,7 +60,7 @@ export async function resetPassword(_prev: ResetState, formData: FormData): Prom
   const row = await findValidResetToken(parsed.data.token);
   if (!row) return { error: "Ce lien n'est plus valable. Demandez-en un nouveau." };
 
-  if (weakPassword(parsed.data.password, { email: row.user.email }) === "personal") return { error: PERSONAL_PASSWORD_MESSAGE };
+  if (weakPassword(parsed.data.password, { email: row.user.email ?? undefined }) === "personal") return { error: PERSONAL_PASSWORD_MESSAGE };
 
   // Spent first, and only if still unspent: two submissions of one link (a
   // double tap, or somebody else holding the e-mail) cannot both set a password.

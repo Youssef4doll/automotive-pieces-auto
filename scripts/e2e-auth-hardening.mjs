@@ -28,8 +28,10 @@ if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(BASE)) {
 const prisma = new PrismaClient();
 
 let failures = 0;
+let passes = 0;
 const check = (cond, what, detail) => {
   if (!cond) failures++;
+  else passes++;
   console.log(`${cond ? "ok  " : "FAIL"}  ${what}${detail !== undefined ? " " + JSON.stringify(detail) : ""}`);
 };
 // Each run speaks from its own address, so the flood and signup windows of
@@ -198,4 +200,6 @@ try {
 }
 
 console.log(`\n${failures ? `${failures} failed` : "all passed"}`);
+// The battery (scripts/run-e2e.sh) reads this line.
+console.log(`${passes} passed, ${failures} failed`);
 process.exit(failures ? 1 : 0);

@@ -1279,6 +1279,84 @@ devices, change password signing out phones/staff/cookies, reset limit,
 idempotent orders including two at once, 413, every sort paging without a
 repeat).
 
+### 5.jj Reaching the shop, push for signed-in phones, signing in by SMS (October 3, 2026)
+
+**Why customers "could not reach the shop".** The app has had WhatsApp, call
+and e-mail buttons since September — on Aide & contact, on every order, on a
+part to check — and collection in store at checkout. They are all behind the
+settings in 5.bb: production's `shop_whatsapp`, `shop_phone` and
+`shop_address` are still placeholders, so the app shows none of them. That
+is the rule working, and it is still the owner's to fix — in `/admin/parametres`
+or the app's Espace boutique → Paramètres. The staff dashboard now says so
+first thing ("À compléter pour vos clients", from `missing` in
+`api/v1/admin/dashboard`).
+
+**A way that needs no number: questions.** `POST /api/v1/questions`
+(multipart: `name`, `phone`, then `body` and/or 1–3 `photos`; optional
+`vehicle`, `productSku`, `orderRef` + `orderToken`, `pushToken` + `locale`)
+files a `ContactMessage` and answers `{ id, token }`. The token (SHA-256 in
+`accessTokenHash`, the order token's design) is the asker's only key to
+`GET /api/v1/questions/[id]`. An order is attached (`orderId`) only when its
+own token — or the account that placed it — proves it; a typed reference
+stays in `orderRef` as context. The shop answers in writing from
+`/admin/messages` or the app's Messages (`POST /api/v1/admin/messages/[id]`
+`{ reply }` or `{ status }`): saved on the row, marked handled, pushed to the
+asker (and to the order's phones), e-mailed when there is an address
+(`questionReplyMail`). Only app questions take a written reply — a website
+message is still answered by e-mail or phone, as 5.bb's inbox always was.
+`GET /api/v1/orders/[ref]` now carries the order's `questions`. Logic in
+`lib/questions.ts`; `/api/v1/questions` is on the proxy's upload list.
+
+**Push for every order of a signed-in phone.** `CustomerSession.pushToken`
+(+ `pushLocale`), set by `POST /api/v1/account/push`. `lib/push` sends an
+order's status (and a return's, and a question's answer) to the phones that
+followed it AND to every phone signed in to its account, one message per
+token; tokens Expo calls dead are cleared everywhere. Phones still only get
+push in a build tied to an EAS project (the app's ARCHITECTURE §25).
+
+**Signing in by SMS.** `lib/sms.ts` sends; `lib/phone-code.ts` keeps the
+rules: six digits, ten minutes, five wrong answers kill a code, a new code
+kills the previous one, only an HMAC (keyed from `SESSION_SECRET`) stored,
+spent atomically. Three codes per number per 15 minutes and eight a day
+(after that the answer is still "sent" and nothing goes), 30 per address an
+hour, 60 answers per address per 15 minutes (`LIMITS.phoneCode*`).
+
+- `POST /api/v1/auth/phone/code` `{ phone, locale }` → `{ sent }`, the same
+  answer for any number.
+- `POST /api/v1/auth/phone/verify` `{ phone, code }` → `{ token, account }`,
+  or `{ ticket, needsAccount }` for a number with no account; the ticket
+  (15 minutes, one use) opens one with `POST /api/v1/auth/phone/signup`
+  `{ ticket, name, email? }`.
+- Only `User.verifiedPhone` is ever matched — never the typed `phone`, or
+  anyone could type a stranger's number on their own account and receive
+  that stranger's sign-in. An e-mail account adds a number from the app
+  (`/api/v1/account/phone/code`, then `/api/v1/account/phone`); one number,
+  one account (unique).
+- `User.email` and `User.passwordHash` are now optional: a phone account has
+  neither. `lib/credentials` refuses a password-less account like a wrong
+  password; it deletes itself with a code (`/api/v1/account/confirm-code`,
+  then `DELETE /api/v1/account { code }`). The website's own sign-in is still
+  e-mail and password; such an account simply cannot use it.
+- A code sign-in never opens the staff space. An ADMIN's **password**
+  sign-in at `/api/v1/auth/session` now returns `staff: { token, admin }`
+  too, so the app shows "Espace boutique" to the owner without a second door
+  and to nobody else (`account.staff`).
+
+**What to set in production for SMS:** `SMS_PROVIDER=twilio`,
+`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM` (a number or a
+sender id allowed in Tunisia) or `TWILIO_MESSAGING_SERVICE_SID`. Until then
+`smsAvailable()` is false in production, `settings/public` says
+`auth.phoneCode: false`, and the app offers e-mail sign-in only — never a
+code that does not arrive. In development, codes go to `.sms-outbox.jsonl`
+(git-ignored) and the console; the suites read them there. A Tunisian
+gateway is one more branch in `sendSms`.
+
+Migration `20261003100000_reach_the_shop` (run `npm run db:migrate`).
+Suite: `scripts/e2e-reach.mjs` (codes, limits, tickets, typed vs proved
+numbers, linking, one number one account, the staff grant, questions and
+their proofs, written answers on the order, push registration, deletion by
+code); the app's `e2e/reach.mjs` drives the same from the screens.
+
 ## 6. Working on it
 
 **Read the comments.** The codebase explains *why* far more than *what* —

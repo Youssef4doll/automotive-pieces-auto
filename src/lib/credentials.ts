@@ -60,8 +60,15 @@ export async function checkCredentials(email: string, password: string): Promise
     await bcrypt.compare(password, await decoyHash());
     return charge();
   }
+  // An account opened with a phone code has no password to match: the same
+  // refusal, after the same amount of work.
+  if (!user.passwordHash) {
+    await bcrypt.compare(password, await decoyHash());
+    return charge();
+  }
   if (!(await bcrypt.compare(password, user.passwordHash))) return charge();
 
   clear(accountKey);
-  return { ok: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+  // Found by its e-mail, so it has one.
+  return { ok: true, user: { id: user.id, name: user.name, email: user.email ?? email.trim().toLowerCase(), role: user.role } };
 }

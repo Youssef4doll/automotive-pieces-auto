@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { deleteCustomerAccount } from "@/lib/account-deletion";
+import { checkCode } from "@/lib/phone-code";
 import { callerKey, clear, hit, LIMITS } from "@/lib/rate-limit";
 import { fail, ok, preflightWrite, readJson } from "../_lib/respond";
 import { accountView, asCustomer, CUSTOMER } from "../_lib/customer";
@@ -14,7 +15,9 @@ export async function GET(request: Request) {
 }
 
 /**
- * Delete the account: `{ password }` → `{ deleted: true }`.
+ * Delete the account: `{ password }` → `{ deleted: true }`; an account with
+ * no password (opened with a phone code) sends `{ code }` instead, the code
+ * from account/confirm-code.
  *
  * Both stores require that an app which creates accounts can delete them
  * from inside the app. The password is asked again, because a phone left
@@ -36,13 +39,22 @@ export async function DELETE(request: Request) {
     const gate = hit(key, LIMITS.loginPerAccount.limit, LIMITS.loginPerAccount.windowMs);
     if (!gate.ok) return fail("rate_limited", CUSTOMER, { "Retry-After": String(gate.retryAfter) });
 
-    const parsed = z.object({ password: z.string().min(1).max(200) }).safeParse(await readJson(request, 2_048));
+    const parsed = z
+      .object({ password: z.string().min(1).max(200).optional(), code: z.string().trim().max(12).optional() })
+      .safeParse(await readJson(request, 2_048));
     if (!parsed.success) return fail("invalid_field", CUSTOMER, undefined, { field: "password" });
     if (customer.role === "ADMIN") return fail("forbidden", CUSTOMER);
 
-    const row = await prisma.user.findUnique({ where: { id: customer.id }, select: { passwordHash: true } });
-    if (!row || !(await bcrypt.compare(parsed.data.password, row.passwordHash))) {
-      return fail("invalid_field", CUSTOMER, undefined, { field: "password", reason: "wrong" });
+    if (customer.hasPassword) {
+      const row = await prisma.user.findUnique({ where: { id: customer.id }, select: { passwordHash: true } });
+      if (!parsed.data.password || !row?.passwordHash || !(await bcrypt.compare(parsed.data.password, row.passwordHash))) {
+        return fail("invalid_field", CUSTOMER, undefined, { field: "password", reason: "wrong" });
+      }
+    } else {
+      // No password to re-enter: the code just sent to the account's number.
+      if (!customer.verifiedPhone || !parsed.data.code) return fail("invalid_field", CUSTOMER, undefined, { field: "code", reason: "wrong" });
+      const checked = await checkCode(customer.verifiedPhone, "confirm", parsed.data.code, customer.id);
+      if (!checked.ok) return fail("invalid_field", CUSTOMER, undefined, { field: "code", reason: checked.reason });
     }
     clear(key);
 

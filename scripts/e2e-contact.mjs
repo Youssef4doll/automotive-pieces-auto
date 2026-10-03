@@ -182,8 +182,14 @@ console.log("\n[4] THE SHOP CAN SEE IT AND MARK IT TREATED");
     check("and the context it arrived with", cardText.includes(`CMD-QA-${STAMP}`), cardText.replace(/\n/g, " · ").slice(0, 120));
 
     await card.getByRole("button", { name: /Marquer traité/i }).click();
-    await admin.waitForTimeout(1200);
-    const row = await prisma.contactMessage.findFirst({ where: { email: `qa-contact-${STAMP}@example.test` } });
+    // Waited for rather than slept on: a development server compiles the
+    // action on its first call, which can take longer than any fixed pause.
+    let row = null;
+    for (let i = 0; i < 20; i++) {
+      await admin.waitForTimeout(500);
+      row = await prisma.contactMessage.findFirst({ where: { email: `qa-contact-${STAMP}@example.test` } });
+      if (row?.status === "HANDLED") break;
+    }
     check("marking it treated is recorded", row?.status === "HANDLED", row?.status ?? "");
     check("with the moment it happened", !!row?.handledAt);
   }

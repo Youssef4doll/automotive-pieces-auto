@@ -61,6 +61,12 @@ export async function appOrderView(orderId: string) {
       },
       history: { orderBy: { createdAt: "asc" }, select: { status: true, createdAt: true } },
       review: { select: { stars: true, comment: true } },
+      // Questions asked about this order from the app (proved by its token
+      // or account — lib/questions), oldest first, so they read as a thread.
+      questions: {
+        orderBy: { createdAt: "asc" },
+        select: { id: true, body: true, createdAt: true, reply: true, repliedAt: true, status: true, _count: { select: { photos: true } } },
+      },
     },
   });
   if (!order) return null;
@@ -116,6 +122,16 @@ export async function appOrderView(orderId: string) {
      * to return. Null before delivery.
      */
     returnOptions: returns.options,
+    /** "Demander à la boutique" about this order, with the shop's answers. */
+    questions: order.questions.map((q) => ({
+      id: q.id,
+      body: q.body,
+      photoCount: q._count.photos,
+      createdAt: q.createdAt.toISOString(),
+      reply: q.reply,
+      repliedAt: q.repliedAt?.toISOString() ?? null,
+      handled: q.status === "HANDLED",
+    })),
   };
 }
 

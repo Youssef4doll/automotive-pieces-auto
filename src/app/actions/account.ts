@@ -80,7 +80,7 @@ export async function updateProfile(_prev: AccountState, formData: FormData): Pr
       data: { name, email, phone: phone === "" ? null : phone },
     }),
     ...changes.map((c) =>
-      prisma.userProfileChange.create({ data: { ...c, userId: user.id, changedBy: "SELF" } }),
+      prisma.userProfileChange.create({ data: { ...c, oldValue: c.oldValue ?? "", userId: user.id, changedBy: "SELF" } }),
     ),
   ]);
 
@@ -113,7 +113,7 @@ export async function changePassword(_prev: AccountState, formData: FormData): P
   }
 
   const parsed = passwordSchema
-    .superRefine((d, ctx) => checkPersonalPassword(d.next, { email: user.email, name: user.name }, ctx, "next"))
+    .superRefine((d, ctx) => checkPersonalPassword(d.next, { email: user.email ?? undefined, name: user.name }, ctx, "next"))
     .safeParse({
       current: formData.get("current"),
       next: formData.get("next"),
@@ -126,7 +126,7 @@ export async function changePassword(_prev: AccountState, formData: FormData): P
 
   const row = await prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
   if (!row) return { error: "Session expirée. Reconnectez-vous." };
-  if (!(await bcrypt.compare(current, row.passwordHash))) {
+  if (!row.passwordHash || !(await bcrypt.compare(current, row.passwordHash))) {
     return { error: "Mot de passe actuel incorrect" };
   }
 
@@ -164,7 +164,7 @@ export async function deleteOwnAccount(_prev: AccountState, formData: FormData):
 
   const password = String(formData.get("password") ?? "");
   const row = await prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
-  if (!row || !password || !(await bcrypt.compare(password, row.passwordHash))) {
+  if (!row?.passwordHash || !password || !(await bcrypt.compare(password, row.passwordHash))) {
     return { error: "Mot de passe incorrect." };
   }
   clear(key);

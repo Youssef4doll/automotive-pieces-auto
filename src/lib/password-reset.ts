@@ -58,8 +58,10 @@ export async function startPasswordReset(email: string) {
     }),
   ]);
 
+  // Found by its e-mail, so it has one; the check is for the type.
+  if (!user.email) return;
   const shop = await loadShopForEmail();
-  const mail = passwordResetMail(user, `${siteUrl()}/compte/reinitialiser/${token}`, shop);
+  const mail = passwordResetMail({ ...user, email: user.email }, `${siteUrl()}/compte/reinitialiser/${token}`, shop);
   // sendMail never throws and logs its own failures with the subject, which
   // carries no token.
   await sendMail(mail);

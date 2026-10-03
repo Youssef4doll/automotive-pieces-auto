@@ -5,7 +5,7 @@ import { issueCustomerSession } from "@/lib/customer-session";
 import { callerKey, hit, LIMITS } from "@/lib/rate-limit";
 import { issueReason, signupSchema } from "@/lib/validation";
 import { fail, guard, ok, preflightWrite, readJson } from "../../_lib/respond";
-import { CUSTOMER } from "../../_lib/customer";
+import { ACCOUNT_SELECT, accountView, CUSTOMER } from "../../_lib/customer";
 
 export const OPTIONS = preflightWrite;
 
@@ -43,13 +43,10 @@ export async function POST(request: Request) {
 
       const user = await prisma.user.create({
         data: { name, email, phone, passwordHash: await bcrypt.hash(password, BCRYPT_COST), role: "CUSTOMER" },
-        select: { id: true, name: true, email: true, phone: true, createdAt: true },
+        select: ACCOUNT_SELECT,
       });
       const token = await issueCustomerSession(user.id, deviceLabel((body as { device?: unknown }).device));
-      return ok(
-        { token, account: { name: user.name, email: user.email, phone: user.phone, createdAt: user.createdAt.toISOString() } },
-        CUSTOMER,
-      );
+      return ok({ token, account: accountView(user) }, CUSTOMER);
     },
     "auth signup",
     CUSTOMER,

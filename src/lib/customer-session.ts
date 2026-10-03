@@ -43,8 +43,13 @@ export async function issueCustomerSession(userId: string, device: string | null
 export type AppCustomer = {
   id: string;
   name: string;
-  email: string;
+  /** Null for an account opened with a phone code. */
+  email: string | null;
   phone: string | null;
+  /** The number it proved by code, if any. */
+  verifiedPhone: string | null;
+  /** Whether it can sign in with a password at all (not the hash itself). */
+  hasPassword: boolean;
   role: "CUSTOMER" | "ADMIN";
   createdAt: Date;
   /** The session this request came in on — "this phone" in the device list. */
@@ -68,7 +73,7 @@ export async function customerForRequest(request: Request): Promise<AppCustomer 
       createdAt: true,
       expiresAt: true,
       lastUsedAt: true,
-      user: { select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true } },
+      user: { select: { id: true, name: true, email: true, phone: true, verifiedPhone: true, passwordHash: true, role: true, createdAt: true } },
     },
   });
   if (!row) return null;
@@ -84,7 +89,8 @@ export async function customerForRequest(request: Request): Promise<AppCustomer 
       .update({ where: { id: row.id }, data: { lastUsedAt: new Date(now), expiresAt } })
       .catch(() => undefined);
   }
-  return { ...row.user, sessionId: row.id };
+  const { passwordHash, ...user } = row.user;
+  return { ...user, hasPassword: Boolean(passwordHash), sessionId: row.id };
 }
 
 /** Sign out this phone. */

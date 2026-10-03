@@ -13,9 +13,9 @@ export const metadata = { title: "Messages" };
  * an order. This is the record the shop owns.
  *
  * Unhandled first, because that half of the page is a job and the rest is a
- * record. The reply itself happens by e-mail or WhatsApp — there is no reply
- * box here, and no "replied" status, because a status the shop cannot keep
- * true is worse than one it can.
+ * record. A website message is answered by e-mail or WhatsApp; a question
+ * asked from the app can also be answered here in writing, because the app
+ * shows that answer to the customer (lib/questions).
  */
 export default async function AdminMessagesPage() {
   const messages = await prisma.contactMessage.findMany({
@@ -36,6 +36,9 @@ export default async function AdminMessagesPage() {
       handledAt: true,
       user: { select: { id: true, email: true } },
       photos: { select: { id: true }, orderBy: { createdAt: "asc" } },
+      reply: true,
+      repliedAt: true,
+      accessTokenHash: true,
     },
   });
 
@@ -50,7 +53,8 @@ export default async function AdminMessagesPage() {
           <Link href="/contact" className="underline underline-offset-2 hover:text-red-600">
             la page contact
           </Link>
-          . La réponse part par e-mail ou WhatsApp — ici on marque simplement ce qui est traité.
+          et depuis l&apos;application. La réponse part par e-mail ou WhatsApp ; une question posée dans
+          l&apos;application peut aussi recevoir sa réponse ici, que le client lira sous sa question.
         </p>
       </div>
 
@@ -68,10 +72,23 @@ export default async function AdminMessagesPage() {
               <MessageRow
                 key={m.id}
                 message={{
-                  ...m,
+                  id: m.id,
+                  name: m.name,
+                  email: m.email,
+                  phone: m.phone,
+                  subject: m.subject,
+                  body: m.body,
+                  status: m.status,
+                  orderRef: m.orderRef,
+                  productSku: m.productSku,
+                  vehicle: m.vehicle,
+                  user: m.user,
                   photoIds: m.photos.map((p) => p.id),
                   createdAt: m.createdAt.toISOString(),
                   handledAt: m.handledAt ? m.handledAt.toISOString() : null,
+                  inApp: Boolean(m.accessTokenHash),
+                  reply: m.reply,
+                  repliedAt: m.repliedAt ? m.repliedAt.toISOString() : null,
                 }}
               />
             ))}

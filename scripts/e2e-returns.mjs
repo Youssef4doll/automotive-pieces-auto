@@ -30,8 +30,10 @@ if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(BASE)) {
 const prisma = new PrismaClient();
 
 let failures = 0;
+let passes = 0;
 const check = (cond, what, detail) => {
   if (!cond) failures++;
+  else passes++;
   console.log(`${cond ? "ok  " : "FAIL"}  ${what}${detail !== undefined ? " " + JSON.stringify(detail) : ""}`);
 };
 const api = async (path, init = {}) => {
@@ -224,4 +226,6 @@ try {
 }
 
 console.log(failures ? `\n${failures} failure(s)` : "\nreturns work end to end");
+// The battery (scripts/run-e2e.sh) reads this line.
+console.log(`${passes} passed, ${failures} failed`);
 process.exit(failures ? 1 : 0);

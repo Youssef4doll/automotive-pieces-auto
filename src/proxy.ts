@@ -38,6 +38,7 @@ const MAX_JSON_BYTES = 256 * 1024;
 const UPLOAD_ROUTES = [
   /^\/api\/v1\/orders\/[^/]+\/returns$/,
   /^\/api\/v1\/expert-requests$/,
+  /^\/api\/v1\/questions$/,
   /^\/api\/v1\/admin\/products\/[^/]+\/images$/,
   /^\/api\/v1\/admin\/categories\/[^/]+\/image$/,
 ];

@@ -20,7 +20,8 @@ export type CustomerState =
 const schema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(2, "Le nom doit contenir au moins 2 caractères").max(80),
-  email: emailAddress("Email invalide"),
+  // Empty only for an account that signs in with its verified phone.
+  email: z.union([z.literal(""), emailAddress("Email invalide")]),
   phone: z
     .string()
     .trim()
@@ -63,21 +64,24 @@ export async function adminUpdateCustomer(_prev: CustomerState, formData: FormDa
 
   const before = await prisma.user.findUnique({
     where: { id },
-    select: { name: true, email: true, phone: true, role: true },
+    select: { name: true, email: true, phone: true, role: true, verifiedPhone: true },
   });
   if (!before) return { error: "Client introuvable." };
+  if (!email && !before.verifiedPhone) {
+    return { error: "Un email est nécessaire : ce compte n'a pas de numéro vérifié pour se connecter." };
+  }
   if (before.role === "ADMIN") {
     return { error: "Un compte administrateur se modifie depuis son propre profil." };
   }
 
-  if (email !== before.email) {
+  if (email && email !== before.email) {
     const taken = await findUserByEmail(email, { id: true });
     if (taken && taken.id !== id) return { error: "Un autre compte utilise déjà cet email." };
   }
 
   const changes = [
     { field: "name", oldValue: before.name, newValue: name },
-    { field: "email", oldValue: before.email, newValue: email },
+    { field: "email", oldValue: before.email ?? "", newValue: email },
     { field: "phone", oldValue: before.phone ?? "", newValue: phone },
   ].filter((c) => c.oldValue !== c.newValue);
 
@@ -86,7 +90,7 @@ export async function adminUpdateCustomer(_prev: CustomerState, formData: FormDa
   await prisma.$transaction([
     prisma.user.update({
       where: { id },
-      data: { name, email, phone: phone === "" ? null : phone },
+      data: { name, email: email || null, phone: phone === "" ? null : phone },
     }),
     ...changes.map((c) =>
       prisma.userProfileChange.create({

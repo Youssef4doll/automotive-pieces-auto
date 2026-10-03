@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { setMessageHandled } from "@/app/actions/contact-admin";
+import { replyToMessage, setMessageHandled } from "@/app/actions/contact-admin";
 
 export type AdminMessage = {
   id: string;
@@ -17,8 +17,12 @@ export type AdminMessage = {
   vehicle: string | null;
   createdAt: string;
   handledAt: string | null;
-  user: { id: string; email: string } | null;
+  user: { id: string; email: string | null } | null;
   photoIds: string[];
+  /** Asked from the app: a written reply reaches the asker there. */
+  inApp: boolean;
+  reply: string | null;
+  repliedAt: string | null;
 };
 
 /** A Tunisian number as wa.me wants it: 216 and eight digits. */
@@ -38,14 +42,33 @@ const fmt = (iso: string) =>
  * pas sur ma voiture" is already answerable without writing back to ask which
  * car. Each of those is a link into the admin where there is one to make.
  *
- * "Répondre" is a plain mailto. The shop answers from its own mailbox and the
- * customer gets a normal reply thread — this table records that the message
- * came in and that somebody dealt with it, and does not pretend to be a
- * helpdesk it would then have to keep true.
+ * "Répondre" is a plain mailto (or WhatsApp to the customer's number). The
+ * shop answers from its own mailbox and the customer gets a normal reply
+ * thread. A question asked from the app also takes a written answer here,
+ * which the customer reads in the app under their question — with a push
+ * and an e-mail when they can be reached that way.
  */
 export default function MessageRow({ message: m }: { message: AdminMessage }) {
   const [handled, setHandled] = useState(m.status === "HANDLED");
   const [pending, start] = useTransition();
+  const [draft, setDraft] = useState("");
+  const [answer, setAnswer] = useState(m.reply);
+  const [answeredAt, setAnsweredAt] = useState(m.repliedAt);
+  const [replyError, setReplyError] = useState<string | null>(null);
+
+  function sendReply() {
+    const text = draft.trim();
+    if (!text) return;
+    setReplyError(null);
+    start(async () => {
+      const res = await replyToMessage(m.id, text);
+      if (!res.ok) return setReplyError(res.error);
+      setAnswer(text);
+      setAnsweredAt(new Date().toISOString());
+      setDraft("");
+      setHandled(true);
+    });
+  }
 
   function toggle() {
     const next = !handled;
@@ -130,6 +153,43 @@ export default function MessageRow({ message: m }: { message: AdminMessage }) {
               </span>
             )
           )}
+        </div>
+      )}
+
+      {answer && (
+        <div className="mt-3 rounded-lg border border-navy-900/10 bg-slate-50 p-3">
+          <p className="text-[11px] font-display font-bold uppercase tracking-wide text-navy-900/50">
+            Réponse dans l&apos;application{answeredAt ? ` · ${fmt(answeredAt)}` : ""}
+          </p>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-navy-950">{answer}</p>
+        </div>
+      )}
+
+      {m.inApp && (
+        <div className="mt-3 flex flex-col gap-2">
+          <label className="text-xs font-semibold text-navy-900/70" htmlFor={`reply-${m.id}`}>
+            {answer ? "Corriger la réponse" : "Répondre dans l'application"}
+          </label>
+          <textarea
+            id={`reply-${m.id}`}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            maxLength={2000}
+            placeholder="Le client la lira sous sa question, dans l'application."
+            className="w-full rounded-lg border border-navy-900/15 bg-white p-2.5 text-sm text-navy-950 focus:border-navy-900/40 focus:outline-none"
+          />
+          {replyError && <p className="text-xs text-red-700">{replyError}</p>}
+          <div>
+            <button
+              type="button"
+              onClick={sendReply}
+              disabled={pending || !draft.trim()}
+              className="inline-flex min-h-tap-compact items-center rounded-lg bg-gold-500 px-4 text-xs font-display font-bold uppercase tracking-wide text-navy-950 hover:bg-gold-400 disabled:opacity-50"
+            >
+              Envoyer la réponse
+            </button>
+          </div>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { backInStockPush, orderLabel, orderStatusPush, pushLocale, returnStatusPush, type PushStatus, type ReturnPushStatus } from "@/lib/push-copy";
+import { backInStockPush, orderLabel, orderStatusPush, pushLocale, questionReplyPush, returnStatusPush, type PushStatus, type ReturnPushStatus } from "@/lib/push-copy";
 
 /**
  * Push notifications, through Expo's push service.
@@ -56,8 +56,47 @@ async function send(messages: Message[]): Promise<{ sent: Set<string>; dead: Set
   return { sent, dead };
 }
 
+type Phone = { token: string; locale: string | null };
+
+/** One message per phone: the same phone can follow an order AND be signed in to its account. */
+function unique(phones: Phone[]): Phone[] {
+  const seen = new Map<string, Phone>();
+  for (const p of phones) if (!seen.has(p.token)) seen.set(p.token, p);
+  return [...seen.values()];
+}
+
+/** The phones signed in to an account that allowed notifications. */
+async function accountPhones(userId: string | null): Promise<Phone[]> {
+  if (!userId) return [];
+  const sessions = await prisma.customerSession.findMany({
+    where: { userId, pushToken: { not: null }, expiresAt: { gt: new Date() } },
+    select: { pushToken: true, pushLocale: true },
+  });
+  return sessions.map((s) => ({ token: s.pushToken!, locale: s.pushLocale }));
+}
+
 /**
- * Tell the phones that registered for this order that it moved. Called from
+ * Who hears about an order: the phones that asked to follow it, and every
+ * phone signed in to the account that placed it — a signed-in customer does
+ * not switch notifications on order by order.
+ */
+async function orderPhones(order: { userId: string | null; pushTokens: Phone[] }): Promise<Phone[]> {
+  return unique([...order.pushTokens, ...(await accountPhones(order.userId))]);
+}
+
+/** Tokens Expo says no longer reach a phone are forgotten everywhere they are kept. */
+async function forget(dead: Set<string>) {
+  if (!dead.size) return;
+  const tokens = [...dead];
+  await Promise.all([
+    prisma.orderPushToken.deleteMany({ where: { token: { in: tokens } } }),
+    prisma.customerSession.updateMany({ where: { pushToken: { in: tokens } }, data: { pushToken: null } }),
+    prisma.contactMessage.updateMany({ where: { pushToken: { in: tokens } }, data: { pushToken: null } }),
+  ]);
+}
+
+/**
+ * Tell the phones following this order that it moved. Called from
  * setOrderStatus, the one path every status change takes.
  */
 export async function pushOrderStatus(orderId: string, status: PushStatus): Promise<void> {
@@ -66,21 +105,60 @@ export async function pushOrderStatus(orderId: string, status: PushStatus): Prom
       where: { id: orderId },
       select: {
         ref: true,
+        userId: true,
         deliveryMethod: true,
         pushTokens: { select: { token: true, locale: true } },
         items: { orderBy: { id: "asc" }, select: { name: true } },
       },
     });
-    if (!order || !order.pushTokens.length) return;
+    if (!order) return;
+    const phones = await orderPhones(order);
+    if (!phones.length) return;
     const label = orderLabel(order.items[0]?.name ?? order.ref, Math.max(0, order.items.length - 1));
-    const messages = order.pushTokens.flatMap((t) => {
+    const messages = phones.flatMap((t) => {
       const copy = orderStatusPush(status, pushLocale(t.locale), label, order.deliveryMethod);
       return copy ? [{ to: t.token, ...copy, sound: "default" as const, channelId: "orders", data: { ref: order.ref } }] : [];
     });
     const { dead } = await send(messages);
-    if (dead.size) await prisma.orderPushToken.deleteMany({ where: { token: { in: [...dead] } } });
+    await forget(dead);
   } catch (e) {
     console.warn("push: order status", e instanceof Error ? e.message : e);
+  }
+}
+
+/**
+ * The shop answered a question asked from the app. The asker's phone (when it
+ * allowed notifications), and — for a question about an order or from a
+ * signed-in customer — the phones following that order or that account.
+ * Tapping it opens the order, or the question.
+ */
+export async function pushQuestionReply(messageId: string): Promise<void> {
+  try {
+    const m = await prisma.contactMessage.findUnique({
+      where: { id: messageId },
+      select: {
+        id: true,
+        reply: true,
+        userId: true,
+        pushToken: true,
+        pushLocale: true,
+        order: { select: { ref: true, userId: true, pushTokens: { select: { token: true, locale: true } } } },
+      },
+    });
+    if (!m?.reply) return;
+    const phones = unique([
+      ...(m.pushToken ? [{ token: m.pushToken, locale: m.pushLocale }] : []),
+      ...(m.order ? await orderPhones(m.order) : []),
+      ...(m.order ? [] : await accountPhones(m.userId)),
+    ]);
+    if (!phones.length) return;
+    const data: Record<string, string> = m.order ? { ref: m.order.ref } : { question: m.id };
+    const { dead } = await send(
+      phones.map((t) => ({ to: t.token, ...questionReplyPush(pushLocale(t.locale), m.reply!), sound: "default" as const, channelId: "orders", data })),
+    );
+    await forget(dead);
+  } catch (e) {
+    console.warn("push: question reply", e instanceof Error ? e.message : e);
   }
 }
 
@@ -92,10 +170,12 @@ export async function pushReturnStatus(returnId: string, status: ReturnPushStatu
   try {
     const request = await prisma.returnRequest.findUnique({
       where: { id: returnId },
-      select: { ref: true, order: { select: { ref: true, pushTokens: { select: { token: true, locale: true } } } } },
+      select: { ref: true, order: { select: { ref: true, userId: true, pushTokens: { select: { token: true, locale: true } } } } },
     });
-    if (!request || !request.order.pushTokens.length) return;
-    const messages = request.order.pushTokens.map((t) => ({
+    if (!request) return;
+    const phones = await orderPhones(request.order);
+    if (!phones.length) return;
+    const messages = phones.map((t) => ({
       to: t.token,
       ...returnStatusPush(status, pushLocale(t.locale), request.ref),
       sound: "default" as const,
@@ -103,7 +183,7 @@ export async function pushReturnStatus(returnId: string, status: ReturnPushStatu
       data: { ref: request.order.ref },
     }));
     const { dead } = await send(messages);
-    if (dead.size) await prisma.orderPushToken.deleteMany({ where: { token: { in: [...dead] } } });
+    await forget(dead);
   } catch (e) {
     console.warn("push: return status", e instanceof Error ? e.message : e);
   }
