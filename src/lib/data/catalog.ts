@@ -474,6 +474,48 @@ export const getPartsBrands = cache(async () => {
 })
 
 /**
+ * One parts maker's page: the maker, and the families it has parts in.
+ *
+ * Only active parts count, as on the brand board (getPartsBrands); a family
+ * appears when the maker has at least one part in it or in one of its
+ * subcategories, with that number — counted, never estimated. In the
+ * catalogue's own order. Null when the slug is not a parts maker with
+ * something on sale: a page that lists nothing is a dead end.
+ */
+export const getBrandFamilies = cache(async (slug: string) => {
+  const brand = await prisma.brand.findFirst({
+    where: { slug, isPartsBrand: true },
+    select: { id: true, name: true, slug: true, logoUrl: true },
+  });
+  if (!brand) return null;
+  const counts = await prisma.product.groupBy({
+    by: ["categoryId"],
+    where: { brandId: brand.id, active: true },
+    _count: { _all: true },
+  });
+  if (!counts.length) return null;
+  const categories = await prisma.category.findMany({
+    where: { id: { in: counts.map((c) => c.categoryId) } },
+    select: { id: true, parentId: true },
+  });
+  const familyOf = new Map(categories.map((c) => [c.id, c.parentId ?? c.id]));
+  const perFamily = new Map<string, number>();
+  for (const c of counts) {
+    const family = familyOf.get(c.categoryId);
+    if (family) perFamily.set(family, (perFamily.get(family) ?? 0) + c._count._all);
+  }
+  const families = await prisma.category.findMany({
+    where: { id: { in: [...perFamily.keys()] }, parentId: null },
+    orderBy: { order: "asc" },
+    select: { id: true, name: true, slug: true, imageUrl: true },
+  });
+  return {
+    brand: { ...brand, productCount: counts.reduce((n, c) => n + c._count._all, 0) },
+    families: families.map((f) => ({ ...f, productCount: perFamily.get(f.id) ?? 0 })),
+  };
+})
+
+/**
  * Every make the shop covers, with how deeply it covers each one.
  *
  * `partCount` is the number of distinct active products that have a fitment row

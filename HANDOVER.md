@@ -1357,6 +1357,19 @@ numbers, linking, one number one account, the staff grant, questions and
 their proofs, written answers on the order, push registration, deletion by
 code); the app's `e2e/reach.mjs` drives the same from the screens.
 
+### 5.kk A maker's page in the app; the app asks for an account to order (October 4, 2026)
+
+- **`GET /api/v1/catalogue/brands/[slug]`** is new. It returns the maker
+  (`name`, `slug`, `logoUrl`, `productCount`) and the families its active
+  parts are in, each with that maker's count, in the catalogue's order
+  (`getBrandFamilies` in lib/data/catalog). It returns 404 for a slug that
+  is not a parts maker with something on sale. The app draws its brand page
+  from it: the mark, the families, then every part.
+- **The app now asks for an account before an order** (the owner's call).
+  The API was not changed: `POST /api/v1/orders` still accepts a guest
+  order, as the website's checkout does. If the website should ask for an
+  account too, that is a separate change to its checkout.
+
 ## 6. Working on it
 
 **Read the comments.** The codebase explains *why* far more than *what* —
