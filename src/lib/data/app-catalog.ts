@@ -3,6 +3,7 @@ import type { Prisma, SupplyMode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fuelContradicts } from "@/lib/fitment-rules";
 import { fitContext, type FitContext } from "@/lib/data/fitment";
+import { complements } from "@/lib/complements";
 import { fitReason, fitVerdict, type FitReason, type FitmentVerdict } from "@/lib/fitment-verdict";
 import { availabilityOf } from "@/lib/availability";
 import { toNumber } from "@/lib/money";
@@ -475,7 +476,7 @@ export async function getAppProduct(slug: string, engineId?: string): Promise<Ap
       .filter((r) => r.type !== "OEM")
       .map((r) => ({ type: r.type, brand: r.brand, raw: r.raw })),
     packContents,
-    boughtTogether: await boughtTogether(row.id, engineId),
+    boughtTogether: await boughtTogether(row.id, { family: row.category.parent?.slug ?? row.category.slug, axle: row.axle }, engineId),
     compatibility: { total: vehicles.length, vehicles: vehicles.slice(0, COMPATIBILITY_SHOWN) },
     manufacturer,
     leadTime: settings.supplier_lead_time?.trim() || null,
@@ -486,7 +487,14 @@ const BOUGHT_TOGETHER = 4;
 /** Orders a pair must share before "bought together" says so. One is a coincidence. */
 const CO_PURCHASE_MIN = 2;
 
-async function boughtTogether(productId: string, engineId?: string): Promise<AppProduct[]> {
+/**
+ * The shop's own links first, as set. Then parts that shared 2+ orders with
+ * this one — only when they make mechanical sense beside it (lib/complements:
+ * a complementary family, the same axle) and are not known not to fit the
+ * customer's car. Two maintenance baskets holding pads and an air filter do
+ * not make the filter a brake accessory.
+ */
+async function boughtTogether(productId: string, part: { family: string; axle: "AVANT" | "ARRIERE" | null }, engineId?: string): Promise<AppProduct[]> {
   const [links, pairs] = await Promise.all([
     prisma.productLink.findMany({ where: { productId, linked: { active: true } }, orderBy: { order: "asc" }, select: { linkedId: true }, take: BOUGHT_TOGETHER }),
     prisma.$queryRaw<{ productId: string; n: bigint }[]>`
@@ -498,18 +506,31 @@ async function boughtTogether(productId: string, engineId?: string): Promise<App
       GROUP BY b."productId"
       HAVING COUNT(DISTINCT a."orderId") >= ${CO_PURCHASE_MIN}
       ORDER BY n DESC
-      LIMIT ${BOUGHT_TOGETHER}
+      LIMIT ${BOUGHT_TOGETHER * 4}
     `,
   ]);
-  const ids = [...new Set([...links.map((l) => l.linkedId), ...pairs.map((p) => p.productId)])].slice(0, BOUGHT_TOGETHER);
-  if (!ids.length) return [];
-  const rows = await prisma.product.findMany({ where: { id: { in: ids }, active: true }, select: appProductSelect(engineId) });
+  const linked = new Set(links.map((l) => l.linkedId));
+  const candidates = [...new Set([...linked, ...pairs.map((p) => p.productId)])];
+  if (!candidates.length) return [];
+  const rows = await prisma.product.findMany({
+    where: { id: { in: candidates }, active: true },
+    select: { ...appProductSelect(engineId), axle: true },
+  });
   const fit = await fitContext(engineId, rows.map((r) => r.id));
   const byId = new Map(rows.map((r) => [r.id, r]));
-  return ids.flatMap((id) => {
-    const r = byId.get(id);
-    return r ? [toAppProduct(r, engineId, fit)] : [];
-  });
+  return candidates
+    .flatMap((id) => {
+      const r = byId.get(id);
+      if (!r) return [];
+      const product = toAppProduct(r, engineId, fit);
+      if (!linked.has(id)) {
+        const family = r.category.parent?.slug ?? r.category.slug;
+        if (!complements(part, { family, axle: r.axle })) return [];
+        if (product.fitment === "DOES_NOT_FIT") return [];
+      }
+      return [product];
+    })
+    .slice(0, BOUGHT_TOGETHER);
 }
 
 /** A pack's contents by SKU, in the order the pack declares them. */
