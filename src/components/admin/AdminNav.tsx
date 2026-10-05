@@ -86,6 +86,7 @@ const ITEMS = [
   { href: "/admin/catalogue", label: "Catalogue", icon: "catalogue" },
   { href: "/admin/import", label: "Import", icon: "import" },
   { href: "/admin/qualite", label: "Qualité", icon: "quality" },
+  { href: "/admin/compatibilites", label: "Compatibilités", icon: "quality" },
   { href: "/admin/stock", label: "Stock", icon: "stock" },
   { href: "/admin/paniers", label: "Paniers", icon: "carts" },
   { href: "/admin/clients", label: "Clients", icon: "clients" },

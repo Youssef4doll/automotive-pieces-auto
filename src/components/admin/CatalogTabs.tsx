@@ -9,6 +9,7 @@ const TABS = [
   { href: "/admin/catalogue/vehicules", label: "Véhicules" },
   { href: "/admin/stock", label: "Produits" },
   { href: "/admin/qualite", label: "Qualité" },
+  { href: "/admin/compatibilites", label: "Compatibilités" },
   { href: "/admin/import", label: "Import" },
 ];
 
