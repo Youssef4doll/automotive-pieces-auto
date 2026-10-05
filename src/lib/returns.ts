@@ -21,6 +21,7 @@ import {
   type ReturnProblem,
   type ReturnStatus,
 } from "@/lib/returns-rules";
+import { afterResponse } from "@/lib/defer";
 
 /**
  * Return requests: filed by the customer on a delivered order (the app's
@@ -188,7 +189,7 @@ export async function createReturn(
     return { ok: true as const, ...created };
   });
 
-  if (result.ok) await notify(result.id, "REQUESTED");
+  if (result.ok) afterResponse(() => notify(result.id, "REQUESTED"));
   return result;
 }
 
@@ -251,7 +252,7 @@ export async function moveReturn(id: string, move: ReturnMove): Promise<{ ok: tr
       if (line.orderItem.productId) await adjustProductStock(line.orderItem.productId, line.qty, `Retour ${current.ref}`);
     }
   }
-  await notify(id, move.to);
+  afterResponse(() => notify(id, move.to));
   return { ok: true };
 }
 

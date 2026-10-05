@@ -8,6 +8,7 @@ import { appOrderView } from "@/lib/orders/view";
 import { callerKey, hit, LIMITS } from "@/lib/rate-limit";
 import { customerForRequest } from "@/lib/customer-session";
 import { fail, guard, ok, preflightWrite, readJson } from "../_lib/respond";
+import { afterResponse } from "@/lib/defer";
 
 /** Never cached, never shared. Write CORS: this route reads no cookie — see respond.ts. */
 const POLICY = { cors: "write" as const };
@@ -117,9 +118,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Confirmation to the customer when they gave an e-mail, alert to the
-      // shop. Catches everything; awaited so a serverless return cannot kill
-      // it mid-flight.
-      await notifyOrderPlaced(result.id);
+      // shop — after the answer has gone (lib/defer), never in front of it.
+      afterResponse(() => notifyOrderPlaced(result.id));
 
       const order = await appOrderView(result.id);
       return ok({ ref: result.ref, token: result.token, order }, POLICY);

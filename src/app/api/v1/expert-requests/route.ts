@@ -8,6 +8,7 @@ import { sendMail } from "@/lib/email";
 import { contactMessageMail } from "@/lib/email-templates";
 import { loadShopForEmail } from "@/lib/order-emails";
 import { fail, guard, ok, preflightWrite } from "../_lib/respond";
+import { afterResponse } from "@/lib/defer";
 
 /** Write CORS: this route reads no cookie; the optional bearer is the app's own. */
 const POLICY = { cors: "write" as const };
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
         },
         shop,
       );
-      if (mail) await sendMail(mail);
+      if (mail) afterResponse(() => sendMail(mail));
 
       return ok({ id: message.id }, POLICY);
     },

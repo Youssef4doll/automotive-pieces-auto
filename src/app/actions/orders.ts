@@ -12,6 +12,7 @@ import { claimOrderIds } from "@/lib/orders/claim";
 import { quoteAppCart } from "@/lib/data/app-catalog";
 import type { PromoProblem } from "@/lib/promo-rules";
 import { z } from "zod";
+import { afterResponse } from "@/lib/defer";
 
 export type PlaceOrderInput = PlaceOrderData;
 export type PlaceOrderResult = { ok: true; ref: string } | { ok: false; error: string };
@@ -62,7 +63,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // day cannot take down a checkout whose stock is already claimed. Awaited
   // rather than left floating because a promise still in flight when the
   // serverless function returns is a promise that gets killed.
-  await notifyOrderPlaced(result.id);
+  afterResponse(() => notifyOrderPlaced(result.id));
 
   return { ok: true, ref: result.ref };
 }

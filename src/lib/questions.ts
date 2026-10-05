@@ -5,6 +5,7 @@ import { pushQuestionReply } from "@/lib/push";
 import { sendMail } from "@/lib/email";
 import { contactMessageMail, questionReplyMail } from "@/lib/email-templates";
 import { loadShopForEmail } from "@/lib/order-emails";
+import { afterResponse } from "@/lib/defer";
 
 /**
  * "Demander à la boutique" from the app — a question, with or without a
@@ -98,7 +99,7 @@ export async function createQuestion(q: NewQuestion) {
     },
     shop,
   );
-  if (mail) await sendMail(mail);
+  if (mail) afterResponse(() => sendMail(mail));
   return { id: message.id, token };
 }
 
@@ -175,11 +176,13 @@ export async function replyToQuestion(id: string, reply: string) {
     where: { id },
     data: { reply: text, repliedAt: now, status: "HANDLED", handledAt: now },
   });
-  await pushQuestionReply(id);
-  if (exists.email) {
-    const shop = await loadShopForEmail();
-    const mail = questionReplyMail({ name: exists.name, email: exists.email, question: exists.body, reply: text, orderRef: exists.orderRef }, shop);
-    if (mail) await sendMail(mail);
-  }
+  afterResponse(async () => {
+    await pushQuestionReply(id);
+    if (exists.email) {
+      const shop = await loadShopForEmail();
+      const mail = questionReplyMail({ name: exists.name, email: exists.email, question: exists.body, reply: text, orderRef: exists.orderRef }, shop);
+      if (mail) await sendMail(mail);
+    }
+  });
   return { ok: true as const };
 }

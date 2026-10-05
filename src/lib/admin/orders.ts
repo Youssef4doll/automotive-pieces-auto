@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/money";
 import { taxBreakdown } from "@/lib/tax";
 import { notifyOrderStatus } from "@/lib/order-emails";
+import { afterResponse } from "@/lib/defer";
 
 /**
  * The shop's order desk, shared by the website admin (server actions) and the
@@ -37,9 +38,12 @@ export async function setOrderStatus(
     data: { status, history: { create: { status } } },
   });
   // Best-effort by design — see lib/order-emails — so a mail failure never
-  // leaves the shop unable to advance an order.
-  await notifyOrderStatus(orderId, status);
-  if (opts.push !== false) await pushOrderStatus(orderId, status);
+  // leaves the shop unable to advance an order; and sent after the answer
+  // (lib/defer), so neither the owner nor a cancelling customer waits on SMTP.
+  afterResponse(async () => {
+    await notifyOrderStatus(orderId, status);
+    if (opts.push !== false) await pushOrderStatus(orderId, status);
+  });
   revalidatePath("/admin/commandes");
   revalidatePath(`/admin/commandes/${orderId}`);
   revalidatePath("/compte/commandes");
