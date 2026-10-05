@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { adminMoveReturn } from "@/app/actions/returns";
 import type { ReturnMove } from "@/lib/returns";
 import type { ReturnStatus, ReturnWish } from "@/lib/returns-rules";
+import { formatTND } from "@/lib/money";
 
 const field = "w-full rounded-lg border border-navy-900/15 bg-white px-3 py-2 text-sm text-navy-950 focus:border-navy-700 focus:outline-none";
 const primary =
@@ -38,7 +39,7 @@ export default function ReturnActions({
   const [refuseNote, setRefuseNote] = useState("");
   const [restock, setRestock] = useState(false);
   const [outcome, setOutcome] = useState<"EXCHANGED" | "REFUNDED">(wish === "REFUND" ? "REFUNDED" : "EXCHANGED");
-  const [amount, setAmount] = useState(value.toFixed(2));
+  const [amount, setAmount] = useState(value.toFixed(3).replace(".", ","));
 
   const send = (move: ReturnMove) =>
     start(async () => {
@@ -109,7 +110,7 @@ export default function ReturnActions({
             <label className="flex flex-col gap-1 text-sm max-w-xs">
               Montant remboursé (DT)
               <input className={field} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-              <span className="text-xs text-navy-900/50">Valeur au prix payé : {value.toFixed(2).replace(".", ",")} DT</span>
+              <span className="text-xs text-navy-900/50">Valeur au prix payé : {formatTND(value)}</span>
             </label>
           )}
           <label className="flex flex-col gap-1 text-sm">

@@ -24,6 +24,7 @@ import { positionLabels } from "@/lib/position";
 import BrandMark from "@/components/product/BrandMark";
 import TechnicalInfo, { type TechRow } from "@/components/product/TechnicalInfo";
 import DeliveryNote from "@/components/product/DeliveryNote";
+import { formatTND } from "@/lib/money";
 
 export async function generateMetadata({
   params,
@@ -48,7 +49,7 @@ export async function generateMetadata({
   const price = toNumber(product.priceSell);
   const brand = product.brand?.name ? `${product.brand.name} ` : "";
   const facts =
-    `${brand}${product.name}, référence ${product.sku}. ${price.toFixed(2)} DT. ` +
+    `${brand}${product.name}, référence ${product.sku}. ${formatTND(price)}. ` +
     `Livraison 24h Grand Tunis, paiement à la livraison.`;
   const own = product.description.trim();
   const description = clampDescription(

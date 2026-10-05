@@ -6,6 +6,7 @@ import { useLocale } from "@/i18n/LocaleProvider";
 import { useCart, cartSubtotal, cartCount } from "@/lib/cart-store";
 import { useSheet } from "@/lib/use-sheet";
 import Price from "./Price";
+import { formatTND } from "@/lib/money";
 
 /**
  * Mobile and desktop use deliberately different presentations:
@@ -90,7 +91,7 @@ export default function CartDrawer({ freeShippingThreshold }: { freeShippingThre
             <div className="px-4 py-2.5 bg-gold-500/10 border-b shrink-0">
               {remaining > 0 ? (
                 <p className="text-xs font-semibold text-navy-900 mb-1.5">
-                  {t("cart.freeShipProgress", { amount: remaining.toFixed(2) })}
+                  {t("cart.freeShipProgress", { amount: formatTND(remaining).replace(" DT", "") })}
                 </p>
               ) : (
                 <p className="text-xs font-bold text-green-700 mb-1.5">✓ {t("cart.freeShipReached")}</p>

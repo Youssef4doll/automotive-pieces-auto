@@ -1,6 +1,10 @@
+/**
+ * "89,000 DT" — three decimals, as Tunisian labels and receipts print the
+ * dinar (1 000 millimes), with a comma and narrow-space thousands. The same
+ * figure the app prints (its lib/format formatDT), so the two never differ.
+ */
 export function formatTND(value: number | string) {
-  const n = typeof value === "string" ? Number(value) : value;
-  return `${n.toFixed(2)} DT`;
+  return formatTNDfr(value);
 }
 
 export function toNumber(value: unknown): number {
@@ -12,14 +16,9 @@ export function toNumber(value: unknown): number {
   return Number(value);
 }
 
-/**
- * French number convention: a comma for the decimal separator and a
- * narrow no-break space as the thousands separator — "1 535,00 DT".
- * Used in the customer account area; the admin keeps formatTND so its
- * tables and exports are unaffected.
- */
+/** French number convention, three decimals: "1 535,000 DT". */
 export function formatTNDfr(value: number | string) {
   const n = typeof value === "string" ? Number(value) : value;
   if (!Number.isFinite(n)) return "— DT";
-  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DT`;
+  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} DT`;
 }
