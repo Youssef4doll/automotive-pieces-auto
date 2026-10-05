@@ -15,7 +15,8 @@
     "db:reset": "node scripts/prisma.mjs migrate reset --force",
     "postinstall": "node scripts/prisma.mjs generate",
     "test": "node --import tsx --test 'src/**/*.test.ts'",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "perf": "node scripts/perf-budget.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
