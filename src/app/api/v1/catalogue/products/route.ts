@@ -59,7 +59,10 @@ export async function GET(request: NextRequest) {
       // is a caller bug rather than an empty result, so it is refused rather
       // than quietly ignored.
       const fits = params.get("fits") === "1";
-      if (fits && engine === null) return fail("bad_request", PUBLIC);
+      // `likely=1`: the leads for that engine, to confirm (never with fits).
+      const likely = params.get("likely") === "1";
+      if ((fits || likely) && engine === null) return fail("bad_request", PUBLIC);
+      if (fits && likely) return fail("bad_request", PUBLIC);
 
       // Bounded up front so an unbounded string never reaches a query, and so
       // a caller cannot walk the catalogue a thousand pages at a time.
@@ -80,6 +83,7 @@ export async function GET(request: NextRequest) {
         subcategorySlug: parsed.subcategory?.success ? parsed.subcategory.data : undefined,
         engineId: parsed.engine?.success ? parsed.engine.data : undefined,
         fitsEngineOnly: fits,
+        likelyEngineOnly: likely,
         brandSlug: parsed.brand?.success ? parsed.brand.data : undefined,
         sort,
         inStockOnly,

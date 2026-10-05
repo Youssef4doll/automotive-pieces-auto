@@ -3,7 +3,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { confirmedFitWhere, engineFuelOf, fitContext } from "@/lib/data/fitment";
+import { confirmedFitWhere, engineFuelOf, fitContext, likelyFitWhere } from "@/lib/data/fitment";
 import { CATALOG_TAG, CATALOG_TTL } from "@/lib/cache";
 import { toNumber } from "@/lib/money";
 import { normalizeReference, groupOeReferences } from "@/lib/reference";
@@ -909,6 +909,12 @@ export async function listAppProducts(options: {
    * because there is nothing to be compatible with.
    */
   fitsEngineOnly?: boolean;
+  /**
+   * Only the leads for `engineId` — inferred, or confirmed for the same
+   * engine code elsewhere (lib/data/fitment likelyFitWhere). Never mixed
+   * into the confirmed list: it is its own section, said as "à confirmer".
+   */
+  likelyEngineOnly?: boolean;
   /** A parts maker's slug — the app's "Nos marques" tiles, and the family filter. */
   brandSlug?: string;
   /** Only parts on the shelf now (stock > 0). */
@@ -939,7 +945,12 @@ export async function listAppProducts(options: {
 
   const engineFuel = await engineFuelOf(options.engineId);
   const confirmed = options.engineId ? confirmedFitWhere(options.engineId, engineFuel) : null;
-  const fitmentWhere = confirmed && options.fitsEngineOnly ? confirmed : {};
+  const fitmentWhere =
+    confirmed && options.fitsEngineOnly
+      ? confirmed
+      : options.engineId && options.likelyEngineOnly
+        ? await likelyFitWhere(options.engineId)
+        : {};
 
   const brandWhere = options.brandSlug ? { brand: { slug: options.brandSlug } } : {};
   const stockWhere = options.inStockOnly ? { stockQty: { gt: 0 } } : {};
@@ -975,7 +986,7 @@ export async function listAppProducts(options: {
   // the shop cannot supply. A part with no fitment rows sits with the
   // others; it is unverified, not compatible.
   const fitSplit: Prisma.ProductWhereInput[] =
-    options.engineId && !options.fitsEngineOnly ? [confirmed!, { NOT: confirmed! }] : [{}];
+    options.engineId && !options.fitsEngineOnly && !options.likelyEngineOnly ? [confirmed!, { NOT: confirmed! }] : [{}];
   const stockSplit = sort === "relevance" ? [IN_STOCK, ON_ORDER, UNAVAILABLE] : [BUYABLE, UNAVAILABLE];
   const segments = fitSplit.flatMap((f) => stockSplit.map((s) => ({ AND: [where, f, s] })));
 

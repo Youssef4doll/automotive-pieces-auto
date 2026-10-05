@@ -68,3 +68,33 @@ export async function fitContext(engineId: string | undefined, productIds: strin
   }
   return { engineId, fuel: engine.fuel, near };
 }
+
+/**
+ * The `where` for "a lead for this engine, not yet confirmed": a DERIVED row
+ * for it, or a VERIFIED row for another engine with the same engine code and
+ * fuel — exactly the parts whose verdict is UNKNOWN with a reason
+ * (lib/fitment-verdict) — and never a part already confirmed or one that
+ * needs the other fuel. The "à confirmer" list beside the confirmed one.
+ */
+export async function likelyFitWhere(engineId: string) {
+  const engine = await prisma.vehicleEngine.findUnique({ where: { id: engineId }, select: { engineCode: true, fuel: true } });
+  if (!engine) return { id: { in: [] as string[] } };
+  const kind = engineFuelKind(engine.fuel);
+  const twins = engine.engineCode
+    ? (
+        await prisma.vehicleEngine.findMany({
+          where: { id: { not: engineId }, engineCode: { not: null } },
+          select: { id: true, engineCode: true, fuel: true },
+        })
+      )
+        .filter((e) => sameEngineCode(e.engineCode, engine.engineCode) && engineFuelKind(e.fuel) === kind)
+        .map((e) => e.id)
+    : [];
+  return {
+    OR: [
+      { fitments: { some: { engineId, confidence: "DERIVED" as const } } },
+      ...(twins.length ? [{ fitments: { some: { engineId: { in: twins }, confidence: "VERIFIED" as const } } }] : []),
+    ],
+    AND: [{ NOT: confirmedFitWhere(engineId, engine.fuel) }, ...(kind ? [{ NOT: needsOtherFuelWhere(kind) }] : [])],
+  };
+}
