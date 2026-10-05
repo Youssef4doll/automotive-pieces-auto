@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/money";
 import { taxBreakdown } from "@/lib/tax";
 import { notifyOrderStatus } from "@/lib/order-emails";
+import { orderStatusEvent } from "@/lib/server-events";
 import { afterResponse } from "@/lib/defer";
 
 /**
@@ -28,7 +29,7 @@ export async function setOrderStatus(
   orderId: string,
   status: OrderStatus,
   /** `push: false` when the customer made the change themselves, on the phone that would be told. */
-  opts: { push?: boolean } = {},
+  opts: { push?: boolean; by?: "customer" | "shop" } = {},
 ): Promise<boolean> {
   const current = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true } });
   if (!current) return false;
@@ -43,6 +44,7 @@ export async function setOrderStatus(
   afterResponse(async () => {
     await notifyOrderStatus(orderId, status);
     if (opts.push !== false) await pushOrderStatus(orderId, status);
+    await orderStatusEvent(orderId, current.status, status, opts.by ?? "shop");
   });
   revalidatePath("/admin/commandes");
   revalidatePath(`/admin/commandes/${orderId}`);

@@ -11,6 +11,8 @@ import { issueOrderToken } from "@/lib/order-token";
 import { personName, phoneNumber } from "@/lib/validation";
 import { judgePromo } from "@/lib/promo";
 import type { PromoProblem } from "@/lib/promo-rules";
+import { afterResponse } from "@/lib/defer";
+import { orderPlacedEvent } from "@/lib/server-events";
 
 /**
  * Placing an order — the part both front doors share.
@@ -335,6 +337,7 @@ export async function createOrder(
       return { id: order.id, ref: order.ref, token };
     });
 
+    afterResponse(() => orderPlacedEvent(result.id));
     return { ok: true, ...result };
   } catch (e) {
     if (e instanceof OrderError) {
