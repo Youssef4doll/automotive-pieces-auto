@@ -174,9 +174,13 @@ export default function FitmentBrowser({ rows }: { rows: FitmentRow[] }) {
                       {m.engines.map((e) => (
                         <span
                           key={e.engineId}
+                          // The customer's engine stands out — in green only when the
+                          // shop confirmed it; an inferred row is amber, as in the app.
                           className={`text-[13px] ${
                             vehicle?.engineId === e.engineId
-                              ? "font-semibold text-green-700"
+                              ? e.derived
+                                ? "font-semibold text-amber-700"
+                                : "font-semibold text-green-700"
                               : "text-gray-600"
                           }`}
                         >
