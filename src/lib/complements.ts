@@ -26,6 +26,11 @@ const COMPLEMENTS: Record<string, string[]> = {
   "capteurs-et-sondes": ["capteurs-et-sondes", "allumage-prechauffage"],
 };
 
+/** The families that belong next to one (itself included). */
+export function complementFamilies(family: string): string[] {
+  return COMPLEMENTS[family] ?? [family];
+}
+
 type Part = { family: string; axle: "AVANT" | "ARRIERE" | null };
 
 /**

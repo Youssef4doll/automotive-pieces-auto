@@ -3,7 +3,7 @@ import type { Prisma, SupplyMode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fuelContradicts } from "@/lib/fitment-rules";
 import { fitContext, type FitContext } from "@/lib/data/fitment";
-import { complements } from "@/lib/complements";
+import { complementFamilies, complements } from "@/lib/complements";
 import { fitReason, fitVerdict, type FitReason, type FitmentVerdict } from "@/lib/fitment-verdict";
 import { availabilityOf } from "@/lib/availability";
 import { toNumber } from "@/lib/money";
@@ -700,7 +700,8 @@ const SUGGEST_MAX_GAP_SHARE = 0.5;
  *   first, a part the shop linked to one already in the basket (a filter
  *   with the oil) — the shop's own recommendation;
  *
- *   then, a part with a VERIFIED fitment row for the customer's engine.
+ *   then, a part with a VERIFIED fitment row for the customer's engine, in
+ *   a family that finishes the same job as the basket (lib/complements).
  *
  * On the shelf only, so taking the suggestion never turns a basket that
  * would leave today into one that waits on a supplier. Never a part in the
@@ -734,7 +735,22 @@ async function freeDeliverySuggestion(inCart: string[], engineId: string | undef
 
   const linked = await pick({ linkedFrom: { some: { productId: { in: inCart } } } }, null);
   if (linked || !engineId) return linked;
-  return pick({ fitments: { some: { engineId, confidence: "VERIFIED" } } }, ["FITS"]);
+  // Confirmed for the car is not enough on its own: it must finish the same
+  // job as the basket (lib/complements) — brake fluid beside pads, not an
+  // air filter that happens to fit.
+  const basket = await prisma.product.findMany({
+    where: { id: { in: inCart } },
+    select: { category: { select: { slug: true, parent: { select: { slug: true } } } } },
+  });
+  const families = [...new Set(basket.flatMap((b) => complementFamilies(b.category.parent?.slug ?? b.category.slug)))];
+  if (!families.length) return null;
+  return pick(
+    {
+      fitments: { some: { engineId, confidence: "VERIFIED" } },
+      category: { OR: [{ slug: { in: families } }, { parent: { slug: { in: families } } }] },
+    },
+    ["FITS"],
+  );
 }
 
 /** Money to the millime, so 0.1 + 0.2 never reaches a customer. */
