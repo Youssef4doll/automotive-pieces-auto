@@ -50,14 +50,17 @@ const itemSchema = z.object({
 const shortText = z.string().trim().max(200);
 const longText = z.string().trim().max(2000);
 
-export const placeOrderSchema = z.object({
+export const placeOrderSchema = z
+  .object({
   // The same rules the signup form uses — see lib/validation. This name is
   // read off a delivery note by a driver at somebody's door, so `min(2)` was
   // not enough: it accepted `ttttt@gmail.com`.
   customerName: personName,
   phone: phoneNumber,
   email: z.email().max(200).optional().or(z.literal("")),
-  governorate: shortText.min(2),
+  // Where a driver goes: required for delivery. Collected in store, the
+  // shop is the place, so the app no longer asks (empty is stored).
+  governorate: shortText.optional(),
   address: longText.optional(),
   deliveryMethod: z.enum(["DELIVERY", "PICKUP"]),
   paymentMethod: z.enum(["COD", "CARD"]),
@@ -80,7 +83,12 @@ export const placeOrderSchema = z.object({
   // A code the shop handed out. Only the code: the discount is looked up and
   // worked out below, inside the transaction, like every other number here.
   promoCode: z.string().trim().max(40).optional(),
-});
+})
+  .superRefine((d, ctx) => {
+    if (d.deliveryMethod === "DELIVERY" && (d.governorate ?? "").length < 2) {
+      ctx.addIssue({ code: "custom", path: ["governorate"], message: "Gouvernorat requis pour la livraison." });
+    }
+  });
 
 export type PlaceOrderData = z.infer<typeof placeOrderSchema>;
 
@@ -278,7 +286,7 @@ export async function createOrder(
           customerName: data.customerName,
           phone: data.phone,
           email: data.email || undefined,
-          governorate: data.governorate,
+          governorate: data.governorate ?? "",
           address: data.address,
           deliveryMethod: data.deliveryMethod,
           paymentMethod: data.paymentMethod,
