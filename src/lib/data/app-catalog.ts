@@ -10,7 +10,7 @@ import { toNumber } from "@/lib/money";
 import { getSettings } from "@/lib/settings";
 import { didYouMean, fold, parseQuery, rankProducts, recordSearchMiss } from "@/lib/search";
 import { groupOeReferences, type OeGroup } from "@/lib/reference";
-import { cartDeliveryQuote, shippingFeeFor, type DeliveryMethod } from "@/lib/shipping";
+import { cartDeliveryQuote, shippingFeeFor, waivedDeliveryFee, type DeliveryMethod } from "@/lib/shipping";
 import { taxPolicy } from "@/lib/tax";
 import { judgePromo } from "@/lib/promo";
 import type { PromoKind, PromoProblem } from "@/lib/promo-rules";
@@ -584,6 +584,9 @@ export type AppCartQuote = {
   suggestion: AppProduct | null;
   deliveryMethod: DeliveryMethod;
   deliveryFee: number;
+  /** The home-delivery fee the threshold waived (struck through beside
+   *  "Gratuit"); 0 for pickup and whenever delivery is charged. */
+  deliveryFeeWaived: number;
   stampDuty: number;
   total: number;
   freeShippingThreshold: number;
@@ -679,6 +682,7 @@ export async function quoteAppCart(input: {
     suggestion,
     deliveryMethod: method,
     deliveryFee,
+    deliveryFeeWaived: waivedDeliveryFee(goods, freeShippingThreshold, method),
     stampDuty,
     total: round(goods + deliveryFee + stampDuty),
     freeShippingThreshold,

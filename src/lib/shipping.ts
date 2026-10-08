@@ -28,6 +28,21 @@ export function shippingFeeFor(
 }
 
 /**
+ * The delivery fee the threshold waived: what this order would have paid for
+ * home delivery under the threshold, so a screen can strike it through next
+ * to "Gratuit". Zero for pickup, which never costs delivery, for an empty
+ * basket, and whenever delivery is charged.
+ */
+export function waivedDeliveryFee(
+  subtotal: number,
+  freeShippingThreshold: number,
+  method: DeliveryMethod = "DELIVERY",
+): number {
+  if (method !== "DELIVERY" || subtotal <= 0) return 0;
+  return shippingFeeFor(subtotal, freeShippingThreshold, method) === 0 ? FLAT_DELIVERY_FEE : 0;
+}
+
+/**
  * What the cart can promise before it knows how the order will be delivered.
  *
  * The cart has no address and no delivery method yet, so it quotes the
