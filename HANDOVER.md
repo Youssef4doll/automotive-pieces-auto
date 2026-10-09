@@ -968,7 +968,7 @@ with the website's own accounts. What changed on this side:
   so a customer token can never open `/api/v1/admin`. `lib/customer-session.ts`.
 - **Routes**: `/api/v1/auth/signup`, `/auth/session` (POST sign in, GET, DELETE
   sign out), `/auth/password-reset` (sends this site's reset e-mail),
-  `/api/v1/account` (GET, DELETE), `/account/orders`,
+  `/api/v1/account` (GET, PATCH, DELETE), `/account/orders`,
   `/account/orders/claim` (guest orders proven by their order tokens — never
   by e-mail), and `/api/v1/events` (the app's analytics into
   `AnalyticsEvent`, tagged `app: true`). None reads a cookie; see respond.ts.
@@ -976,6 +976,14 @@ with the website's own accounts. What changed on this side:
   `POST /api/v1/orders` attaches the order to the signed-in account.
 - **Password changed or reset signs every phone out** (customer and staff
   sessions deleted in the same transaction).
+- **`PATCH /api/v1/account`** (October 2026) — the app's "Mes informations":
+  `{ name?, email? }`, the website profile form's rules (`personName`,
+  `emailAddress`, a taken address is `invalid_field` email/`taken`) and its
+  budget of 20 changes an hour, each changed field filed in
+  `UserProfileChange` as `SELF`. A new e-mail needs proof — the current
+  `password`, or for a code-only account the `code` from
+  `/account/confirm-code` — because it is where a password reset goes. The
+  phone stays on `/account/phone` (a code to the new number).
 - **Account deletion** — required by both stores — on `/compte/profil`
   ("Supprimer mon compte", password re-entered) and in the app, through one
   function (`lib/account-deletion.ts`). Orders are kept, detached: they are
