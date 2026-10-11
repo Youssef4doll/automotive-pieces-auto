@@ -58,11 +58,11 @@ export function orderStatusText(status: TextStatus, o: TextOrder): string | null
         : `${head}votre commande ${o.ref} est confirmée. Nous vous prévenons dès qu'elle est prête au magasin.`;
     case "PREPARED":
       // For a delivery the next news is the van; for a pickup it is "come and get it".
-      return o.deliveryMethod === "PICKUP" ? `${head}votre commande ${o.ref} est prête au magasin. À tout de suite !` : null;
+      return o.deliveryMethod === "PICKUP" ? `${head}votre commande ${o.ref} est prête au magasin. Nous vous attendons.` : null;
     case "SHIPPED":
       return `${head}votre commande ${o.ref} est en route — le livreur vous appelle avant de passer. À payer à la livraison : ${o.total}.`;
     case "DELIVERED":
-      return `${head}commande ${o.ref} livrée, merci ! Une pièce ne va pas ? Le retour se fait en 3 gestes depuis la commande, dans l'app.`;
+      return `${head}commande ${o.ref} livrée, merci. Une pièce ne va pas ? Le retour se fait en 3 gestes depuis la commande, dans l'app.`;
     case "CANCELLED":
       return `${head}votre commande ${o.ref} a été annulée. Une question ? Répondez depuis l'app, la boutique vous lit.`;
   }
