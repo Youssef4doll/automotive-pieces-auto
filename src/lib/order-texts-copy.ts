@@ -20,7 +20,7 @@ const DAY_ONLY = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numer
 /** "10:00" → "10 h", "10:30" → "10 h 30". */
 export function frenchClock(hhmm: string) {
   const [h, m] = hhmm.split(":");
-  return m && m !== "00" ? `${Number(h)} h ${m}` : `${Number(h)} h`;
+  return m && m !== "00" ? `${Number(h)}\u00a0h\u00a0${m}` : `${Number(h)}\u00a0h`;
 }
 
 /**

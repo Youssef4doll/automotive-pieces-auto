@@ -12,15 +12,15 @@ const order: TextOrder = {
 };
 
 test("the estimate reads as the owner wrote it", () => {
-  assert.equal(frenchClock("10:00"), "10 h");
-  assert.equal(frenchClock("09:30"), "9 h 30");
-  assert.equal(frenchEstimate(order.estimate!), "mardi 6 octobre, 10 h–18 h");
+  assert.equal(frenchClock("10:00"), "10\u00a0h");
+  assert.equal(frenchClock("09:30"), "9\u00a0h\u00a030");
+  assert.equal(frenchEstimate(order.estimate!), "mardi 6 octobre, 10\u00a0h–18\u00a0h");
   assert.equal(frenchEstimate({ from: "2026-10-08", to: "2026-10-10", window: null }), "entre jeudi 8 et samedi 10 octobre");
   assert.equal(frenchEstimate({ from: "2026-10-30", to: "2026-11-02", window: null }), "entre vendredi 30 octobre et lundi 2 novembre");
 });
 
 test("each step has its message, and the van is the one that says the courier calls", () => {
-  assert.match(orderStatusText("CONFIRMED", order)!, /CMD-1042 est confirmée\. Livraison estimée : mardi 6 octobre, 10 h–18 h\./);
+  assert.match(orderStatusText("CONFIRMED", order)!, /CMD-1042 est confirmée\. Livraison estimée : mardi 6 octobre, 10\u00a0h–18\u00a0h\./);
   assert.match(orderStatusText("SHIPPED", order)!, /en route — le livreur vous appelle avant de passer\. À payer à la livraison : 138,600 DT\./);
   assert.match(orderStatusText("DELIVERED", order)!, /3 gestes/);
   assert.match(orderStatusText("PENDING", order)!, /bien reçue \(138,600 DT/);

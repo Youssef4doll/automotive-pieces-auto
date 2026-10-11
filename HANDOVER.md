@@ -1424,3 +1424,34 @@ These came from the shop owner and are worth keeping:
 - **Say what is true about stock and fitment.** Out-of-stock says so.
   Compatibility is claimed only where the fitment table backs it, and parts with
   no fitment data are shown apart rather than hidden or claimed.
+
+
+## Orders: estimated date, texts, delays, addresses (October 11, 2026)
+
+- **Estimated delivery date** (`lib/delivery-estimate`, `lib/order-estimate`):
+  settings `delivery_cutoff` ("14:00"), `delivery_window` ("10:00–18:00"),
+  `delivery_days` ("1,2,3,4,5,6", Monday = 1) in /admin/parametres and the
+  app's Espace boutique. With the cut-off set, each delivery order stores
+  `estimatedFrom`/`estimatedTo`/`estimatedWindow` (Tunisian dates); without
+  it, no date is promised anywhere. `GET /api/v1/settings/public` exposes the
+  three (normalised) under `delivery`; order views carry `estimate`.
+- **Texts at every step** (`lib/order-texts`, copy in `lib/order-texts-copy`):
+  placed, confirmed, ready (pickup), shipped ("le livreur vous appelle avant de
+  passer"), delivered, cancelled — when an SMS provider is configured
+  (`lib/sms`) and `sms_order_updates` is not "0". Not for a change the
+  customer made themselves.
+- **Delays said first** (`lib/order-delays`): an order not shipped by the
+  morning of its first promised day, or shipped and past the last day's
+  courier hours, is told once by push and text and marked `delayNotifiedAt`
+  (shown "En retard · client prévenu" in the admin). Triggered by
+  `GET /api/cron/late-orders` (Vercel cron, daily 07:00 UTC = 08:00 Tunis,
+  `vercel.json`; **set `CRON_SECRET` in Vercel** — without it the route
+  refuses every call) and, between those, whenever the shop opens its order
+  list (at most every ten minutes per server).
+- **Where exactly**: orders take `landmark`, `latitude`, `longitude`
+  (inside Tunisia's box, both or neither) and `savedAddressId`; the admin
+  order page shows the landmark and "Voir la position sur la carte".
+- **Saved addresses** (`SavedAddress`, `lib/saved-addresses`):
+  `GET/POST /api/v1/account/addresses`, `PATCH/DELETE
+  /api/v1/account/addresses/[id]` — bearer only, ten per account, someone
+  else's id is a 404. Migration `20261011100000_estimate_addresses`.

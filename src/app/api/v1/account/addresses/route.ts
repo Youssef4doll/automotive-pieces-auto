@@ -8,16 +8,19 @@ export const OPTIONS = preflightWrite;
 
 /**
  * The account's delivery addresses — "Maison", "Travail" — so a checkout is
- * a tap (lib/saved-addresses). The last one used first. Bearer only, like
+ * a tap (lib/saved-addresses). The last one used or added first. Bearer only, like
  * every account route: the website's cookie is never read here.
  */
 export async function GET(request: Request) {
   return asCustomer(request, "addresses GET", async (customer) => {
     const rows = await prisma.savedAddress.findMany({
       where: { userId: customer.id },
-      orderBy: [{ lastUsedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
-      select: ADDRESS_SELECT,
+      select: { ...ADDRESS_SELECT, createdAt: true },
     });
+    // The one used or added last comes first: an address kept at checkout is
+    // the one the next order most likely goes to. Ten rows at most, sorted here.
+    const recent = (a: { lastUsedAt: Date | null; createdAt: Date }) => Math.max(a.lastUsedAt?.getTime() ?? 0, a.createdAt.getTime());
+    rows.sort((a, b) => recent(b) - recent(a));
     return ok({ addresses: rows.map(addressView) }, CUSTOMER);
   });
 }
