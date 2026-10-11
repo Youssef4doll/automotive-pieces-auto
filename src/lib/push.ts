@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { backInStockPush, orderLabel, orderStatusPush, pushLocale, questionReplyPush, returnStatusPush, type PushStatus, type ReturnPushStatus } from "@/lib/push-copy";
+import { backInStockPush, orderDelayPush, orderLabel, orderStatusPush, pushLocale, questionReplyPush, returnStatusPush, type PushStatus, type ReturnPushStatus } from "@/lib/push-copy";
 
 /**
  * Push notifications, through Expo's push service.
@@ -123,6 +123,37 @@ export async function pushOrderStatus(orderId: string, status: PushStatus): Prom
     await forget(dead);
   } catch (e) {
     console.warn("push: order status", e instanceof Error ? e.message : e);
+  }
+}
+
+/** The order will miss its promised date (lib/order-delays): the phones following it hear it first. */
+export async function pushOrderDelay(orderId: string): Promise<void> {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        ref: true,
+        userId: true,
+        status: true,
+        pushTokens: { select: { token: true, locale: true } },
+        items: { orderBy: { id: "asc" }, select: { name: true } },
+      },
+    });
+    if (!order) return;
+    const phones = await orderPhones(order);
+    if (!phones.length) return;
+    const label = orderLabel(order.items[0]?.name ?? order.ref, Math.max(0, order.items.length - 1));
+    const messages = phones.map((t) => ({
+      to: t.token,
+      ...orderDelayPush(pushLocale(t.locale), label, order.status === "SHIPPED"),
+      sound: "default" as const,
+      channelId: "orders",
+      data: { ref: order.ref },
+    }));
+    const { dead } = await send(messages);
+    await forget(dead);
+  } catch (e) {
+    console.warn("push: order delay", e instanceof Error ? e.message : e);
   }
 }
 

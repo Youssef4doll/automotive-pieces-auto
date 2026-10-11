@@ -4,6 +4,8 @@ import { formatTND, toNumber } from "@/lib/money";
 import { ORDER_STATUS_LABEL } from "@/lib/order-status";
 import StatusBadge from "@/components/admin/StatusBadge";
 import type { OrderStatus } from "@prisma/client";
+import { afterResponse } from "@/lib/defer";
+import { sweepLateOrdersSometimes } from "@/lib/order-delays";
 
 const STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED", "PREPARED", "SHIPPED", "DELIVERED", "CANCELLED"];
 
@@ -13,6 +15,9 @@ export default async function AdminOrdersPage({
   searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const { status, q } = await searchParams;
+  // Opening the order list is when a delay gets noticed: the customers whose
+  // promised date has passed are told now, after the page (lib/order-delays).
+  afterResponse(sweepLateOrdersSometimes);
 
   const orders = await prisma.order.findMany({
     where: {
@@ -77,6 +82,9 @@ export default async function AdminOrdersPage({
                 <td className="px-4 py-3 text-navy-900/50">{new Date(o.createdAt).toLocaleDateString("fr-FR")}</td>
                 <td className="px-4 py-3">
                   <StatusBadge status={o.status} />
+                  {o.delayNotifiedAt && o.status !== "DELIVERED" && o.status !== "CANCELLED" ? (
+                    <span className="ms-2 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-700">En retard · client prévenu</span>
+                  ) : null}
                 </td>
                 <td className="px-4 py-3 text-end font-semibold">{formatTND(toNumber(o.total))}</td>
               </tr>

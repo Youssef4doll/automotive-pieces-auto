@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { issueOrderToken } from "@/lib/order-token";
 import { notifyOrderPlaced } from "@/lib/order-emails";
+import { textOrderStatus } from "@/lib/order-texts";
 import { createOrder, placeOrderSchema } from "@/lib/orders/place";
 import { appOrderView } from "@/lib/orders/view";
 import { callerKey, hit, LIMITS } from "@/lib/rate-limit";
@@ -119,7 +120,11 @@ export async function POST(request: NextRequest) {
 
       // Confirmation to the customer when they gave an e-mail, alert to the
       // shop — after the answer has gone (lib/defer), never in front of it.
-      afterResponse(() => notifyOrderPlaced(result.id));
+      afterResponse(async () => {
+        await notifyOrderPlaced(result.id);
+        // "Commande bien reçue" by text too (lib/order-texts).
+        await textOrderStatus(result.id, "PENDING");
+      });
 
       const order = await appOrderView(result.id);
       return ok({ ref: result.ref, token: result.token, order }, POLICY);

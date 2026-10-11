@@ -1,4 +1,6 @@
 import type { OrderStatus } from "@prisma/client";
+import { afterResponse } from "@/lib/defer";
+import { sweepLateOrdersSometimes } from "@/lib/order-delays";
 import { listAdminOrders, ORDER_STATUSES } from "@/lib/admin/orders";
 import { ok, preflightWrite } from "../../_lib/respond";
 import { ADMIN, asAdmin } from "../_lib/admin";
@@ -13,6 +15,9 @@ export async function GET(request: Request) {
     const status = (ORDER_STATUSES as string[]).includes(raw) ? (raw as OrderStatus) : undefined;
     const q = url.searchParams.get("q")?.trim().slice(0, 80) || undefined;
     const cursor = url.searchParams.get("cursor") || undefined;
+    // The shop looking at its orders is when a delay gets noticed: tell the
+    // customers whose promised date has passed (lib/order-delays), after the answer.
+    afterResponse(sweepLateOrdersSometimes);
     return ok(await listAdminOrders({ status, q, cursor }), ADMIN);
   });
 }

@@ -29,21 +29,21 @@ const ORDER: Record<PushLocale, Partial<Record<PushStatus | "READY", Copy>>> = {
   fr: {
     CONFIRMED: { title: "Commande confirmée", body: (l) => `La boutique a confirmé votre commande : ${l}.` },
     READY: { title: "Commande prête", body: (l) => `Votre commande est prête au magasin : ${l}.` },
-    SHIPPED: { title: "Commande en route", body: (l) => `Votre commande a été remise au livreur : ${l}.` },
+    SHIPPED: { title: "Commande en route", body: (l) => `Votre commande est en route — le livreur vous appelle avant de passer : ${l}.` },
     DELIVERED: { title: "Commande livrée", body: (l) => `Votre commande est marquée livrée : ${l}. Dites-nous comment ça s'est passé.` },
     CANCELLED: { title: "Commande annulée", body: (l) => `Votre commande a été annulée : ${l}.` },
   },
   en: {
     CONFIRMED: { title: "Order confirmed", body: (l) => `The shop confirmed your order: ${l}.` },
     READY: { title: "Order ready", body: (l) => `Your order is ready at the shop: ${l}.` },
-    SHIPPED: { title: "Order on its way", body: (l) => `Your order was handed to the courier: ${l}.` },
+    SHIPPED: { title: "Order on its way", body: (l) => `Your order is on its way — the courier will call before coming: ${l}.` },
     DELIVERED: { title: "Order delivered", body: (l) => `Your order is marked delivered: ${l}. Tell us how it went.` },
     CANCELLED: { title: "Order cancelled", body: (l) => `Your order was cancelled: ${l}.` },
   },
   ar: {
     CONFIRMED: { title: "تم تأكيد الطلب", body: (l) => `أكّد المتجر طلبك: ${l}.` },
     READY: { title: "الطلب جاهز", body: (l) => `طلبك جاهز في المتجر: ${l}.` },
-    SHIPPED: { title: "الطلب في الطريق", body: (l) => `سُلّم طلبك لعامل التوصيل: ${l}.` },
+    SHIPPED: { title: "الطلب في الطريق", body: (l) => `طلبك في الطريق — سيتصل بك عامل التوصيل قبل المرور: ${l}.` },
     DELIVERED: { title: "تم تسليم الطلب", body: (l) => `طلبك مسجَّل كمُسلَّم: ${l}. أخبرنا كيف جرى الأمر.` },
     CANCELLED: { title: "أُلغي الطلب", body: (l) => `أُلغي طلبك: ${l}.` },
   },
@@ -65,6 +65,39 @@ export function orderStatusPush(
   if (!key) return null;
   const copy = ORDER[locale][key];
   return copy ? { title: copy.title, body: copy.body(label) } : null;
+}
+
+const DELAY: Record<PushLocale, { title: string; body: (label: string, shipped: boolean) => string }> = {
+  fr: {
+    title: "Votre commande a du retard",
+    body: (l, shipped) =>
+      shipped
+        ? `Désolés : ${l} n'arrivera pas à la date prévue. Elle est chez le livreur, qui vous appelle avant de passer.`
+        : `Désolés : ${l} n'arrivera pas à la date prévue. Nous vous prévenons dès qu'elle part.`,
+  },
+  en: {
+    title: "Your order is running late",
+    body: (l, shipped) =>
+      shipped
+        ? `Sorry: ${l} will not arrive on the date we gave. The courier has it and will call before coming.`
+        : `Sorry: ${l} will not arrive on the date we gave. We will tell you as soon as it leaves.`,
+  },
+  ar: {
+    title: "طلبك متأخر",
+    body: (l, shipped) =>
+      shipped
+        ? `نعتذر: ${l} لن يصل في الموعد المحدد. هو عند عامل التوصيل الذي سيتصل بك قبل المرور.`
+        : `نعتذر: ${l} لن يصل في الموعد المحدد. سنخبرك فور خروجه.`,
+  },
+};
+
+/**
+ * The order will miss the date it was promised (lib/order-delays) — said
+ * once, before the customer has to ask.
+ */
+export function orderDelayPush(locale: PushLocale, label: string, shipped: boolean) {
+  const c = DELAY[locale];
+  return { title: c.title, body: c.body(label, shipped) };
 }
 
 const BACK: Record<PushLocale, { title: string; body: (name: string) => string }> = {

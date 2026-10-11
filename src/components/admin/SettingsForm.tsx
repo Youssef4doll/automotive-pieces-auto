@@ -42,6 +42,20 @@ export default function SettingsForm({ settings }: { settings: SettingsMap }) {
         <Field label="Délai régions" name="delivery_regions" defaultValue={settings.delivery_regions} />
       </div>
 
+      {/* The estimated delivery date (lib/delivery-estimate). Without the
+          cut-off no date is shown anywhere — only the delays above. */}
+      <div className="grid sm:grid-cols-3 gap-4">
+        <Field label="Heure limite d'expédition" name="delivery_cutoff" defaultValue={settings.delivery_cutoff} placeholder="ex. 14:00" />
+        <Field label="Horaires du livreur" name="delivery_window" defaultValue={settings.delivery_window} placeholder="ex. 10:00–18:00" />
+        <Field label="Jours de livraison (1 = lundi … 7 = dimanche)" name="delivery_days" defaultValue={settings.delivery_days} placeholder="1,2,3,4,5,6" />
+      </div>
+      <p className="-mt-2 text-xs text-gray-500">
+        Avec l&apos;heure limite, le client voit une date : « Livraison estimée : mardi 7 octobre, 10 h–18 h ». Une
+        commande passée avant l&apos;heure limite part le jour même ; après, le jour ouvré suivant. Laissée vide, aucune
+        date n&apos;est annoncée.
+      </p>
+      <Field label="SMS à chaque étape de la commande (1 = oui, 0 = non)" name="sms_order_updates" defaultValue={settings.sms_order_updates} placeholder="1" />
+
       {/* Quoted on every part that is out of stock but still orderable. Left
           empty those parts say they are ordered in and say nothing about
           when — which is better than a delay nobody has committed to. */}

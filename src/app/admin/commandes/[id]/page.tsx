@@ -78,6 +78,27 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             <p>{order.deliveryMethod === "PICKUP" ? "Retrait en magasin" : "Livraison à domicile"}</p>
             <p className="text-gray-600">{order.governorate}</p>
             {order.address && <p className="text-gray-600">{order.address}</p>}
+            {/* What the driver needs where the street has no number. */}
+            {order.landmark && <p className="text-gray-600">Repère : {order.landmark}</p>}
+            {order.latitude != null && order.longitude != null && (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${order.latitude},${order.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block mt-1 text-navy-900 font-semibold underline"
+              >
+                Voir la position sur la carte
+              </a>
+            )}
+            {order.estimatedFrom && order.estimatedTo && (
+              <p className="text-xs text-navy-900/60 mt-1">
+                Promise au client : {order.estimatedFrom.toISOString().slice(0, 10) === order.estimatedTo.toISOString().slice(0, 10)
+                  ? order.estimatedFrom.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
+                  : `${order.estimatedFrom.toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "UTC" })} – ${order.estimatedTo.toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "UTC" })}`}
+                {order.estimatedWindow ? `, ${order.estimatedWindow}` : ""}
+                {order.delayNotifiedAt ? " · en retard, client prévenu" : ""}
+              </p>
+            )}
             <p className="text-xs text-navy-900/40 mt-1">
               Paiement : {order.paymentMethod === "COD" ? "À la livraison" : "Carte bancaire"}
             </p>

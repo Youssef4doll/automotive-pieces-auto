@@ -80,8 +80,33 @@ model User {
   adminSessions     AdminSession[]
   appSessions       CustomerSession[]
   phoneCodes        PhoneCode[]
+  addresses         SavedAddress[]
 
   @@index([role])
+}
+
+/// A delivery address kept on the account — "Maison", "Travail" — so the
+/// next checkout is a tap (api/v1/account/addresses). What a driver needs
+/// in a street with no number: the governorate and delegation, the address
+/// as the customer writes it, a landmark ("en face de la pharmacie, 2e
+/// étage") and, when the customer placed a pin, its coordinates.
+model SavedAddress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label       String
+  governorate String
+  delegation  String?
+  address     String
+  landmark    String?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  /// Set by an order placed to this address, so the last one used comes first.
+  lastUsedAt  DateTime?
+
+  @@index([userId])
 }
 
 /**
@@ -511,6 +536,21 @@ model Order {
   email           String?
   governorate     String
   address         String?
+  // Where exactly, for a driver in a street with no number: a landmark the
+  // customer wrote ("en face de la pharmacie, 2e étage") and, when they
+  // placed a pin, its coordinates — the courier opens them in a map.
+  landmark        String?
+  latitude        Float?
+  longitude       Float?
+  // The date the shop's settings let it promise (lib/delivery-estimate): the
+  // first and last day, Tunisian dates, and the courier's hours — kept on the
+  // order so a later settings change cannot move a promise already made.
+  // Null when no date was promised (no cut-off set, or pickup).
+  estimatedFrom   DateTime?      @db.Date
+  estimatedTo     DateTime?      @db.Date
+  estimatedWindow String?
+  /// When the customer was told the order would miss its estimate (lib/order-delays). Once.
+  delayNotifiedAt DateTime?
   deliveryMethod  DeliveryMethod @default(DELIVERY)
   paymentMethod   PaymentMethod  @default(COD)
   status          OrderStatus    @default(PENDING)

@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/money";
 import { taxBreakdown } from "@/lib/tax";
 import { notifyOrderStatus } from "@/lib/order-emails";
+import { textOrderStatus } from "@/lib/order-texts";
+import { storedEstimate } from "@/lib/order-estimate";
 import { orderStatusEvent } from "@/lib/server-events";
 import { afterResponse } from "@/lib/defer";
 
@@ -44,6 +46,8 @@ export async function setOrderStatus(
   afterResponse(async () => {
     await notifyOrderStatus(orderId, status);
     if (opts.push !== false) await pushOrderStatus(orderId, status);
+    // A text at each step (lib/order-texts) — not for a change the customer made themselves.
+    if (opts.by !== "customer") await textOrderStatus(orderId, status);
     await orderStatusEvent(orderId, current.status, status, opts.by ?? "shop");
   });
   revalidatePath("/admin/commandes");
@@ -143,6 +147,12 @@ export async function adminOrderDetail(orderId: string) {
     accountEmail: o.user?.email ?? null,
     governorate: o.governorate,
     address: o.address,
+    /** What the driver needs where the street has no number. */
+    landmark: o.landmark,
+    pin: o.latitude != null && o.longitude != null ? { lat: o.latitude, lng: o.longitude } : null,
+    /** The date promised at the order (lib/order-estimate), and whether the customer was told it is late. */
+    estimate: storedEstimate(o),
+    late: o.delayNotifiedAt != null,
     deliveryMethod: o.deliveryMethod,
     paymentMethod: o.paymentMethod,
     notes: o.notes,

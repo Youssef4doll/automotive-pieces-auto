@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { storedEstimate } from "@/lib/order-estimate";
 import { toNumber } from "@/lib/money";
 import { returnsForOrder } from "@/lib/returns";
 
@@ -33,6 +34,13 @@ export async function appOrderView(orderId: string) {
       email: true,
       governorate: true,
       address: true,
+      landmark: true,
+      latitude: true,
+      longitude: true,
+      estimatedFrom: true,
+      estimatedTo: true,
+      estimatedWindow: true,
+      delayNotifiedAt: true,
       deliveryMethod: true,
       paymentMethod: true,
       subtotal: true,
@@ -87,6 +95,16 @@ export async function appOrderView(orderId: string) {
     email: order.email,
     governorate: order.governorate,
     address: order.address,
+    landmark: order.landmark,
+    /** The pin the customer placed, or null. */
+    pin: order.latitude != null && order.longitude != null ? { lat: order.latitude, lng: order.longitude } : null,
+    /**
+     * The date promised when the order was placed (lib/order-estimate), or
+     * null when the shop's settings promised none. `late` once the shop has
+     * told the customer it will be missed (lib/order-delays).
+     */
+    estimate: storedEstimate(order),
+    late: order.delayNotifiedAt != null,
     deliveryMethod: order.deliveryMethod,
     paymentMethod: order.paymentMethod,
     vehicleLabel: order.vehicleLabel,

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { shippingFeeFor } from "@/lib/shipping";
 import { taxPolicy } from "@/lib/tax";
 import { getSettings } from "@/lib/settings";
+import { orderEstimate } from "@/lib/order-estimate";
 import { toNumber } from "@/lib/money";
 import { computeSegment } from "@/lib/segment";
 import { issueOrderToken } from "@/lib/order-token";
@@ -62,6 +63,16 @@ export const placeOrderSchema = z
   // shop is the place, so the app no longer asks (empty is stored).
   governorate: shortText.optional(),
   address: longText.optional(),
+  // What a driver needs where a street has no number: a landmark in the
+  // customer's words and, when they placed a pin, its coordinates — inside
+  // Tunisia's own box, so a pin dropped on the wrong continent is refused.
+  landmark: shortText.optional(),
+  // The account's saved address it was sent to, if any — only so that one
+  // comes first next time (lib/saved-addresses). Never read for the address
+  // itself: the fields above are what the order stores.
+  savedAddressId: z.string().min(1).max(64).optional(),
+  latitude: z.number().min(30).max(38).optional(),
+  longitude: z.number().min(7).max(12).optional(),
   deliveryMethod: z.enum(["DELIVERY", "PICKUP"]),
   paymentMethod: z.enum(["COD", "CARD"]),
   notes: longText.optional(),
@@ -87,6 +98,10 @@ export const placeOrderSchema = z
   .superRefine((d, ctx) => {
     if (d.deliveryMethod === "DELIVERY" && (d.governorate ?? "").length < 2) {
       ctx.addIssue({ code: "custom", path: ["governorate"], message: "Gouvernorat requis pour la livraison." });
+    }
+    // A pin is both coordinates or neither.
+    if ((d.latitude == null) !== (d.longitude == null)) {
+      ctx.addIssue({ code: "custom", path: ["latitude"], message: "Position incomplète." });
     }
   });
 
@@ -138,6 +153,9 @@ export async function createOrder(
   // customer files states the rate that was in force when they bought, not
   // whatever the settings say the day somebody prints it again.
   const tax = taxPolicy(settings);
+  // "Livraison estimée : mardi 7 octobre, 10 h–18 h" — worked out now, from
+  // the settings in force now, and stored as promised (lib/order-estimate).
+  const estimate = orderEstimate(settings, data.governorate, data.deliveryMethod);
 
   // The car, and what we already know about the parts on it.
   //
@@ -288,6 +306,14 @@ export async function createOrder(
           email: data.email || undefined,
           governorate: data.governorate ?? "",
           address: data.address,
+          // Only where a driver goes: collected in store there is no door.
+          landmark: data.deliveryMethod === "DELIVERY" ? data.landmark || null : null,
+          latitude: data.deliveryMethod === "DELIVERY" ? (data.latitude ?? null) : null,
+          longitude: data.deliveryMethod === "DELIVERY" ? (data.longitude ?? null) : null,
+          // The date the settings let the shop promise now, kept as promised.
+          estimatedFrom: estimate ? new Date(`${estimate.from}T00:00:00Z`) : null,
+          estimatedTo: estimate ? new Date(`${estimate.to}T00:00:00Z`) : null,
+          estimatedWindow: estimate?.window ? `${estimate.window.start}–${estimate.window.end}` : null,
           deliveryMethod: data.deliveryMethod,
           paymentMethod: data.paymentMethod,
           status: "PENDING",
@@ -346,6 +372,13 @@ export async function createOrder(
     });
 
     afterResponse(() => orderPlacedEvent(result.id));
+    // The saved address this went to comes first next time. Only the
+    // account's own: someone else's id simply matches nothing.
+    if (ctx.userId && data.savedAddressId && data.deliveryMethod === "DELIVERY") {
+      const userId = ctx.userId;
+      const addressId = data.savedAddressId;
+      afterResponse(() => prisma.savedAddress.updateMany({ where: { id: addressId, userId }, data: { lastUsedAt: new Date() } }));
+    }
     return { ok: true, ...result };
   } catch (e) {
     if (e instanceof OrderError) {

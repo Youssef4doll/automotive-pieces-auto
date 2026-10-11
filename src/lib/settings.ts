@@ -29,6 +29,19 @@ export const DEFAULT_SETTINGS = {
   free_shipping_threshold: "150",
   delivery_grand_tunis: "24h",
   delivery_regions: "48–72h",
+  // The estimated delivery date ("Livraison estimée : mardi 7 octobre,
+  // 10 h–18 h", lib/delivery-estimate) is worked out from these three and
+  // the delays above. The cut-off and the courier's hours are empty on
+  // purpose: until the owner states them there is no date anywhere, only
+  // the delays as written — a date nobody committed to is a promise the shop
+  // never made. The days default to Monday–Saturday, the shop's own hours.
+  delivery_cutoff: "",
+  delivery_window: "",
+  delivery_days: "1,2,3,4,5,6",
+  // A text message at each step of an order (confirmed, on its way,
+  // delivered, a delay), when an SMS provider is set up (lib/sms). "0" turns
+  // them off and leaves the push notifications and e-mails.
+  sms_order_updates: "1",
   // How long the shop takes to get in a part it does not hold. Empty on
   // purpose: a part marked "sur commande" then says that it is ordered in and
   // stops there, rather than naming a delay nobody has committed to. Fill it

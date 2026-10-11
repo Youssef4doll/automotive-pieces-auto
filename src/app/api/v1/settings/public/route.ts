@@ -2,12 +2,27 @@ import { GOVERNORATES, GRAND_TUNIS } from "@/lib/governorates";
 import { RETURN_DAYS, WARRANTY_MONTHS } from "@/lib/policy";
 import { SHOP_ERROR_HOURS } from "@/lib/returns-rules";
 import { getSettings, publicContact } from "@/lib/settings";
+import { parseClock, parseDays, parseWindow } from "@/lib/delivery-estimate";
 import { FLAT_DELIVERY_FEE } from "@/lib/shipping";
 import { smsAvailable } from "@/lib/sms";
 import { taxPolicy } from "@/lib/tax";
 import { Cache, guard, ok, preflight } from "../../_lib/respond";
 
 const PUBLIC = { cache: Cache.catalogue, cors: true };
+
+const hhmm = (n: number) => `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+const cutoffText = (v: string) => {
+  const n = parseClock(v);
+  return n == null ? null : hhmm(n);
+};
+const windowText = (v: string) => {
+  const w = parseWindow(v);
+  return w ? `${w.start}–${w.end}` : null;
+};
+const daysText = (v: string) => {
+  const d = parseDays(v);
+  return d ? [...d].sort().join(",") : null;
+};
 
 /**
  * What the shop has said in public about how it trades.
@@ -44,6 +59,15 @@ export async function GET() {
             /** As the shop wrote them — "24h", "48–72h". Null when unset. */
             grandTunis: text(settings.delivery_grand_tunis),
             regions: text(settings.delivery_regions),
+            /**
+             * What the estimated date is worked out from (lib/delivery-estimate),
+             * normalised: the cut-off "14:00", the courier's hours "10:00–18:00",
+             * the working days "1,2,3,4,5,6" (Monday = 1). Null until the shop
+             * states it — and with no cut-off, no date is shown anywhere.
+             */
+            cutoff: cutoffText(settings.delivery_cutoff),
+            window: windowText(settings.delivery_window),
+            days: daysText(settings.delivery_days),
           },
           tax: { vatRate: tax.vatRate, stampDuty: tax.stampDuty },
           supplierLeadTime: text(settings.supplier_lead_time),

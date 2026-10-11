@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import { hit, callerKey, LIMITS } from "@/lib/rate-limit";
 import { rememberOrder, placedInThisBrowser, ordersFromThisBrowser } from "@/lib/order-access";
 import { notifyOrderPlaced } from "@/lib/order-emails";
+import { textOrderStatus } from "@/lib/order-texts";
 import { createOrder, placeOrderSchema, type PlaceOrderData } from "@/lib/orders/place";
 import { matchGuestOrder } from "@/lib/orders/lookup";
 import { claimOrderIds } from "@/lib/orders/claim";
@@ -63,7 +64,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // day cannot take down a checkout whose stock is already claimed. Awaited
   // rather than left floating because a promise still in flight when the
   // serverless function returns is a promise that gets killed.
-  afterResponse(() => notifyOrderPlaced(result.id));
+  afterResponse(async () => {
+        await notifyOrderPlaced(result.id);
+        // "Commande bien reçue" by text too (lib/order-texts).
+        await textOrderStatus(result.id, "PENDING");
+      });
 
   return { ok: true, ref: result.ref };
 }
