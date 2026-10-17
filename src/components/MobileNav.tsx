@@ -216,7 +216,7 @@ export default function MobileNav({
                 <Secondary href="/marques" onClose={onClose}>
                   {t("nav.brands")}
                 </Secondary>
-                <Secondary href="/#magasin" onClose={onClose}>
+                <Secondary href="/contact" onClose={onClose}>
                   {t("nav.about")}
                 </Secondary>
               </nav>

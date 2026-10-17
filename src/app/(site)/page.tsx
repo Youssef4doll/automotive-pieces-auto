@@ -4,7 +4,7 @@ import BrandBoard from "@/components/BrandBoard";
 import CategoryGrid from "@/components/CategoryGrid";
 import ProductGrid from "@/components/ProductGrid";
 import WhyUs from "@/components/WhyUs";
-import StoreSection from "@/components/StoreSection";
+import AppPromo from "@/components/AppPromo";
 import NotFoundBand from "@/components/NotFoundBand";
 import B2BBand from "@/components/B2BBand";
 import SectionHeading from "@/components/SectionHeading";
@@ -123,7 +123,7 @@ export default async function HomePage() {
         years={yearsTrading(settings)}
         deliveryGrandTunis={settings.delivery_grand_tunis}
       />
-      <StoreSection />
+      <AppPromo />
       <NotFoundBand contactUrl={contactUrl} phone={contact.phone} />
       <B2BBand contactUrl={contactUrl} />
     </>

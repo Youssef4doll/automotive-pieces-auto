@@ -87,7 +87,7 @@ type Step = "make" | "model" | "fuel" | "engine";
 export default function VehiclePicker({
   onClose,
   initialMakeSlug,
-  contactUrl = "/#magasin",
+  contactUrl = "/contact",
 }: {
   onClose: () => void;
   initialMakeSlug?: string;

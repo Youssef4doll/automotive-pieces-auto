@@ -62,7 +62,7 @@ export default function VehicleStoreBar({ storeAddress }: { storeAddress: string
           </button>
 
           <Link
-            href="/#magasin"
+            href="/contact"
             className="flex items-center gap-2.5 px-gutter py-2 min-h-tap hover:bg-gray-50 transition-colors"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f2352" strokeWidth="1.6" className="shrink-0">

@@ -48,7 +48,7 @@ export function contactLink(contact: ContactChannels, message?: string): string 
       ? `mailto:${contact.email}?subject=${encodeURIComponent(message)}`
       : `mailto:${contact.email}`;
   }
-  return "/#magasin";
+  return "/contact";
 }
 
 /** True when the link leaves the site, so the caller can set target and rel. */

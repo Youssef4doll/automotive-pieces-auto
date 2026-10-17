@@ -75,7 +75,7 @@ export default function SupportCard({
             {contact.email}
           </a>
         )}
-        <Link href="/#magasin" className="flex items-center justify-center min-h-tap text-sm text-gray-500 underline">
+        <Link href="/contact" className="flex items-center justify-center min-h-tap text-sm text-gray-500 underline">
           Voir l&apos;adresse du magasin
         </Link>
       </div>

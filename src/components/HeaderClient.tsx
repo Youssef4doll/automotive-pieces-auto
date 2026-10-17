@@ -170,7 +170,7 @@ export default function HeaderClient({
             <Link href="/marques" className="text-white hover:text-gold-500">
               {t("nav.brands")}
             </Link>
-            <Link href="/#magasin" className="text-white hover:text-gold-500">
+            <Link href="/contact" className="text-white hover:text-gold-500">
               {t("nav.about")}
             </Link>
             <a
