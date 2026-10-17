@@ -4,14 +4,18 @@ import Image from "next/image";
 import { useLocale } from "@/i18n/LocaleProvider";
 
 /**
- * The phone app, shown before it is in the stores (the owner, October 2026).
+ * The phone app, before it is in the stores (the owner, October 2026, from
+ * his reference banner).
  *
- * The shop's front in a frame with "Téléchargez l'application" over it and
- * the two store buttons, locked: the app is not published yet, so the
- * buttons say "Bientôt" and go nowhere — a link to a store page that does
- * not exist would be the site promising what it does not have. Beside it a
- * phone showing the app's real catalogue screen, standing up out of the
- * white into the navy band above.
+ * A navy banner: the shop's mark, "Votre voiture. Les bonnes pièces." — the
+ * app's own headline — a line on what it does, the two store buttons and
+ * three promises the shop already makes everywhere else. On the other side,
+ * the app on a tilted phone among brake discs, filters and a shock absorber,
+ * fading into the navy.
+ *
+ * The store buttons are locked: the app is not published yet, so they say
+ * "Bientôt" and go nowhere — a link to a store page that does not exist
+ * would be the site promising what it does not have.
  *
  * Replaces "Passez nous voir": the address, hours and number stay on the
  * contact page and in the footer, and the links that went to #magasin go
@@ -20,33 +24,76 @@ import { useLocale } from "@/i18n/LocaleProvider";
 export default function AppPromo() {
   const { t } = useLocale();
   return (
-    <section id="application" className="mx-auto shell-w px-4 pb-8 sm:pb-12">
-      <div className="grid sm:grid-cols-2 gap-6 sm:gap-10 items-end">
-        <div className="relative h-72 sm:h-96 mt-8 sm:mt-12 rounded-2xl overflow-hidden border border-gray-200 order-2 sm:order-1">
+    <section id="application" className="mx-auto shell-w px-4 py-8 sm:py-12">
+      <div className="relative overflow-hidden rounded-3xl bg-navy-950 text-white shadow-[0_24px_60px_-20px_rgba(3,10,26,0.55)]">
+        {/* The phone among the parts: above the words on a phone, beside them from sm up. */}
+        <div className="relative h-[26rem] sm:absolute sm:inset-y-0 sm:end-0 sm:h-auto sm:w-[56%] [mask-image:linear-gradient(to_bottom,black_70%,transparent)] sm:[mask-image:linear-gradient(to_right,transparent,black_38%)] sm:rtl:[mask-image:linear-gradient(to_left,transparent,black_38%)]">
           <Image
-            src="/images/storefront.png"
-            alt=""
+            src="/images/app-banner.webp"
+            alt={t("appPromo.screen")}
             fill
-            sizes="(max-width: 640px) 100vw, 50vw"
-            className="object-cover"
+            sizes="(max-width: 640px) 100vw, 56vw"
+            className="object-cover object-[50%_35%] sm:object-[50%_40%]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-navy-950/90 via-navy-950/35 to-navy-950/10" />
-          <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-            <h2 className="text-2xl sm:text-4xl font-heading font-extrabold uppercase text-white tracking-tight mb-4">
-              {t("appPromo.title")}
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              <StoreButton store="apple" soon={t("appPromo.soon")} locked={t("appPromo.locked")} />
-              <StoreButton store="google" soon={t("appPromo.soon")} locked={t("appPromo.locked")} />
-            </div>
-          </div>
         </div>
+        <div className="pointer-events-none absolute inset-0 hidden sm:block bg-gradient-to-r rtl:bg-gradient-to-l from-navy-950 via-navy-950/70 via-45% to-transparent to-70%" />
 
-        <div className="relative z-10 flex justify-center order-1 sm:order-2 -mt-24 sm:-mt-56">
-          <Phone alt={t("appPromo.screen")} />
+        <div className="relative px-6 pb-8 pt-2 sm:px-12 sm:py-14 sm:max-w-[54%]">
+          <Image src="/images/logo-white.png" alt="Automotive Pièces Auto" width={720} height={240} className="w-40 sm:w-56 h-auto mb-6 sm:mb-8" />
+          <h2 className="font-heading text-[2rem] sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight mb-4">
+            <span className="block font-sans font-normal">{t("appPromo.title1")}</span>
+            <span className="block font-extrabold">{t("appPromo.title2")}</span>
+          </h2>
+          <p className="text-base sm:text-lg text-white/75 max-w-md mb-7">{t("appPromo.body")}</p>
+          <div className="flex flex-wrap gap-3 mb-8">
+            <StoreButton store="apple" soon={t("appPromo.soon")} locked={t("appPromo.locked")} />
+            <StoreButton store="google" soon={t("appPromo.soon")} locked={t("appPromo.locked")} />
+          </div>
+          <ul className="flex flex-wrap gap-x-5 gap-y-3 text-sm text-white/90">
+            <Promise icon={<ShieldGlyph />} label={t("appPromo.fit")} />
+            <Promise icon={<CashGlyph />} label={t("trust.cod")} />
+            <Promise icon={<BadgeGlyph />} label={t("trust.warranty")} />
+          </ul>
         </div>
       </div>
     </section>
+  );
+}
+
+function Promise({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <li className="flex items-center gap-2.5">
+      <span className="text-gold-500">{icon}</span>
+      {label}
+    </li>
+  );
+}
+
+function ShieldGlyph() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.2 7.5 9.5 4.3-1.3 7.5-5 7.5-9.5V6L12 3z" />
+      <path d="m8.8 12 2.2 2.2 4.4-4.4" />
+    </svg>
+  );
+}
+
+function CashGlyph() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.6" />
+      <path d="M6 9.5v5M18 9.5v5" />
+    </svg>
+  );
+}
+
+function BadgeGlyph() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="9" r="6" />
+      <path d="m8.5 14.2-1.5 7 5-2.7 5 2.7-1.5-7" />
+    </svg>
   );
 }
 
@@ -69,21 +116,6 @@ function StoreButton({ store, soon, locked }: { store: "apple" | "google"; soon:
         <LockGlyph />
       </span>
     </span>
-  );
-}
-
-/** An iPhone, drawn: the screen is the app's catalogue, as it really looks. */
-function Phone({ alt }: { alt: string }) {
-  return (
-    <div className="relative w-[200px] sm:w-[260px] rounded-[44px] sm:rounded-[52px] bg-navy-950 p-[9px] sm:p-[11px] shadow-[0_30px_60px_-12px_rgba(3,10,26,0.55),0_12px_24px_-8px_rgba(3,10,26,0.35)] ring-1 ring-white/10">
-      <div className="relative aspect-[448/974] rounded-[36px] sm:rounded-[42px] overflow-hidden bg-white">
-        <Image src="/images/app-screen.webp" alt={alt} fill sizes="260px" className="object-cover object-top" />
-        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-[34%] h-[22px] rounded-full bg-navy-950" aria-hidden />
-      </div>
-      <span className="absolute -left-[3px] top-28 w-[3px] h-10 rounded-l bg-navy-900" aria-hidden />
-      <span className="absolute -left-[3px] top-44 w-[3px] h-16 rounded-l bg-navy-900" aria-hidden />
-      <span className="absolute -right-[3px] top-36 w-[3px] h-20 rounded-r bg-navy-900" aria-hidden />
-    </div>
   );
 }
 
